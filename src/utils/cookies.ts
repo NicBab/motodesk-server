@@ -1,0 +1,1 @@
+// Consistent secure cookie options
