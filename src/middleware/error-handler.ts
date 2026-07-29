@@ -1,53 +1,44 @@
-// import type {
-//   NextFunction,
-//   Request,
-//   Response,
-// } from "express";
+import type { ErrorRequestHandler } from "express";
 
-// import { env } from "../config/env.js";
+import { env } from "../config/env.js";
 
-// type ErrorWithStatus = Error & {
-//   statusCode?: number;
-// };
+type ErrorWithStatus = Error & {
+  status?: number;
+  statusCode?: number;
+};
 
-// export function errorHandler(
-//   error: ErrorWithStatus,
-//   _request: Request,
-//   response: Response,
-//   _next: NextFunction
-// ): void {
-//   const statusCode = error.statusCode ?? 500;
+export const errorHandler: ErrorRequestHandler = (
+  error,
+  _request,
+  response,
+  _next,
+): void => {
+  const normalizedError: ErrorWithStatus =
+    error instanceof Error
+      ? (error as ErrorWithStatus)
+      : Object.assign(
+          new Error("An unknown error occurred."),
+          {
+            statusCode: 500,
+          },
+        );
 
-//   if (env.NODE_ENV !== "test") {
-//     console.error(error);
-//   }
+  const statusCode =
+    normalizedError.statusCode ??
+    normalizedError.status ??
+    500;
 
-//   response.status(statusCode).json({
-//     success: false,
-//     message:
-//       statusCode === 500
-//         ? "Internal server error"
-//         : error.message,
+  const isServerError = statusCode >= 500;
 
-//     ...(env.NODE_ENV === "development" && {
-//       stack: error.stack,
-//     }),
-//   });
-// }
-
-
-import type { NextFunction, Request, Response } from "express";
-
-export function errorHandler(
-  error: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
-  console.error(error);
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
+  response.status(statusCode).json({
+    message: isServerError
+      ? "An unexpected server error occurred."
+      : normalizedError.message,
+    ...(env.NODE_ENV === "development"
+      ? {
+          error: normalizedError.message,
+          stack: normalizedError.stack,
+        }
+      : {}),
   });
-}
+};

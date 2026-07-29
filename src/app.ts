@@ -48,22 +48,20 @@
 
 // export default app;
 
-
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-
 import { env } from "./config/env.js";
-import { errorHandler } from "./middleware/error-handler.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 import { apiRouter } from "./routes/index.js";
+import cookieParser from "cookie-parser";
+import authRouter from "./modules/auth/auth.routes.js";
+import { errorHandler } from "./middleware/error-handler.js";
 
 export const app = express();
 
 app.disable("x-powered-by");
-
-app.use(helmet());
 
 app.use(
   cors({
@@ -74,7 +72,11 @@ app.use(
 
 app.use(morgan("dev"));
 app.use(express.json());
+app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
+
+
+app.use(cookieParser());
 
 app.get("/", (_req, res) => {
   res.status(200).json({
@@ -84,6 +86,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api/v1", apiRouter);
+app.use("/api/v1/auth", authRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

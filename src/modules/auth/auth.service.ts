@@ -1,45 +1,46 @@
-// Registration, login and verification workflows
+import { prisma } from "../../config/prisma.js";
+
+import {
+  MembershipStatus,
+  SessionRevocationReason,
+  type Membership,
+  type Organization,
+  type User,
+} from "../../generated/prisma/client.js";
 
 import type {
-  Membership,
-  Organization,
-  User,
-} from "../../generated/prisma/client.js";
+  LoginInput,
+  LogoutInput,
+  RefreshSessionInput,
+  RegisterInput,
+} from "./auth.schemas.js";
 
 import type {
   AuthenticatedMembership,
   AuthenticatedUser,
-} from "./auth.types.js";
-
-import { MembershipStatus } from "../../generated/prisma/client.js";
-
-import type {
   AuthenticationResult,
   RequestContext,
 } from "./auth.types.js";
-import { createSession } from "./session.service.js";
-
-import { generateAccessToken } from "./token.service.js";
-
-import { prisma } from "../../config/prisma.js";
-import type {
-  LoginInput,
-  RegisterInput,
-} from "./auth.schemas.js";
 
 import {
   hashPassword,
   verifyPassword,
 } from "./password.service.js";
 
-import type { RefreshSessionInput } from "./auth.schemas.js";
-
 import {
+  createSession,
+  revokeSession,
+  revokeUserSessions,
   rotateSessionToken,
   validateSession,
 } from "./session.service.js";
 
-import { parseRefreshToken } from "./token.service.js";
+import {
+  generateAccessToken,
+  parseRefreshToken,
+} from "./token.service.js";
+
+//******************************************************************************************
 
 type UserWithPassword = Pick<
   User,
@@ -54,13 +55,12 @@ type UserWithPassword = Pick<
 
 type MembershipWithOrganization = Pick<
   Membership,
-  | "id"
-  | "organizationId"
-  | "role"
-  | "status"
+  "id" | "organizationId" | "role" | "status"
 > & {
   organization: Pick<Organization, "name">;
 };
+
+//******************************************************************************************
 
 export const authenticationUserSelect = {
   id: true,
@@ -84,9 +84,9 @@ export const authenticationMembershipSelect = {
   },
 } as const;
 
-export function toAuthenticatedUser(
-  user: UserWithPassword,
-): AuthenticatedUser {
+//******************************************************************************************
+
+export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
   return {
     id: user.id,
     email: user.email,
@@ -125,10 +125,7 @@ export async function createAuthenticationResult(
   membership: MembershipWithOrganization | null,
   context: RequestContext,
 ): Promise<AuthenticationResult> {
-  const { session, refreshToken } = await createSession(
-    user.id,
-    context,
-  );
+  const { session, refreshToken } = await createSession(user.id, context);
 
   const authenticatedUser = toAuthenticatedUser(user);
 
@@ -141,8 +138,7 @@ export async function createAuthenticationResult(
     sub: user.id,
     email: user.email,
     sessionId: session.id,
-    organizationId:
-      authenticatedMembership?.organizationId ?? null,
+    organizationId: authenticatedMembership?.organizationId ?? null,
     membershipId: authenticatedMembership?.id ?? null,
     role: authenticatedMembership?.role ?? null,
   });
@@ -173,9 +169,7 @@ export async function registerUser(
   });
 
   if (existingUser) {
-    throw new Error(
-      "An account with this email address already exists.",
-    );
+    throw new Error("An account with this email address already exists.");
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -192,13 +186,9 @@ export async function registerUser(
     select: authenticationUserSelect,
   });
 
-// At this stage, registration creates only the user account.
-// It does not yet create an organization or membership.
-  return createAuthenticationResult(
-    user,
-    null,
-    context,
-  );
+  // At this stage, registration creates only the user account.
+  // It does not yet create an organization or membership.
+  return createAuthenticationResult(user, null, context);
 }
 
 //**************************************************************************************
@@ -245,11 +235,7 @@ export async function loginUser(
 
   const membership = user.memberships[0] ?? null;
 
-  return createAuthenticationResult(
-    user,
-    membership,
-    context,
-  );
+  return createAuthenticationResult(user, membership, context);
 }
 
 //*********************************************************************
@@ -258,9 +244,7 @@ export async function refreshSession(
   input: RefreshSessionInput,
   _context: RequestContext,
 ): Promise<AuthenticationResult> {
-  const parsedRefreshToken = parseRefreshToken(
-    input.refreshToken,
-  );
+  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
 
   const validatedSession = await validateSession(
     parsedRefreshToken.sessionId,
@@ -314,8 +298,7 @@ export async function refreshSession(
     sub: user.id,
     email: user.email,
     sessionId: validatedSession.session.id,
-    organizationId:
-      authenticatedMembership?.organizationId ?? null,
+    organizationId: authenticatedMembership?.organizationId ?? null,
     membershipId: authenticatedMembership?.id ?? null,
     role: authenticatedMembership?.role ?? null,
   });
@@ -326,7 +309,32 @@ export async function refreshSession(
     accessToken: accessToken.token,
     refreshToken: rotatedRefreshToken.token,
     accessTokenExpiresAt: accessToken.expiresAt,
-    refreshTokenExpiresAt:
-      rotatedRefreshToken.expiresAt,
+    refreshTokenExpiresAt: rotatedRefreshToken.expiresAt,
   };
 }
+
+//******************************************************************************************
+
+export async function logoutUser(input: LogoutInput): Promise<void> {
+  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
+
+  await revokeSession(
+    parsedRefreshToken.sessionId,
+    SessionRevocationReason.LOGOUT,
+  );
+}
+
+//******************************************************************************************
+
+export async function logoutAllUserSessions(
+  userId: string,
+): Promise<number> {
+  const result = await revokeUserSessions(
+    userId,
+    SessionRevocationReason.LOGOUT_ALL,
+  );
+
+  return result.revokedSessionCount;
+}
+
+//******************************************************************************************
