@@ -1,12 +1,11 @@
 import { Router } from "express";
 
-import { MembershipRole } from "../../generated/prisma/client.js";
-import { validateRequest } from "../../middleware/validate-request.js";
 import { validateParams } from "../../middleware/validate-params.js";
+import { validateRequest } from "../../middleware/validate-request.js";
 import { authenticateRequest } from "../auth/auth.middleware.js";
-import { requireRoles } from "../auth/role.middleware.js";
 import { requireOrganizationAccess } from "../organizations/organization.middleware.js";
-
+import { Permissions } from "../permissions/permission.constants.js";
+import { requirePermissions } from "../permissions/permission.middleware.js";
 import {
   getMembershipHandler,
   listMembershipsHandler,
@@ -29,10 +28,8 @@ router.get(
   "/",
   authenticateRequest,
   requireOrganizationAccess,
-  requireRoles(
-    MembershipRole.OWNER,
-    MembershipRole.ADMIN,
-    MembershipRole.MANAGER,
+  requirePermissions(
+    Permissions.MEMBERSHIPS_VIEW,
   ),
   listMembershipsHandler,
 );
@@ -43,10 +40,8 @@ router.get(
   "/:membershipId",
   authenticateRequest,
   requireOrganizationAccess,
-  requireRoles(
-    MembershipRole.OWNER,
-    MembershipRole.ADMIN,
-    MembershipRole.MANAGER,
+  requirePermissions(
+    Permissions.MEMBERSHIPS_VIEW,
   ),
   validateParams(membershipIdSchema),
   getMembershipHandler,
@@ -58,9 +53,8 @@ router.patch(
   "/:membershipId",
   authenticateRequest,
   requireOrganizationAccess,
-  requireRoles(
-    MembershipRole.OWNER,
-    MembershipRole.ADMIN,
+  requirePermissions(
+    Permissions.MEMBERSHIPS_UPDATE,
   ),
   validateParams(membershipIdSchema),
   validateRequest(updateMembershipSchema),

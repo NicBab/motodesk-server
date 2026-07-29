@@ -3,7 +3,7 @@
 import type { Request, Response } from "express";
 import type { RequestContext } from "./auth.types.js";
 import type { AuthenticatedRequest } from "./auth.middleware.js";
-
+import { getPermissionsForRole } from "../permissions/permission.utils.js";
 import {
   clearAuthenticationCookies,
   setAccessTokenCookie,
@@ -24,7 +24,7 @@ import type {
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
-   SwitchOrganizationInput,
+  SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
 //************************************************************** */
@@ -46,9 +46,14 @@ export async function register(
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
+  const permissions = result.membership
+    ? getPermissionsForRole(result.membership.role)
+    : [];
+
   response.status(201).json({
     user: result.user,
     membership: result.membership,
+    permissions,
     accessTokenExpiresAt: result.accessTokenExpiresAt,
     refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
@@ -64,9 +69,14 @@ export async function login(
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
+  const permissions = result.membership
+    ? getPermissionsForRole(result.membership.role)
+    : [];
+
   response.status(200).json({
     user: result.user,
     membership: result.membership,
+    permissions,
     accessTokenExpiresAt: result.accessTokenExpiresAt,
     refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
@@ -82,9 +92,14 @@ export async function refresh(
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
+  const permissions = result.membership
+    ? getPermissionsForRole(result.membership.role)
+    : [];
+
   response.status(200).json({
     user: result.user,
     membership: result.membership,
+    permissions,
     accessTokenExpiresAt: result.accessTokenExpiresAt,
     refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
@@ -96,11 +111,9 @@ export async function switchOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
+  const userId = request.authenticatedUser?.id;
 
-  const sessionId =
-    request.authenticationSessionId;
+  const sessionId = request.authenticationSessionId;
 
   if (!userId || !sessionId) {
     response.status(401).json({
@@ -110,25 +123,20 @@ export async function switchOrganizationHandler(
     return;
   }
 
-  const input =
-    request.body as SwitchOrganizationInput;
+  const input = request.body as SwitchOrganizationInput;
 
-  const result =
-    await switchOrganization(
-      userId,
-      sessionId,
-      input,
-    );
+  const result = await switchOrganization(userId, sessionId, input);
 
-  setAccessTokenCookie(
-    response,
-    result.accessToken,
-  );
+  setAccessTokenCookie(response, result.accessToken);
+
+  const permissions = getPermissionsForRole(result.membership.role);
 
   response.status(200).json({
-    membership: result.membership,
-    accessTokenExpiresAt:
-      result.accessTokenExpiresAt,
+    data: {
+      membership: result.membership,
+      permissions,
+      accessTokenExpiresAt: result.accessTokenExpiresAt,
+    },
   });
 }
 
@@ -186,9 +194,16 @@ export async function me(
     return;
   }
 
+  const permissions = request.authenticatedMembership
+    ? getPermissionsForRole(request.authenticatedMembership.role)
+    : [];
+
   response.status(200).json({
-    user,
-    membership: request.authenticatedMembership,
+    data: {
+      user,
+      membership: request.authenticatedMembership,
+      permissions,
+    },
   });
 }
 

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { validateRequest } from "../../middleware/validate-request.js";
-import { MembershipRole } from "../../generated/prisma/client.js";
 import { authenticateRequest } from "../auth/auth.middleware.js";
-import { requireRoles } from "../auth/role.middleware.js";
+import { Permissions } from "../permissions/permission.constants.js";
+import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
 import membershipRouter from "../memberships/membership.routes.js";
 import {
@@ -57,9 +57,8 @@ router.patch(
   "/:organizationId",
   authenticateRequest,
   requireOrganizationAccess,
-  requireRoles(
-    MembershipRole.OWNER,
-    MembershipRole.ADMIN,
+  requirePermissions(
+    Permissions.ORGANIZATION_UPDATE,
   ),
   validateRequest(updateOrganizationSchema),
   updateOrganizationHandler,

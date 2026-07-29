@@ -53,3 +53,13 @@ export type MembershipUpdateData = {
   role?: MembershipRole;
   status?: MembershipStatus;
 };
+
+//************************************************************** */
+
+export interface MembershipActorContext {
+  organizationId: string;
+  membershipId: string;
+  role: MembershipRole;
+}
+
+//************************************************************** */
