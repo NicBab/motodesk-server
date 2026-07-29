@@ -1,0 +1,37 @@
+import { env } from "../../config/env.js";
+
+export const ACCESS_TOKEN_TTL_MINUTES =
+  env.ACCESS_TOKEN_TTL_MINUTES;
+
+export const ACCESS_TOKEN_TTL_SECONDS =
+  ACCESS_TOKEN_TTL_MINUTES * 60;
+
+export const REFRESH_TOKEN_TTL_DAYS =
+  env.REFRESH_TOKEN_TTL_DAYS;
+
+export const REFRESH_TOKEN_TTL_MILLISECONDS =
+  REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1_000;
+
+export const EMAIL_VERIFICATION_TTL_HOURS =
+  env.EMAIL_VERIFICATION_TTL_HOURS;
+
+export const EMAIL_VERIFICATION_TTL_MILLISECONDS =
+  EMAIL_VERIFICATION_TTL_HOURS * 60 * 60 * 1_000;
+
+export const PASSWORD_RESET_TTL_MINUTES =
+  env.PASSWORD_RESET_TTL_MINUTES;
+
+export const PASSWORD_RESET_TTL_MILLISECONDS =
+  PASSWORD_RESET_TTL_MINUTES * 60 * 1_000;
+
+export const ACCESS_TOKEN_COOKIE_NAME =
+  "motodesk_access_token";
+
+export const REFRESH_TOKEN_COOKIE_NAME =
+  "motodesk_refresh_token";
+
+export const REFRESH_TOKEN_BYTE_LENGTH = 64;
+
+export const TOKEN_HASH_ALGORITHM = "sha256";
+
+export const PASSWORD_HASH_ROUNDS = 12;
