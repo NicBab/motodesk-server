@@ -34,6 +34,19 @@ const expiredCookieOptions: CookieOptions = {
 };
 
 //************************************************************** */
+
+export function setAccessTokenCookie(
+  response: Response,
+  accessToken: string,
+): void {
+  response.cookie(
+    ACCESS_TOKEN_COOKIE_NAME,
+    accessToken,
+    accessTokenCookieOptions,
+  );
+}
+
+//************************************************************** */
 export function setAuthenticationCookies(
   response: Response,
   accessToken: string,

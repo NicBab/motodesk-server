@@ -11,6 +11,7 @@ import {
   refresh,
   register,
   me,
+  switchOrganizationHandler,
 } from "./auth.controller.js";
 
 import {
@@ -18,6 +19,7 @@ import {
   logoutSchema,
   refreshSessionSchema,
   registerSchema,
+  switchOrganizationSchema,
 } from "./auth.schemas.js";
 
 //*********************************************************************** */
@@ -29,6 +31,13 @@ router.post("/register", validateRequest(registerSchema), register);
 router.post("/login", validateRequest(loginSchema), login);
 
 router.post("/refresh", validateRequest(refreshSessionSchema), refresh);
+
+router.post(
+  "/switch-organization",
+  authenticateRequest,
+  validateRequest(switchOrganizationSchema),
+  switchOrganizationHandler,
+);
 
 router.post("/logout", validateRequest(logoutSchema), logout);
 

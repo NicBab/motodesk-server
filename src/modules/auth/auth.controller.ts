@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from "./auth.middleware.js";
 
 import {
   clearAuthenticationCookies,
+  setAccessTokenCookie,
   setAuthenticationCookies,
 } from "./cookie.service.js";
 
@@ -15,6 +16,7 @@ import {
   logoutUser,
   refreshSession,
   registerUser,
+  switchOrganization,
 } from "./auth.service.js";
 
 import type {
@@ -22,6 +24,7 @@ import type {
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
+   SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
 //************************************************************** */
@@ -84,6 +87,48 @@ export async function refresh(
     membership: result.membership,
     accessTokenExpiresAt: result.accessTokenExpiresAt,
     refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+  });
+}
+
+//************************************************************** */
+
+export async function switchOrganizationHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const userId =
+    request.authenticatedUser?.id;
+
+  const sessionId =
+    request.authenticationSessionId;
+
+  if (!userId || !sessionId) {
+    response.status(401).json({
+      message: "Authentication required.",
+    });
+
+    return;
+  }
+
+  const input =
+    request.body as SwitchOrganizationInput;
+
+  const result =
+    await switchOrganization(
+      userId,
+      sessionId,
+      input,
+    );
+
+  setAccessTokenCookie(
+    response,
+    result.accessToken,
+  );
+
+  response.status(200).json({
+    membership: result.membership,
+    accessTokenExpiresAt:
+      result.accessTokenExpiresAt,
   });
 }
 

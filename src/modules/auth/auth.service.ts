@@ -13,6 +13,7 @@ import type {
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
+  SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
 import type {
@@ -33,6 +34,7 @@ import {
 } from "./session.service.js";
 
 import { generateAccessToken, parseRefreshToken } from "./token.service.js";
+import { AppError } from "../../common/errors/app-error.js";
 
 //************************************************************** */
 
@@ -52,6 +54,12 @@ type MembershipWithOrganization = Pick<
   "id" | "organizationId" | "role" | "status"
 > & {
   organization: Pick<Organization, "name">;
+};
+
+type SwitchOrganizationResult = {
+  membership: AuthenticatedMembership;
+  accessToken: string;
+  accessTokenExpiresAt: Date;
 };
 
 //************************************************************** */
@@ -306,6 +314,82 @@ export async function refreshSession(
     refreshToken: rotatedRefreshToken.token,
     accessTokenExpiresAt: accessToken.expiresAt,
     refreshTokenExpiresAt: rotatedRefreshToken.expiresAt,
+  };
+}
+
+//************************************************************** */
+
+export async function switchOrganization(
+  userId: string,
+  sessionId: string,
+  input: SwitchOrganizationInput,
+): Promise<SwitchOrganizationResult> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      ...authenticationUserSelect,
+      memberships: {
+        where: {
+          organizationId: input.organizationId,
+          status: MembershipStatus.ACTIVE,
+        },
+        take: 1,
+        select: authenticationMembershipSelect,
+      },
+    },
+  });
+
+if (!user) {
+  throw new AppError(
+    401,
+    "The authenticated user no longer exists.",
+    {
+      code: "AUTHENTICATED_USER_NOT_FOUND",
+    },
+  );
+}
+
+if (!user.isActive) {
+  throw new AppError(
+    403,
+    "This account is currently inactive.",
+    {
+      code: "ACCOUNT_INACTIVE",
+    },
+  );
+}
+
+  const membership = user.memberships[0];
+
+if (!membership) {
+  throw new AppError(
+    403,
+    "You do not have an active membership in this organization.",
+    {
+      code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+    },
+  );
+}
+
+  const authenticatedMembership =
+    toAuthenticatedMembership(membership);
+
+  const accessToken = generateAccessToken({
+    sub: user.id,
+    email: user.email,
+    sessionId,
+    organizationId:
+      authenticatedMembership.organizationId,
+    membershipId: authenticatedMembership.id,
+    role: authenticatedMembership.role,
+  });
+
+  return {
+    membership: authenticatedMembership,
+    accessToken: accessToken.token,
+    accessTokenExpiresAt: accessToken.expiresAt,
   };
 }
 

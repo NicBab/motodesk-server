@@ -57,6 +57,7 @@ import { notFoundHandler } from "./middleware/not-found.js";
 import { apiRouter } from "./routes/index.js";
 import cookieParser from "cookie-parser";
 import authRouter from "./modules/auth/auth.routes.js";
+import organizationRouter from "./modules/organizations/organization.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 export const app = express();
@@ -86,6 +87,10 @@ app.get("/", (_req, res) => {
 
 app.use("/api/v1", apiRouter);
 app.use("/api/v1/auth", authRouter);
+app.use(
+  "/api/v1/organizations",
+  organizationRouter,
+);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

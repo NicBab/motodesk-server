@@ -116,6 +116,39 @@ if (!organization) {
 }
 
 //************************************************************** */
+
+export async function getOrganizationsForUser(
+  userId: string,
+) {
+  return prisma.membership.findMany({
+    where: {
+      userId,
+      status: MembershipStatus.ACTIVE,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+      createdAt: true,
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    },
+  });
+}
+
+//************************************************************** */
 export async function updateOrganization(
   organizationId: string,
   input: UpdateOrganizationInput,

@@ -9,6 +9,7 @@ import type {
 import {
   createOrganization,
   getOrganizationById,
+  getOrganizationsForUser,
   updateOrganization,
 } from "./organization.service.js";
 
@@ -86,6 +87,23 @@ export async function createOrganizationHandler(
 
   response.status(201).json({
     data: organization,
+  });
+}
+
+//************************************************************** */
+
+export async function getMyOrganizationsHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const userId =
+    requireAuthenticatedUserId(request);
+
+  const memberships =
+    await getOrganizationsForUser(userId);
+
+  response.status(200).json({
+    data: memberships,
   });
 }
 

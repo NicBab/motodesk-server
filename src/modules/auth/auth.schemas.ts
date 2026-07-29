@@ -79,6 +79,15 @@ export const logoutSchema = z.object({
 
 //************************************************************** */
 
+export const switchOrganizationSchema = z.object({
+  organizationId: z
+    .string()
+    .trim()
+    .min(1, "Organization ID is required."),
+});
+
+//************************************************************** */
+
 export const requestPasswordResetSchema = z.object({
   email: emailSchema,
 });
@@ -107,5 +116,8 @@ export type RequestPasswordResetInput = z.infer<
 >;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type SwitchOrganizationInput = z.infer<
+  typeof switchOrganizationSchema
+>;
 
 //************************************************************** */
