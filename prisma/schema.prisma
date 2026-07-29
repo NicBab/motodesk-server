@@ -22,6 +22,20 @@ enum MembershipStatus {
   SUSPENDED
 }
 
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum SessionRevocationReason {
+  LOGOUT
+  LOGOUT_ALL
+  PASSWORD_CHANGED
+  TOKEN_REUSE
+  ADMIN_REVOKED
+  EXPIRED
+}
+
 model User {
   id           String  @id @default(cuid())
   email        String  @unique
@@ -32,19 +46,24 @@ model User {
   isActive     Boolean @default(true)
 
   memberships Membership[]
+  sessions    Session[]
+  authTokens  AuthToken[]
+
+  createdAuditEvents AuditLog[] @relation("AuditActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Organization {
-  id    String @id @default(cuid())
+  id    String  @id @default(cuid())
   name  String
-  slug  String @unique
+  slug  String  @unique
   email String?
   phone String?
 
   memberships Membership[]
+  auditLogs   AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,4 +85,73 @@ model Membership {
   @@unique([userId, organizationId])
   @@index([userId])
   @@index([organizationId])
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique
+
+  userAgent String?
+  ipAddress String?
+
+  expiresAt  DateTime
+  lastUsedAt DateTime @default(now())
+
+  revokedAt     DateTime?
+  revokedReason SessionRevocationReason?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model AuthToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      AuthTokenType
+  tokenHash String        @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  actorUserId String?
+  actorUser   User?   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  action       String
+  resourceType String
+  resourceId   String?
+
+  ipAddress String?
+  userAgent String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([action])
 }
