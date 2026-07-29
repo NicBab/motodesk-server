@@ -2,6 +2,7 @@
 
 import type { Request, Response } from "express";
 import type { RequestContext } from "./auth.types.js";
+import type { AuthenticatedRequest } from "./auth.middleware.js";
 
 import {
   clearAuthenticationCookies,
@@ -23,10 +24,6 @@ import type {
   RegisterInput,
 } from "./auth.schemas.js";
 
-import type {
-  AuthenticatedRequest,
-} from "./auth.middleware.js";
-
 //************************************************************** */
 
 function getRequestContext(request: Request): RequestContext {
@@ -39,104 +36,61 @@ function getRequestContext(request: Request): RequestContext {
 //************************************************************** */
 
 export async function register(
-  request: Request<
-    Record<string, never>,
-    unknown,
-    RegisterInput
-  >,
+  request: Request<Record<string, never>, unknown, RegisterInput>,
   response: Response,
 ): Promise<void> {
-  const result = await registerUser(
-    request.body,
-    getRequestContext(request),
-  );
+  const result = await registerUser(request.body, getRequestContext(request));
 
-  setAuthenticationCookies(
-    response,
-    result.accessToken,
-    result.refreshToken,
-  );
+  setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   response.status(201).json({
     user: result.user,
     membership: result.membership,
-    accessTokenExpiresAt:
-      result.accessTokenExpiresAt,
-    refreshTokenExpiresAt:
-      result.refreshTokenExpiresAt,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
 }
 
 //************************************************************** */
 
 export async function login(
-  request: Request<
-    Record<string, never>,
-    unknown,
-    LoginInput
-  >,
+  request: Request<Record<string, never>, unknown, LoginInput>,
   response: Response,
 ): Promise<void> {
-  const result = await loginUser(
-    request.body,
-    getRequestContext(request),
-  );
+  const result = await loginUser(request.body, getRequestContext(request));
 
-  setAuthenticationCookies(
-    response,
-    result.accessToken,
-    result.refreshToken,
-  );
+  setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   response.status(200).json({
     user: result.user,
     membership: result.membership,
-    accessTokenExpiresAt:
-      result.accessTokenExpiresAt,
-    refreshTokenExpiresAt:
-      result.refreshTokenExpiresAt,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
 }
 
 //************************************************************** */
 
 export async function refresh(
-  request: Request<
-    Record<string, never>,
-    unknown,
-    RefreshSessionInput
-  >,
+  request: Request<Record<string, never>, unknown, RefreshSessionInput>,
   response: Response,
 ): Promise<void> {
-  const result = await refreshSession(
-    request.body,
-    getRequestContext(request),
-  );
+  const result = await refreshSession(request.body, getRequestContext(request));
 
-  setAuthenticationCookies(
-    response,
-    result.accessToken,
-    result.refreshToken,
-  );
+  setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   response.status(200).json({
     user: result.user,
     membership: result.membership,
-    accessTokenExpiresAt:
-      result.accessTokenExpiresAt,
-    refreshTokenExpiresAt:
-      result.refreshTokenExpiresAt,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
   });
 }
 
 //************************************************************** */
 
 export async function logout(
-  request: Request<
-    Record<string, never>,
-    unknown,
-    LogoutInput
-  >,
+  request: Request<Record<string, never>, unknown, LogoutInput>,
   response: Response,
 ): Promise<void> {
   await logoutUser(request.body);
@@ -152,8 +106,7 @@ export async function logoutAll(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
+  const userId = request.authenticatedUser?.id;
 
   if (!userId) {
     response.status(401).json({
@@ -163,8 +116,7 @@ export async function logoutAll(
     return;
   }
 
-  const revokedSessionCount =
-    await logoutAllUserSessions(userId);
+  const revokedSessionCount = await logoutAllUserSessions(userId);
 
   clearAuthenticationCookies(response);
 

@@ -1,18 +1,20 @@
 // Refresh-session creation, rotation and revocation
 import { randomUUID } from "node:crypto";
+import { prisma } from "../../config/prisma.js";
+import type { RequestContext } from "./auth.types.js";
+import { verifyTokenHash } from "./auth.utils.js";
+
 import {
   SessionRevocationReason,
   type Session,
 } from "../../generated/prisma/client.js";
-import { prisma } from "../../config/prisma.js";
-import type { RequestContext } from "./auth.types.js";
+
 import {
   generateRefreshToken,
   type GeneratedRefreshToken,
 } from "./token.service.js";
-import { verifyTokenHash } from "./auth.utils.js";
 
-//**************************************************************************************
+//************************************************************** */
 
 export interface CreatedSession {
   session: Session;
@@ -32,7 +34,7 @@ export interface RevokeUserSessionsResult {
   revokedSessionCount: number;
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function createSession(
   userId: string,
@@ -59,7 +61,7 @@ export async function createSession(
   };
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function validateSession(
   sessionId: string,
@@ -80,18 +82,12 @@ export async function validateSession(
   }
 
   if (session.expiresAt.getTime() <= Date.now()) {
-    await revokeSession(
-      session.id,
-      SessionRevocationReason.EXPIRED,
-    );
+    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
 
     return null;
   }
 
-  const tokenMatches = verifyTokenHash(
-    refreshTokenSecret,
-    session.tokenHash,
-  );
+  const tokenMatches = verifyTokenHash(refreshTokenSecret, session.tokenHash);
 
   if (!tokenMatches) {
     return null;
@@ -112,7 +108,7 @@ export async function validateSession(
   };
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function validateAccessSession(
   sessionId: string,
@@ -137,10 +133,7 @@ export async function validateAccessSession(
   }
 
   if (session.expiresAt.getTime() <= Date.now()) {
-    await revokeSession(
-      session.id,
-      SessionRevocationReason.EXPIRED,
-    );
+    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
 
     return null;
   }
@@ -159,7 +152,7 @@ export async function validateAccessSession(
   };
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function rotateSessionToken(
   sessionId: string,
@@ -180,7 +173,7 @@ export async function rotateSessionToken(
   return refreshToken;
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function revokeSession(
   sessionId: string,
@@ -198,7 +191,7 @@ export async function revokeSession(
   });
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function revokeUserSessions(
   userId: string,
@@ -230,7 +223,7 @@ export async function revokeUserSessions(
   };
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function revokeAllUserSessions(
   userId: string,
@@ -250,7 +243,7 @@ export async function revokeAllUserSessions(
   return result.count;
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function deleteExpiredSessions(): Promise<number> {
   const result = await prisma.session.deleteMany({
@@ -264,6 +257,6 @@ export async function deleteExpiredSessions(): Promise<number> {
   return result.count;
 }
 
-//**************************************************************************************
+//************************************************************** */
 
-//**************************************************************************************
+//************************************************************** */

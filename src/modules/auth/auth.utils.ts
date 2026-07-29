@@ -5,22 +5,21 @@ import {
   TOKEN_HASH_ALGORITHM,
 } from "./auth.constants.js";
 
+//************************************************************** */
 export function generateRandomToken(
   byteLength = REFRESH_TOKEN_BYTE_LENGTH,
 ): string {
   return randomBytes(byteLength).toString("hex");
 }
 
+//************************************************************** */
+
 export function hashToken(token: string): string {
-  return createHash(TOKEN_HASH_ALGORITHM)
-    .update(token)
-    .digest("hex");
+  return createHash(TOKEN_HASH_ALGORITHM).update(token).digest("hex");
 }
 
-export function verifyTokenHash(
-  token: string,
-  storedHash: string,
-): boolean {
+//************************************************************** */
+export function verifyTokenHash(token: string, storedHash: string): boolean {
   const computedHash = hashToken(token);
 
   const computedBuffer = Buffer.from(computedHash, "hex");
@@ -33,9 +32,12 @@ export function verifyTokenHash(
   return timingSafeEqual(computedBuffer, storedBuffer);
 }
 
-export function splitRefreshToken(
-  refreshToken: string,
-): { sessionId: string; secret: string } {
+//************************************************************** */
+
+export function splitRefreshToken(refreshToken: string): {
+  sessionId: string;
+  secret: string;
+} {
   const separatorIndex = refreshToken.indexOf(".");
 
   if (separatorIndex === -1) {
@@ -48,9 +50,9 @@ export function splitRefreshToken(
   };
 }
 
-export function buildRefreshToken(
-  sessionId: string,
-  secret: string,
-): string {
+//************************************************************** */
+export function buildRefreshToken(sessionId: string, secret: string): string {
   return `${sessionId}.${secret}`;
 }
+
+//************************************************************** */

@@ -75,7 +75,6 @@ app.use(express.json());
 app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
 
-
 app.use(cookieParser());
 
 app.get("/", (_req, res) => {

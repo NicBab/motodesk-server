@@ -1,6 +1,8 @@
 // Endpoint declarations
 
 import { Router } from "express";
+import { authenticateRequest } from "./auth.middleware.js";
+import { validateRequest } from "../../middleware/validate-request.js";
 
 import {
   login,
@@ -10,14 +12,6 @@ import {
   register,
   me,
 } from "./auth.controller.js";
-
-import {
-  authenticateRequest,
-} from "./auth.middleware.js";
-
-import {
-  validateRequest,
-} from "../../middleware/validate-request.js";
 
 import {
   loginSchema,
@@ -30,40 +24,16 @@ import {
 
 const router = Router();
 
-router.post(
-  "/register",
-  validateRequest(registerSchema),
-  register,
-);
+router.post("/register", validateRequest(registerSchema), register);
 
-router.post(
-  "/login",
-  validateRequest(loginSchema),
-  login,
-);
+router.post("/login", validateRequest(loginSchema), login);
 
-router.post(
-  "/refresh",
-  validateRequest(refreshSessionSchema),
-  refresh,
-);
+router.post("/refresh", validateRequest(refreshSessionSchema), refresh);
 
-router.post(
-  "/logout",
-  validateRequest(logoutSchema),
-  logout,
-);
+router.post("/logout", validateRequest(logoutSchema), logout);
 
-router.post(
-  "/logout-all",
-  authenticateRequest,
-  logoutAll,
-);
+router.post("/logout-all", authenticateRequest, logoutAll);
 
-router.get(
-  "/me",
-  authenticateRequest,
-  me,
-);
+router.get("/me", authenticateRequest, me);
 
 export default router;

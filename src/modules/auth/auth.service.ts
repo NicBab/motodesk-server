@@ -22,10 +22,7 @@ import type {
   RequestContext,
 } from "./auth.types.js";
 
-import {
-  hashPassword,
-  verifyPassword,
-} from "./password.service.js";
+import { hashPassword, verifyPassword } from "./password.service.js";
 
 import {
   createSession,
@@ -35,12 +32,9 @@ import {
   validateSession,
 } from "./session.service.js";
 
-import {
-  generateAccessToken,
-  parseRefreshToken,
-} from "./token.service.js";
+import { generateAccessToken, parseRefreshToken } from "./token.service.js";
 
-//******************************************************************************************
+//************************************************************** */
 
 type UserWithPassword = Pick<
   User,
@@ -60,7 +54,7 @@ type MembershipWithOrganization = Pick<
   organization: Pick<Organization, "name">;
 };
 
-//******************************************************************************************
+//************************************************************** */
 
 export const authenticationUserSelect = {
   id: true,
@@ -84,7 +78,7 @@ export const authenticationMembershipSelect = {
   },
 } as const;
 
-//******************************************************************************************
+//************************************************************** */
 
 export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
   return {
@@ -96,6 +90,8 @@ export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
     isActive: user.isActive,
   };
 }
+
+//************************************************************** */
 
 export function toAuthenticatedMembership(
   membership: MembershipWithOrganization,
@@ -109,7 +105,7 @@ export function toAuthenticatedMembership(
   };
 }
 
-//******************************************************************************************
+//************************************************************** */
 
 // Creates a database session.
 // Generates the refresh token.
@@ -153,7 +149,7 @@ export async function createAuthenticationResult(
   };
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function registerUser(
   input: RegisterInput,
@@ -191,7 +187,7 @@ export async function registerUser(
   return createAuthenticationResult(user, null, context);
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function loginUser(
   input: LoginInput,
@@ -238,7 +234,7 @@ export async function loginUser(
   return createAuthenticationResult(user, membership, context);
 }
 
-//*********************************************************************
+//************************************************************** */
 
 export async function refreshSession(
   input: RefreshSessionInput,
@@ -313,7 +309,7 @@ export async function refreshSession(
   };
 }
 
-//******************************************************************************************
+//************************************************************** */
 
 export async function logoutUser(input: LogoutInput): Promise<void> {
   const parsedRefreshToken = parseRefreshToken(input.refreshToken);
@@ -324,11 +320,9 @@ export async function logoutUser(input: LogoutInput): Promise<void> {
   );
 }
 
-//******************************************************************************************
+//************************************************************** */
 
-export async function logoutAllUserSessions(
-  userId: string,
-): Promise<number> {
+export async function logoutAllUserSessions(userId: string): Promise<number> {
   const result = await revokeUserSessions(
     userId,
     SessionRevocationReason.LOGOUT_ALL,
@@ -337,4 +331,4 @@ export async function logoutAllUserSessions(
   return result.revokedSessionCount;
 }
 
-//******************************************************************************************
+//************************************************************** */

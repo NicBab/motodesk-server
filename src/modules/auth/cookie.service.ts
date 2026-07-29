@@ -1,5 +1,4 @@
 import type { CookieOptions, Response } from "express";
-
 import { env } from "../../config/env.js";
 import {
   ACCESS_TOKEN_COOKIE_NAME,
@@ -7,6 +6,8 @@ import {
   REFRESH_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_TTL_MILLISECONDS,
 } from "./auth.constants.js";
+
+//************************************************************** */
 
 const baseCookieOptions: CookieOptions = {
   httpOnly: true,
@@ -32,6 +33,7 @@ const expiredCookieOptions: CookieOptions = {
   maxAge: 0,
 };
 
+//************************************************************** */
 export function setAuthenticationCookies(
   response: Response,
   accessToken: string,
@@ -50,16 +52,11 @@ export function setAuthenticationCookies(
   );
 }
 
-export function clearAuthenticationCookies(
-  response: Response,
-): void {
-  response.clearCookie(
-    ACCESS_TOKEN_COOKIE_NAME,
-    expiredCookieOptions,
-  );
+//************************************************************** */
+export function clearAuthenticationCookies(response: Response): void {
+  response.clearCookie(ACCESS_TOKEN_COOKIE_NAME, expiredCookieOptions);
 
-  response.clearCookie(
-    REFRESH_TOKEN_COOKIE_NAME,
-    expiredCookieOptions,
-  );
+  response.clearCookie(REFRESH_TOKEN_COOKIE_NAME, expiredCookieOptions);
 }
+
+//************************************************************** */

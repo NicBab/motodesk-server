@@ -1,18 +1,15 @@
 import type { NextFunction, Request, Response } from "express";
-
 import { prisma } from "../../config/prisma.js";
-
 import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
+import { validateAccessSession } from "./session.service.js";
+import { verifyAccessToken } from "./token.service.js";
 
 import type {
   AuthenticatedMembership,
   AuthenticatedUser,
 } from "./auth.types.js";
 
-import { validateAccessSession } from "./session.service.js";
-import { verifyAccessToken } from "./token.service.js";
-
-//**************************************************************************************
+//************************************************************** */
 
 export interface AuthenticatedRequest extends Request {
   authenticatedUser?: AuthenticatedUser;
@@ -24,7 +21,7 @@ type RequestWithCookies = Request & {
   cookies?: Record<string, string | undefined>;
 };
 
-//**************************************************************************************
+//************************************************************** */
 
 function getAccessToken(request: Request): string | null {
   const requestWithCookies = request as RequestWithCookies;
@@ -32,7 +29,7 @@ function getAccessToken(request: Request): string | null {
   return requestWithCookies.cookies?.[ACCESS_TOKEN_COOKIE_NAME] ?? null;
 }
 
-//**************************************************************************************
+//************************************************************** */
 
 export async function authenticateRequest(
   request: AuthenticatedRequest,
@@ -144,4 +141,4 @@ export async function authenticateRequest(
   }
 }
 
-//**************************************************************************************
+//************************************************************** */

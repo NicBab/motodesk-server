@@ -3,6 +3,7 @@ import type {
   MembershipStatus,
 } from "../../generated/prisma/client.js";
 
+//************************************************************** */
 export interface AccessTokenPayload {
   sub: string;
   email: string;
@@ -12,6 +13,7 @@ export interface AccessTokenPayload {
   role: MembershipRole | null;
 }
 
+//************************************************************** */
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -21,6 +23,7 @@ export interface AuthenticatedUser {
   isActive: boolean;
 }
 
+//************************************************************** */
 export interface AuthenticatedMembership {
   id: string;
   organizationId: string;
@@ -29,6 +32,7 @@ export interface AuthenticatedMembership {
   status: MembershipStatus;
 }
 
+//************************************************************** */
 export interface AuthenticationResult {
   user: AuthenticatedUser;
   membership: AuthenticatedMembership | null;
@@ -38,12 +42,16 @@ export interface AuthenticationResult {
   refreshTokenExpiresAt: Date;
 }
 
+//************************************************************** */
 export interface RequestContext {
   ipAddress: string | null;
   userAgent: string | null;
 }
 
+//************************************************************** */
 export interface RefreshTokenParts {
   sessionId: string;
   secret: string;
 }
+
+//************************************************************** */
