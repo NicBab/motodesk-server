@@ -66,6 +66,7 @@ export function setAuthenticationCookies(
 }
 
 //************************************************************** */
+
 export function clearAuthenticationCookies(response: Response): void {
   response.clearCookie(ACCESS_TOKEN_COOKIE_NAME, expiredCookieOptions);
 
