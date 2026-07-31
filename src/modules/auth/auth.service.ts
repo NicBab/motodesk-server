@@ -1,5 +1,7 @@
-import { prisma } from "../../config/prisma.js";
-
+// import { prisma } from "../../config/prisma.js";
+import { hashPassword, verifyPassword } from "./password.service.js";
+import { AppError } from "../../common/errors/app-error.js";
+import { generateAccessToken, parseRefreshToken } from "./token.service.js";
 import {
   MembershipStatus,
   SessionRevocationReason,
@@ -23,8 +25,6 @@ import type {
   RequestContext,
 } from "./auth.types.js";
 
-import { hashPassword, verifyPassword } from "./password.service.js";
-
 import {
   createSession,
   revokeSession,
@@ -33,8 +33,14 @@ import {
   validateSession,
 } from "./session.service.js";
 
-import { generateAccessToken, parseRefreshToken } from "./token.service.js";
-import { AppError } from "../../common/errors/app-error.js";
+import {
+  createUserRecord,
+  findUserForAuthentication,
+  findUserForLogin,
+  findUserForOrganizationSwitch,
+  findUserIdByEmail,
+} from "./auth.repository.js";
+
 
 //************************************************************** */
 
@@ -163,36 +169,37 @@ export async function registerUser(
   input: RegisterInput,
   context: RequestContext,
 ): Promise<AuthenticationResult> {
-  const existingUser = await prisma.user.findUnique({
-    where: {
-      email: input.email,
-    },
-    select: {
-      id: true,
-    },
-  });
+  const existingUser =
+    await findUserIdByEmail(input.email);
 
   if (existingUser) {
-    throw new Error("An account with this email address already exists.");
+    throw new AppError(
+      409,
+      "An account with this email address already exists.",
+      {
+        code: "EMAIL_ALREADY_REGISTERED",
+      },
+    );
   }
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash =
+    await hashPassword(input.password);
 
-  const user = await prisma.user.create({
-    data: {
-      email: input.email,
-      passwordHash,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phone: input.phone ?? null,
-      isActive: true,
-    },
-    select: authenticationUserSelect,
+  const user = await createUserRecord({
+    email: input.email,
+    passwordHash,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    phone: input.phone ?? null,
   });
 
-  // At this stage, registration creates only the user account.
-  // It does not yet create an organization or membership.
-  return createAuthenticationResult(user, null, context);
+  // Registration creates only the user account.
+  // Organization creation happens during onboarding.
+  return createAuthenticationResult(
+    user,
+    null,
+    context,
+  );
 }
 
 //************************************************************** */
@@ -201,45 +208,53 @@ export async function loginUser(
   input: LoginInput,
   context: RequestContext,
 ): Promise<AuthenticationResult> {
-  const user = await prisma.user.findUnique({
-    where: {
-      email: input.email,
-    },
-    select: {
-      ...authenticationUserSelect,
-      memberships: {
-        where: {
-          status: MembershipStatus.ACTIVE,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-        take: 1,
-        select: authenticationMembershipSelect,
-      },
-    },
-  });
+  const user =
+    await findUserForLogin(input.email);
 
   if (!user) {
-    throw new Error("Invalid email address or password.");
+    throw new AppError(
+      401,
+      "Invalid email address or password.",
+      {
+        code: "INVALID_CREDENTIALS",
+      },
+    );
   }
 
   if (!user.isActive) {
-    throw new Error("This account is currently inactive.");
+    throw new AppError(
+      403,
+      "This account is currently inactive.",
+      {
+        code: "ACCOUNT_INACTIVE",
+      },
+    );
   }
 
-  const passwordMatches = await verifyPassword(
-    input.password,
-    user.passwordHash,
-  );
+  const passwordMatches =
+    await verifyPassword(
+      input.password,
+      user.passwordHash,
+    );
 
   if (!passwordMatches) {
-    throw new Error("Invalid email address or password.");
+    throw new AppError(
+      401,
+      "Invalid email address or password.",
+      {
+        code: "INVALID_CREDENTIALS",
+      },
+    );
   }
 
-  const membership = user.memberships[0] ?? null;
+  const membership =
+    user.memberships[0] ?? null;
 
-  return createAuthenticationResult(user, membership, context);
+  return createAuthenticationResult(
+    user,
+    membership,
+    context,
+  );
 }
 
 //************************************************************** */
@@ -248,72 +263,96 @@ export async function refreshSession(
   input: RefreshSessionInput,
   _context: RequestContext,
 ): Promise<AuthenticationResult> {
-  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
+  const parsedRefreshToken =
+    parseRefreshToken(input.refreshToken);
 
-  const validatedSession = await validateSession(
-    parsedRefreshToken.sessionId,
-    parsedRefreshToken.secret,
-  );
+  const validatedSession =
+    await validateSession(
+      parsedRefreshToken.sessionId,
+      parsedRefreshToken.secret,
+    );
 
   if (!validatedSession) {
-    throw new Error("Session has expired or is invalid.");
+    throw new AppError(
+      401,
+      "Session has expired or is invalid.",
+      {
+        code: "SESSION_INVALID",
+      },
+    );
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: validatedSession.session.userId,
-    },
-    select: {
-      ...authenticationUserSelect,
-      memberships: {
-        where: {
-          status: MembershipStatus.ACTIVE,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-        take: 1,
-        select: authenticationMembershipSelect,
-      },
-    },
-  });
+  const user =
+    await findUserForAuthentication(
+      validatedSession.session.userId,
+    );
 
   if (!user) {
-    throw new Error("User no longer exists.");
+    throw new AppError(
+      401,
+      "The authenticated user no longer exists.",
+      {
+        code: "AUTHENTICATED_USER_NOT_FOUND",
+      },
+    );
   }
 
   if (!user.isActive) {
-    throw new Error("Account is inactive.");
+    throw new AppError(
+      403,
+      "This account is currently inactive.",
+      {
+        code: "ACCOUNT_INACTIVE",
+      },
+    );
   }
 
-  const rotatedRefreshToken = await rotateSessionToken(
-    validatedSession.session.id,
-  );
+  const rotatedRefreshToken =
+    await rotateSessionToken(
+      validatedSession.session.id,
+    );
 
-  const membership = user.memberships[0] ?? null;
+  const membership =
+    user.memberships[0] ?? null;
 
-  const authenticatedUser = toAuthenticatedUser(user);
+  const authenticatedUser =
+    toAuthenticatedUser(user);
 
-  const authenticatedMembership = membership
-    ? toAuthenticatedMembership(membership)
-    : null;
+  const authenticatedMembership =
+    membership
+      ? toAuthenticatedMembership(
+          membership,
+        )
+      : null;
 
-  const accessToken = generateAccessToken({
-    sub: user.id,
-    email: user.email,
-    sessionId: validatedSession.session.id,
-    organizationId: authenticatedMembership?.organizationId ?? null,
-    membershipId: authenticatedMembership?.id ?? null,
-    role: authenticatedMembership?.role ?? null,
-  });
+  const accessToken =
+    generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      sessionId:
+        validatedSession.session.id,
+      organizationId:
+        authenticatedMembership
+          ?.organizationId ?? null,
+      membershipId:
+        authenticatedMembership?.id ??
+        null,
+      role:
+        authenticatedMembership?.role ??
+        null,
+    });
 
   return {
     user: authenticatedUser,
-    membership: authenticatedMembership,
+    membership:
+      authenticatedMembership,
     accessToken: accessToken.token,
-    refreshToken: rotatedRefreshToken.token,
-    accessTokenExpiresAt: accessToken.expiresAt,
-    refreshTokenExpiresAt: rotatedRefreshToken.expiresAt,
+    refreshToken:
+      rotatedRefreshToken.token,
+    accessTokenExpiresAt:
+      accessToken.expiresAt,
+    refreshTokenExpiresAt:
+      rotatedRefreshToken.expiresAt,
   };
 }
 
@@ -324,72 +363,70 @@ export async function switchOrganization(
   sessionId: string,
   input: SwitchOrganizationInput,
 ): Promise<SwitchOrganizationResult> {
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-    select: {
-      ...authenticationUserSelect,
-      memberships: {
-        where: {
-          organizationId: input.organizationId,
-          status: MembershipStatus.ACTIVE,
-        },
-        take: 1,
-        select: authenticationMembershipSelect,
+  const user =
+    await findUserForOrganizationSwitch(
+      userId,
+      input.organizationId,
+    );
+
+  if (!user) {
+    throw new AppError(
+      401,
+      "The authenticated user no longer exists.",
+      {
+        code: "AUTHENTICATED_USER_NOT_FOUND",
       },
-    },
-  });
+    );
+  }
 
-if (!user) {
-  throw new AppError(
-    401,
-    "The authenticated user no longer exists.",
-    {
-      code: "AUTHENTICATED_USER_NOT_FOUND",
-    },
-  );
-}
+  if (!user.isActive) {
+    throw new AppError(
+      403,
+      "This account is currently inactive.",
+      {
+        code: "ACCOUNT_INACTIVE",
+      },
+    );
+  }
 
-if (!user.isActive) {
-  throw new AppError(
-    403,
-    "This account is currently inactive.",
-    {
-      code: "ACCOUNT_INACTIVE",
-    },
-  );
-}
+  const membership =
+    user.memberships[0] ?? null;
 
-  const membership = user.memberships[0];
-
-if (!membership) {
-  throw new AppError(
-    403,
-    "You do not have an active membership in this organization.",
-    {
-      code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
-    },
-  );
-}
+  if (!membership) {
+    throw new AppError(
+      403,
+      "You do not have an active membership in this organization.",
+      {
+        code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+      },
+    );
+  }
 
   const authenticatedMembership =
-    toAuthenticatedMembership(membership);
+    toAuthenticatedMembership(
+      membership,
+    );
 
-  const accessToken = generateAccessToken({
-    sub: user.id,
-    email: user.email,
-    sessionId,
-    organizationId:
-      authenticatedMembership.organizationId,
-    membershipId: authenticatedMembership.id,
-    role: authenticatedMembership.role,
-  });
+  const accessToken =
+    generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      sessionId,
+      organizationId:
+        authenticatedMembership.organizationId,
+      membershipId:
+        authenticatedMembership.id,
+      role:
+        authenticatedMembership.role,
+    });
 
   return {
-    membership: authenticatedMembership,
-    accessToken: accessToken.token,
-    accessTokenExpiresAt: accessToken.expiresAt,
+    membership:
+      authenticatedMembership,
+    accessToken:
+      accessToken.token,
+    accessTokenExpiresAt:
+      accessToken.expiresAt,
   };
 }
 

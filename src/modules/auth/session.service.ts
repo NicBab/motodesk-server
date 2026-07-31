@@ -1,18 +1,30 @@
 // Refresh-session creation, rotation and revocation
+
 import { randomUUID } from "node:crypto";
-import { prisma } from "../../config/prisma.js";
-import type { RequestContext } from "./auth.types.js";
-import { verifyTokenHash } from "./auth.utils.js";
 
 import {
   SessionRevocationReason,
   type Session,
 } from "../../generated/prisma/client.js";
 
+import type { RequestContext } from "./auth.types.js";
+
 import {
   generateRefreshToken,
   type GeneratedRefreshToken,
 } from "./token.service.js";
+
+import { verifyTokenHash } from "./auth.utils.js";
+
+import {
+  createSessionRecord,
+  deleteExpiredSessionRecords,
+  findSessionById,
+  revokeSessionRecord,
+  revokeUserSessionRecords,
+  rotateSessionRecord,
+  touchSession,
+} from "./session.repository.js";
 
 //************************************************************** */
 
@@ -42,18 +54,18 @@ export async function createSession(
 ): Promise<CreatedSession> {
   const sessionId = randomUUID();
 
-  const refreshToken = generateRefreshToken(sessionId);
+  const refreshToken =
+    generateRefreshToken(sessionId);
 
-  const session = await prisma.session.create({
-    data: {
+  const session =
+    await createSessionRecord({
       id: sessionId,
       userId,
       tokenHash: refreshToken.tokenHash,
       userAgent: context.userAgent,
       ipAddress: context.ipAddress,
       expiresAt: refreshToken.expiresAt,
-    },
-  });
+    });
 
   return {
     session,
@@ -67,11 +79,8 @@ export async function validateSession(
   sessionId: string,
   refreshTokenSecret: string,
 ): Promise<ValidatedSession | null> {
-  const session = await prisma.session.findUnique({
-    where: {
-      id: sessionId,
-    },
-  });
+  const session =
+    await findSessionById(sessionId);
 
   if (!session) {
     return null;
@@ -81,26 +90,29 @@ export async function validateSession(
     return null;
   }
 
-  if (session.expiresAt.getTime() <= Date.now()) {
-    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
+  if (
+    session.expiresAt.getTime() <=
+    Date.now()
+  ) {
+    await revokeSession(
+      session.id,
+      SessionRevocationReason.EXPIRED,
+    );
 
     return null;
   }
 
-  const tokenMatches = verifyTokenHash(refreshTokenSecret, session.tokenHash);
+  const tokenMatches =
+    verifyTokenHash(
+      refreshTokenSecret,
+      session.tokenHash,
+    );
 
   if (!tokenMatches) {
     return null;
   }
 
-  await prisma.session.update({
-    where: {
-      id: session.id,
-    },
-    data: {
-      lastUsedAt: new Date(),
-    },
-  });
+  await touchSession(session.id);
 
   return {
     session,
@@ -114,11 +126,8 @@ export async function validateAccessSession(
   sessionId: string,
   userId: string,
 ): Promise<ValidatedAccessSession | null> {
-  const session = await prisma.session.findUnique({
-    where: {
-      id: sessionId,
-    },
-  });
+  const session =
+    await findSessionById(sessionId);
 
   if (!session) {
     return null;
@@ -132,20 +141,19 @@ export async function validateAccessSession(
     return null;
   }
 
-  if (session.expiresAt.getTime() <= Date.now()) {
-    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
+  if (
+    session.expiresAt.getTime() <=
+    Date.now()
+  ) {
+    await revokeSession(
+      session.id,
+      SessionRevocationReason.EXPIRED,
+    );
 
     return null;
   }
 
-  await prisma.session.update({
-    where: {
-      id: session.id,
-    },
-    data: {
-      lastUsedAt: new Date(),
-    },
-  });
+  await touchSession(session.id);
 
   return {
     session,
@@ -157,18 +165,14 @@ export async function validateAccessSession(
 export async function rotateSessionToken(
   sessionId: string,
 ): Promise<GeneratedRefreshToken> {
-  const refreshToken = generateRefreshToken(sessionId);
+  const refreshToken =
+    generateRefreshToken(sessionId);
 
-  await prisma.session.update({
-    where: {
-      id: sessionId,
-    },
-    data: {
-      tokenHash: refreshToken.tokenHash,
-      expiresAt: refreshToken.expiresAt,
-      lastUsedAt: new Date(),
-    },
-  });
+  await rotateSessionRecord(
+    sessionId,
+    refreshToken.tokenHash,
+    refreshToken.expiresAt,
+  );
 
   return refreshToken;
 }
@@ -179,16 +183,10 @@ export async function revokeSession(
   sessionId: string,
   reason: SessionRevocationReason,
 ): Promise<void> {
-  await prisma.session.updateMany({
-    where: {
-      id: sessionId,
-      revokedAt: null,
-    },
-    data: {
-      revokedAt: new Date(),
-      revokedReason: reason,
-    },
-  });
+  await revokeSessionRecord(
+    sessionId,
+    reason,
+  );
 }
 
 //************************************************************** */
@@ -198,25 +196,12 @@ export async function revokeUserSessions(
   reason: SessionRevocationReason,
   excludedSessionId?: string,
 ): Promise<RevokeUserSessionsResult> {
-  const revokedAt = new Date();
-
-  const result = await prisma.session.updateMany({
-    where: {
+  const result =
+    await revokeUserSessionRecords(
       userId,
-      revokedAt: null,
-      ...(excludedSessionId
-        ? {
-            id: {
-              not: excludedSessionId,
-            },
-          }
-        : {}),
-    },
-    data: {
-      revokedAt,
-      revocationReason: reason,
-    },
-  });
+      reason,
+      excludedSessionId,
+    );
 
   return {
     revokedSessionCount: result.count,
@@ -229,16 +214,11 @@ export async function revokeAllUserSessions(
   userId: string,
   reason: SessionRevocationReason,
 ): Promise<number> {
-  const result = await prisma.session.updateMany({
-    where: {
+  const result =
+    await revokeUserSessionRecords(
       userId,
-      revokedAt: null,
-    },
-    data: {
-      revokedAt: new Date(),
-      revokedReason: reason,
-    },
-  });
+      reason,
+    );
 
   return result.count;
 }
@@ -246,17 +226,8 @@ export async function revokeAllUserSessions(
 //************************************************************** */
 
 export async function deleteExpiredSessions(): Promise<number> {
-  const result = await prisma.session.deleteMany({
-    where: {
-      expiresAt: {
-        lte: new Date(),
-      },
-    },
-  });
+  const result =
+    await deleteExpiredSessionRecords();
 
   return result.count;
 }
-
-//************************************************************** */
-
-//************************************************************** */

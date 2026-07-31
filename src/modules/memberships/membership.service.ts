@@ -1,27 +1,21 @@
-//************************************************************** */
-//************************************************************** */
-// membership.service.ts
-//   fetches data
-//   calls policy
-//   persists changes
-//   maps DTOs
-//************************************************************** */
-//************************************************************** */
-
 import { AppError } from "../../common/errors/app-error.js";
-import { prisma } from "../../config/prisma.js";
 import { assertMembershipUpdateAllowed } from "./membership.policy.js";
 import {
-  toMembershipListItem,
-  toMembershipRecord,
-} from "./membership.utils.js";
-
+  findMembershipById,
+  findMembershipForUpdate,
+  findMembershipsByOrganization,
+  updateMembershipRecord,
+} from "./membership.repository.js";
 import type {
   MembershipActorContext,
   MembershipListItem,
   MembershipRecord,
   MembershipUpdateData,
 } from "./membership.types.js";
+import {
+  toMembershipListItem,
+  toMembershipRecord,
+} from "./membership.utils.js";
 
 //************************************************************** */
 
@@ -29,20 +23,9 @@ export async function listMemberships(
   organizationId: string,
 ): Promise<MembershipListItem[]> {
   const memberships =
-    await prisma.membership.findMany({
-      where: {
-        organizationId,
-      },
-      include: {
-        user: true,
-        organization: true,
-      },
-      orderBy: [
-        {
-          createdAt: "asc",
-        },
-      ],
-    });
+    await findMembershipsByOrganization(
+      organizationId,
+    );
 
   return memberships.map(
     toMembershipListItem,
@@ -55,24 +38,25 @@ export async function getMembershipById(
   organizationId: string,
   membershipId: string,
 ): Promise<MembershipRecord> {
-  const membership = await prisma.membership.findFirst({
-    where: {
-      id: membershipId,
+  const membership =
+    await findMembershipById(
       organizationId,
-    },
-    include: {
-      user: true,
-      organization: true,
-    },
-  });
+      membershipId,
+    );
 
   if (!membership) {
-    throw new AppError(404, "Membership not found.", {
-      code: "MEMBERSHIP_NOT_FOUND",
-    });
+    throw new AppError(
+      404,
+      "Membership not found.",
+      {
+        code: "MEMBERSHIP_NOT_FOUND",
+      },
+    );
   }
 
-  return toMembershipRecord(membership);
+  return toMembershipRecord(
+    membership,
+  );
 }
 
 //************************************************************** */
@@ -84,12 +68,10 @@ export async function updateMembership(
   data: MembershipUpdateData,
 ): Promise<MembershipRecord> {
   const existing =
-    await prisma.membership.findFirst({
-      where: {
-        id: membershipId,
-        organizationId,
-      },
-    });
+    await findMembershipForUpdate(
+      organizationId,
+      membershipId,
+    );
 
   if (!existing) {
     throw new AppError(
@@ -112,29 +94,26 @@ export async function updateMembership(
   );
 
   const membership =
-    await prisma.membership.update({
-      where: {
-        id: membershipId,
-      },
-      data: {
+    await updateMembershipRecord(
+      membershipId,
+      {
         ...(roleChanged &&
         data.role !== undefined
-          ? { role: data.role }
+          ? {
+              role: data.role,
+            }
           : {}),
+
         ...(statusChanged &&
         data.status !== undefined
-          ? { status: data.status }
+          ? {
+              status: data.status,
+            }
           : {}),
       },
-      include: {
-        user: true,
-        organization: true,
-      },
-    });
+    );
 
   return toMembershipRecord(
     membership,
   );
 }
-
-//************************************************************** */
