@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { prisma } from "../../config/prisma.js";
+// import { prisma } from "../../config/prisma.js";
 import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
 import { validateAccessSession } from "./session.service.js";
 import { verifyAccessToken } from "./token.service.js";
@@ -8,6 +8,11 @@ import type {
   AuthenticatedMembership,
   AuthenticatedUser,
 } from "./auth.types.js";
+
+import {
+  findAuthenticatedMembership,
+  findAuthenticatedUserById,
+} from "./auth.repository.js";
 
 //************************************************************** */
 
@@ -62,22 +67,10 @@ export async function authenticateRequest(
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: tokenPayload.sub,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        isActive: true,
-        emailVerifiedAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+const user =
+  await findAuthenticatedUserById(
+    tokenPayload.sub,
+  );
 
     if (!user || !user.isActive) {
       response.status(401).json({
@@ -93,28 +86,12 @@ export async function authenticateRequest(
     request.authenticatedMembership = null;
 
     if (tokenPayload.membershipId) {
-      const membership = await prisma.membership.findFirst({
-        where: {
-          id: tokenPayload.membershipId,
-          userId: user.id,
-          ...(tokenPayload.organizationId
-            ? {
-                organizationId: tokenPayload.organizationId,
-              }
-            : {}),
-        },
-        select: {
-          id: true,
-          organizationId: true,
-          role: true,
-          status: true,
-          organization: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
+const membership =
+  await findAuthenticatedMembership(
+    tokenPayload.membershipId,
+    user.id,
+    tokenPayload.organizationId,
+  );
 
       if (!membership) {
         response.status(401).json({
