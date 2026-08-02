@@ -1,6 +1,6 @@
 import type { Response } from "express";
 
-import { AppError } from "../../common/errors/app-error.js";
+import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
 import type { UpdateMembershipInput } from "./membership.schemas.js";
 import {

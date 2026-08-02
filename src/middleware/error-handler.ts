@@ -1,5 +1,5 @@
 import type { ErrorRequestHandler } from "express";
-import { AppError } from "../common/errors/app-error.js";
+import { AppError } from "../platform/errors/app-error.js";
 import { env } from "../config/env.js";
 
 type ErrorWithStatus = Error & {

@@ -1,6 +1,6 @@
 // import { prisma } from "../../config/prisma.js";
 import { hashPassword, verifyPassword } from "./password.service.js";
-import { AppError } from "../../common/errors/app-error.js";
+import { AppError } from "../../platform/errors/app-error.js";
 import { generateAccessToken, parseRefreshToken } from "./token.service.js";
 import {
   MembershipStatus,

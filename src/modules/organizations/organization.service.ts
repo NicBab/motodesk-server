@@ -1,4 +1,4 @@
-import { AppError } from "../../common/errors/app-error.js";
+import { AppError } from "../../platform/errors/app-error.js";
 import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
