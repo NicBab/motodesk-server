@@ -27,6 +27,11 @@ import type {
   SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
+import {
+  created,
+  ok,
+} from "../../platform/http/api-response.js";
+
 //************************************************************** */
 
 function getRequestContext(request: Request): RequestContext {
@@ -50,13 +55,15 @@ export async function register(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-  response.status(201).json({
-    user: result.user,
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-  });
+created(response, {
+  user: result.user,
+  membership: result.membership,
+  permissions,
+  accessTokenExpiresAt:
+    result.accessTokenExpiresAt,
+  refreshTokenExpiresAt:
+    result.refreshTokenExpiresAt,
+});
 }
 
 //************************************************************** */
@@ -73,13 +80,15 @@ export async function login(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-  response.status(200).json({
-    user: result.user,
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-  });
+ok(response, {
+  user: result.user,
+  membership: result.membership,
+  permissions,
+  accessTokenExpiresAt:
+    result.accessTokenExpiresAt,
+  refreshTokenExpiresAt:
+    result.refreshTokenExpiresAt,
+});
 }
 
 //************************************************************** */
@@ -96,13 +105,15 @@ export async function refresh(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-  response.status(200).json({
-    user: result.user,
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-  });
+ok(response, {
+  user: result.user,
+  membership: result.membership,
+  permissions,
+  accessTokenExpiresAt:
+    result.accessTokenExpiresAt,
+  refreshTokenExpiresAt:
+    result.refreshTokenExpiresAt,
+});
 }
 
 //************************************************************** */
@@ -111,9 +122,11 @@ export async function switchOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId = request.authenticatedUser?.id;
+  const userId =
+    request.authenticatedUser?.id;
 
-  const sessionId = request.authenticationSessionId;
+  const sessionId =
+    request.authenticationSessionId;
 
   if (!userId || !sessionId) {
     response.status(401).json({
@@ -123,21 +136,32 @@ export async function switchOrganizationHandler(
     return;
   }
 
-  const input = request.body as SwitchOrganizationInput;
+  const input =
+    request.body as SwitchOrganizationInput;
 
-  const result = await switchOrganization(userId, sessionId, input);
+  const result =
+    await switchOrganization(
+      userId,
+      sessionId,
+      input,
+    );
 
-  setAccessTokenCookie(response, result.accessToken);
+  setAccessTokenCookie(
+    response,
+    result.accessToken,
+  );
 
-  const permissions = getPermissionsForRole(result.membership.role);
+  const permissions =
+    getPermissionsForRole(
+      result.membership.role,
+    );
 
-  response.status(200).json({
-    data: {
-      membership: result.membership,
-      permissions,
-      accessTokenExpiresAt: result.accessTokenExpiresAt,
-    },
-  });
+ok(response, {
+  membership: result.membership,
+  permissions,
+  accessTokenExpiresAt:
+    result.accessTokenExpiresAt,
+});
 }
 
 //************************************************************** */
@@ -150,7 +174,9 @@ export async function logout(
 
   clearAuthenticationCookies(response);
 
-  response.status(204).send();
+  ok(response, {
+  message: "Logged out successfully.",
+});
 }
 
 //************************************************************** */
@@ -159,7 +185,8 @@ export async function logoutAll(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId = request.authenticatedUser?.id;
+  const userId =
+    request.authenticatedUser?.id;
 
   if (!userId) {
     response.status(401).json({
@@ -169,13 +196,14 @@ export async function logoutAll(
     return;
   }
 
-  const revokedSessionCount = await logoutAllUserSessions(userId);
+  const revokedSessionCount =
+    await logoutAllUserSessions(userId);
 
   clearAuthenticationCookies(response);
 
-  response.status(200).json({
-    revokedSessionCount,
-  });
+ok(response, {
+  revokedSessionCount,
+});
 }
 
 //************************************************************** */
@@ -184,7 +212,8 @@ export async function me(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const user = request.authenticatedUser;
+  const user =
+    request.authenticatedUser;
 
   if (!user) {
     response.status(401).json({
@@ -194,17 +223,18 @@ export async function me(
     return;
   }
 
-  const permissions = request.authenticatedMembership
-    ? getPermissionsForRole(request.authenticatedMembership.role)
-    : [];
+  const permissions =
+    request.authenticatedMembership
+      ? getPermissionsForRole(
+          request.authenticatedMembership.role,
+        )
+      : [];
 
-  response.status(200).json({
-    data: {
-      user,
-      membership: request.authenticatedMembership,
-      permissions,
-    },
-  });
+ok(response, {
+  user,
+  membership: request.authenticatedMembership,
+  permissions,
+});
 }
 
 //************************************************************** */

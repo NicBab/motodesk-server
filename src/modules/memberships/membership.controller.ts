@@ -3,11 +3,16 @@ import type { Response } from "express";
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
 import type { UpdateMembershipInput } from "./membership.schemas.js";
+import { getRequestContext } from "../../platform/request/request.context.js";
 import {
   getMembershipById,
   listMemberships,
   updateMembership,
 } from "./membership.service.js";
+import {
+  list as listResponse,
+  ok,
+} from "../../platform/http/api-response.js";
 
 //************************************************************** */
 
@@ -50,9 +55,10 @@ export async function listMembershipsHandler(
 
   const memberships = await listMemberships(organizationId);
 
-  response.status(200).json({
-    data: memberships,
-  });
+ listResponse(
+  response,
+  memberships,
+);
 }
 
 //************************************************************** */
@@ -67,9 +73,10 @@ export async function getMembershipHandler(
 
   const membership = await getMembershipById(organizationId, membershipId);
 
-  response.status(200).json({
-    data: membership,
-  });
+ ok(
+  response,
+  membership,
+);
 }
 
 //************************************************************** */
@@ -78,47 +85,55 @@ export async function updateMembershipHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const actorMembership = request.authenticatedMembership;
+  const organizationId =
+    requireOrganizationId(request);
 
-  if (!request.authenticatedUser || !actorMembership) {
-    response.status(401).json({
-      message: "Authentication required.",
-    });
+  const membershipId =
+    requireMembershipId(request);
 
-    return;
+  const context = getRequestContext();
+
+  if (!context.membership) {
+    throw new AppError(
+      403,
+      "Organization membership is required.",
+      {
+        code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+      },
+    );
   }
 
-  const organizationId = request.params.organizationId;
+  const input =
+    request.body as UpdateMembershipInput;
 
-  const membershipId = request.params.membershipId;
+  const membership =
+    await updateMembership(
+      organizationId,
+      membershipId,
+      {
+        organizationId:
+          context.membership.organizationId,
+        membershipId:
+          context.membership.id,
+        role: context.membership.role,
+      },
+      {
+        ...(input.role !== undefined
+          ? {
+              role: input.role,
+            }
+          : {}),
 
-  if (typeof organizationId !== "string" || typeof membershipId !== "string") {
-    response.status(400).json({
-      message: "Organization ID and membership ID are required.",
-    });
+        ...(input.status !== undefined
+          ? {
+              status: input.status,
+            }
+          : {}),
+      },
+    );
 
-    return;
-  }
-
-  const input = request.body as UpdateMembershipInput;
-
-  const membership = await updateMembership(
-    organizationId,
-    membershipId,
-    {
-      organizationId: actorMembership.organizationId,
-      membershipId: actorMembership.id,
-      role: actorMembership.role,
-    },
-    {
-      ...(input.role !== undefined ? { role: input.role } : {}),
-      ...(input.status !== undefined ? { status: input.status } : {}),
-    },
-  );
-
-  response.status(200).json({
-    data: {
-      membership,
-    },
-  });
+  ok(
+  response,
+  membership,
+);
 }

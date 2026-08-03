@@ -6,7 +6,11 @@ import type {
 } from "express";
 import type { ZodType } from "zod";
 
-export function validateRequest<T>(
+import { mapValidationErrors } from "./validate-response.js";
+
+//************************************************************** */
+
+export function validateBody<T>(
   schema: ZodType<T>,
 ): RequestHandler {
   return (
@@ -14,16 +18,17 @@ export function validateRequest<T>(
     response: Response,
     next: NextFunction,
   ): void => {
-    const result = schema.safeParse(request.body);
+    const result =
+      schema.safeParse(request.body);
 
     if (!result.success) {
       response.status(400).json({
         success: false,
-        message: "Request validation failed.",
-        errors: result.error.issues.map((issue) => ({
-          field: issue.path.join("."),
-          message: issue.message,
-        })),
+        message:
+          "Request body validation failed.",
+        errors: mapValidationErrors(
+          result.error,
+        ),
       });
 
       return;

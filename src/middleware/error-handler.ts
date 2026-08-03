@@ -1,6 +1,8 @@
 import type { ErrorRequestHandler } from "express";
-import { AppError } from "../platform/errors/app-error.js";
+
 import { env } from "../config/env.js";
+import { AppError } from "../platform/errors/app-error.js";
+import { createErrorResponse } from "../platform/http/api-error.js";
 
 type ErrorWithStatus = Error & {
   status?: number;
@@ -30,26 +32,26 @@ export const errorHandler: ErrorRequestHandler = (
         normalizedError.status ??
         500;
 
-  const isServerError = statusCode >= 500;
+  const isServerError =
+    statusCode >= 500;
+
+  const responseBody =
+    createErrorResponse(
+      isServerError
+        ? "An unexpected server error occurred."
+        : normalizedError.message,
+
+      error instanceof AppError
+        ? error.code
+        : undefined,
+
+      error instanceof AppError
+        ? error.details
+        : undefined,
+    );
 
   response.status(statusCode).json({
-    message: isServerError
-      ? "An unexpected server error occurred."
-      : normalizedError.message,
-
-    ...(error instanceof AppError &&
-    error.code
-      ? {
-          code: error.code,
-        }
-      : {}),
-
-    ...(error instanceof AppError &&
-    error.details !== undefined
-      ? {
-          details: error.details,
-        }
-      : {}),
+    ...responseBody,
 
     ...(env.NODE_ENV === "development"
       ? {

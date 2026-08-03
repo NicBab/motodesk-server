@@ -2,6 +2,7 @@ import type { Response } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
+import { getRequestContext } from "../../platform/request/request.context.js";
 import type {
   CreateOrganizationRequest,
   UpdateOrganizationRequest,
@@ -12,25 +13,30 @@ import {
   getOrganizationsForUser,
   updateOrganization,
 } from "./organization.service.js";
+import {
+  created,
+  list as listResponse,
+  ok,
+} from "../../platform/http/api-response.js";
 
 //************************************************************** */
-function requireAuthenticatedUserId(
-  request: AuthenticatedRequest,
-): string {
-  const userId = request.authenticatedUser?.id;
+// function requireAuthenticatedUserId(
+//   request: AuthenticatedRequest,
+// ): string {
+//   const userId = request.authenticatedUser?.id;
 
-  if (!userId) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code: "AUTHENTICATION_REQUIRED",
-      },
-    );
-  }
+//   if (!userId) {
+//     throw new AppError(
+//       401,
+//       "Authentication required.",
+//       {
+//         code: "AUTHENTICATION_REQUIRED",
+//       },
+//     );
+//   }
 
-  return userId;
-}
+//   return userId;
+// }
 
 //************************************************************** */
 
@@ -62,6 +68,8 @@ export async function createOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
+  const context = getRequestContext();
+
   const body =
     request.body as CreateOrganizationRequest;
 
@@ -69,8 +77,7 @@ export async function createOrganizationHandler(
     await createOrganization({
       name: body.name,
       slug: body.slug,
-      ownerUserId:
-        requireAuthenticatedUserId(request),
+      ownerUserId: context.user.id,
 
       ...(body.email !== undefined
         ? {
@@ -85,26 +92,29 @@ export async function createOrganizationHandler(
         : {}),
     });
 
-  response.status(201).json({
-    data: organization,
-  });
+  created(
+  response,
+  organization,
+);
 }
 
 //************************************************************** */
 
 export async function getMyOrganizationsHandler(
-  request: AuthenticatedRequest,
+  _request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    requireAuthenticatedUserId(request);
+  const context = getRequestContext();
 
   const memberships =
-    await getOrganizationsForUser(userId);
+    await getOrganizationsForUser(
+      context.user.id,
+    );
 
-  response.status(200).json({
-    data: memberships,
-  });
+listResponse(
+  response,
+  memberships,
+);
 }
 
 //************************************************************** */
@@ -117,9 +127,10 @@ export async function getOrganizationHandler(
       requireOrganizationId(request),
     );
 
-  response.status(200).json({
-    data: organization,
-  });
+ok(
+  response,
+  organization,
+);
 }
 
 //************************************************************** */
@@ -127,11 +138,10 @@ export async function updateOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
+  const context = getRequestContext();
+
   const organizationId =
     requireOrganizationId(request);
-
-  const userId =
-    requireAuthenticatedUserId(request);
 
   const body =
     request.body as UpdateOrganizationRequest;
@@ -158,12 +168,13 @@ export async function updateOrganizationHandler(
             }
           : {}),
       },
-      userId,
+      context.user.id,
     );
 
-  response.status(200).json({
-    data: organization,
-  });
+ok(
+  response,
+  organization,
+);
 }
 
 //************************************************************** */

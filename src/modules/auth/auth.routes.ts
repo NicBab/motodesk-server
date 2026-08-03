@@ -2,8 +2,8 @@
 
 import { Router } from "express";
 import { authenticateRequest } from "./auth.middleware.js";
-import { validateRequest } from "../../middleware/validate-request.js";
-
+import { validateBody } from "../../platform/validation/validate-body.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 import {
   login,
   logout,
@@ -26,23 +26,24 @@ import {
 
 const router = Router();
 
-router.post("/register", validateRequest(registerSchema), register);
+router.post("/register",validateBody(registerSchema), register);
 
-router.post("/login", validateRequest(loginSchema), login);
+router.post("/login", validateBody(loginSchema), login);
 
-router.post("/refresh", validateRequest(refreshSessionSchema), refresh);
+router.post("/refresh", validateBody(refreshSessionSchema), refresh);
 
 router.post(
   "/switch-organization",
   authenticateRequest,
-  validateRequest(switchOrganizationSchema),
+  initializeRequestContext,
+  validateBody(switchOrganizationSchema),
   switchOrganizationHandler,
 );
 
-router.post("/logout", validateRequest(logoutSchema), logout);
+router.post("/logout", validateBody(logoutSchema), logout);
 
-router.post("/logout-all", authenticateRequest, logoutAll);
+router.post("/logout-all", authenticateRequest, initializeRequestContext, logoutAll);
 
-router.get("/me", authenticateRequest, me);
+router.get("/me", authenticateRequest, initializeRequestContext, me);
 
 export default router;

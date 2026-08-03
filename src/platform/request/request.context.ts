@@ -1,35 +1,57 @@
+import {
+  AsyncLocalStorage,
+} from "node:async_hooks";
+
+import { AppError } from "../errors/app-error.js";
 import type {
   RequestContext,
 } from "./request.types.js";
 
 //************************************************************** */
 
-let currentRequestContext:
-  | RequestContext
-  | null = null;
+const requestContextStorage =
+  new AsyncLocalStorage<RequestContext>();
 
 //************************************************************** */
 
-export function setRequestContext(
+export function runWithRequestContext<T>(
   context: RequestContext,
-): void {
-  currentRequestContext = context;
+  callback: () => T,
+): T {
+  return requestContextStorage.run(
+    context,
+    callback,
+  );
 }
 
 //************************************************************** */
 
-export function clearRequestContext(): void {
-  currentRequestContext = null;
-}
+export function getRequestContext():
+  RequestContext {
+  const context =
+    requestContextStorage.getStore();
 
-//************************************************************** */
-
-export function getRequestContext(): RequestContext {
-  if (!currentRequestContext) {
-    throw new Error(
-      "Request context has not been initialized.",
+  if (!context) {
+    throw new AppError(
+      500,
+      "Request context is unavailable.",
+      {
+        code:
+          "REQUEST_CONTEXT_UNAVAILABLE",
+      },
     );
   }
 
-  return currentRequestContext;
+  return context;
+}
+
+//************************************************************** */
+
+export function tryGetRequestContext():
+  | RequestContext
+  | null {
+  return (
+    requestContextStorage.getStore() ??
+    null
+  );
 }

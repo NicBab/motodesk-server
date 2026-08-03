@@ -6,6 +6,8 @@ import type {
 } from "express";
 import type { ZodType } from "zod";
 
+import { mapValidationErrors } from "./validate-response.js";
+
 //************************************************************** */
 
 export function validateParams<T>(
@@ -24,11 +26,8 @@ export function validateParams<T>(
         success: false,
         message:
           "Route parameter validation failed.",
-        errors: result.error.issues.map(
-          (issue) => ({
-            field: issue.path.join("."),
-            message: issue.message,
-          }),
+        errors: mapValidationErrors(
+          result.error,
         ),
       });
 

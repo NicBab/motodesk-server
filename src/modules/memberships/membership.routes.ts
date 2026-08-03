@@ -1,11 +1,12 @@
 import { Router } from "express";
 
-import { validateParams } from "../../middleware/validate-params.js";
-import { validateRequest } from "../../middleware/validate-request.js";
+import { validateBody } from "../../platform/validation/validate-body.js";
+import { validateParams } from "../../platform/validation/validate-params.js";
 import { authenticateRequest } from "../auth/auth.middleware.js";
 import { requireOrganizationAccess } from "../organizations/organization.middleware.js";
 import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 import {
   getMembershipHandler,
   listMembershipsHandler,
@@ -27,6 +28,7 @@ const router = Router({
 router.get(
   "/",
   authenticateRequest,
+  initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(
     Permissions.MEMBERSHIPS_VIEW,
@@ -39,6 +41,7 @@ router.get(
 router.get(
   "/:membershipId",
   authenticateRequest,
+  initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(
     Permissions.MEMBERSHIPS_VIEW,
@@ -52,12 +55,13 @@ router.get(
 router.patch(
   "/:membershipId",
   authenticateRequest,
+  initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(
     Permissions.MEMBERSHIPS_UPDATE,
   ),
   validateParams(membershipIdSchema),
-  validateRequest(updateMembershipSchema),
+  validateBody(updateMembershipSchema),
   updateMembershipHandler,
 );
 
