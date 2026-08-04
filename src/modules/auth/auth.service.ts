@@ -1,7 +1,15 @@
 // import { prisma } from "../../config/prisma.js";
 import { hashPassword, verifyPassword } from "./password.service.js";
 import { AppError } from "../../platform/errors/app-error.js";
-import { generateAccessToken, parseRefreshToken } from "./token.service.js";
+import { randomUUID } from "node:crypto";
+
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  parseRefreshToken,
+  type GeneratedRefreshToken,
+} from "./token.service.js";
+
 import {
   MembershipStatus,
   SessionRevocationReason,
@@ -34,7 +42,7 @@ import {
 } from "./session.service.js";
 
 import {
-  createUserRecord,
+  createRegistrationRecords,
   findUserForAuthentication,
   findUserForLogin,
   findUserForOrganizationSwitch,
@@ -130,37 +138,77 @@ export function toAuthenticatedMembership(
 // An invited or suspended membership does not enter the JWT:
 // This prevents a non-active membership from accidentally granting organization access.
 
-export async function createAuthenticationResult(
+//************************************************************** */
+
+function buildAuthenticationResult(
   user: UserWithPassword,
   membership: MembershipWithOrganization | null,
-  context: RequestContext,
-): Promise<AuthenticationResult> {
-  const { session, refreshToken } = await createSession(user.id, context);
-
-  const authenticatedUser = toAuthenticatedUser(user);
+  sessionId: string,
+  refreshToken: GeneratedRefreshToken,
+): AuthenticationResult {
+  const authenticatedUser =
+    toAuthenticatedUser(user);
 
   const authenticatedMembership =
-    membership?.status === MembershipStatus.ACTIVE
-      ? toAuthenticatedMembership(membership)
+    membership?.status ===
+    MembershipStatus.ACTIVE
+      ? toAuthenticatedMembership(
+          membership,
+        )
       : null;
 
-  const accessToken = generateAccessToken({
-    sub: user.id,
-    email: user.email,
-    sessionId: session.id,
-    organizationId: authenticatedMembership?.organizationId ?? null,
-    membershipId: authenticatedMembership?.id ?? null,
-    role: authenticatedMembership?.role ?? null,
-  });
+  const accessToken =
+    generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      sessionId,
+      organizationId:
+        authenticatedMembership
+          ?.organizationId ?? null,
+      membershipId:
+        authenticatedMembership?.id ??
+        null,
+      role:
+        authenticatedMembership?.role ??
+        null,
+    });
 
   return {
     user: authenticatedUser,
-    membership: authenticatedMembership,
+    membership:
+      authenticatedMembership,
     accessToken: accessToken.token,
     refreshToken: refreshToken.token,
-    accessTokenExpiresAt: accessToken.expiresAt,
-    refreshTokenExpiresAt: refreshToken.expiresAt,
+    accessTokenExpiresAt:
+      accessToken.expiresAt,
+    refreshTokenExpiresAt:
+      refreshToken.expiresAt,
   };
+}
+
+//************************************************************** */
+
+export async function createAuthenticationResult(
+  user: UserWithPassword,
+  membership:
+    | MembershipWithOrganization
+    | null,
+  context: RequestContext,
+): Promise<AuthenticationResult> {
+  const {
+    session,
+    refreshToken,
+  } = await createSession(
+    user.id,
+    context,
+  );
+
+  return buildAuthenticationResult(
+    user,
+    membership,
+    session.id,
+    refreshToken,
+  );
 }
 
 //************************************************************** */
@@ -185,20 +233,56 @@ export async function registerUser(
   const passwordHash =
     await hashPassword(input.password);
 
-  const user = await createUserRecord({
-    email: input.email,
-    passwordHash,
-    firstName: input.firstName,
-    lastName: input.lastName,
-    phone: input.phone ?? null,
-  });
+  const sessionId = randomUUID();
 
-  // Registration creates only the user account.
-  // Organization creation happens during onboarding.
-  return createAuthenticationResult(
-    user,
-    null,
-    context,
+  const refreshToken =
+    generateRefreshToken(sessionId);
+
+  const records =
+    await createRegistrationRecords({
+      user: {
+        email: input.email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone ?? null,
+      },
+
+      session: {
+        id: sessionId,
+        tokenHash: refreshToken.tokenHash,
+        userAgent: context.userAgent,
+        ipAddress: context.ipAddress,
+        expiresAt: refreshToken.expiresAt,
+      },
+
+      ...(input.organization !== undefined
+        ? {
+            organization: {
+              name: input.organization.name,
+              slug: input.organization.slug,
+
+              ...(input.organization.email !== undefined
+                ? {
+                    email: input.organization.email,
+                  }
+                : {}),
+
+              ...(input.organization.phone !== undefined
+                ? {
+                    phone: input.organization.phone,
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    });
+
+  return buildAuthenticationResult(
+    records.user,
+    records.membership,
+    records.session.id,
+    refreshToken,
   );
 }
 

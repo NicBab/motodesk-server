@@ -2,6 +2,10 @@
 
 import { z } from "zod";
 
+import {
+  createOrganizationSchema,
+} from "../organizations/organization.schemas.js";
+
 //************************************************************** */
 
 const emailSchema = z
@@ -53,6 +57,9 @@ export const registerSchema = z.object({
   firstName: nameSchema,
   lastName: nameSchema,
   phone: optionalPhoneSchema,
+
+  organization:
+    createOrganizationSchema.optional(),
 });
 
 //************************************************************** */

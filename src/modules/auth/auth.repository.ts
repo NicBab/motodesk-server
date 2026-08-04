@@ -1,7 +1,12 @@
 import {
   MembershipStatus,
+  MembershipRole,
   type Prisma,
 } from "../../generated/prisma/client.js";
+
+import {
+  runTransaction,
+} from "../../platform/database/repository.js";
 
 import { prisma } from "../../config/prisma.js";
 
@@ -205,4 +210,123 @@ export async function findAuthenticatedMembership(
       },
     },
   });
+}
+
+//************************************************************** */
+//************************************************************** */
+
+export interface RegistrationOrganizationData {
+  name: string;
+  slug: string;
+  email?: string;
+  phone?: string;
+}
+
+//************************************************************** */
+
+export interface CreateRegistrationRecordsData {
+  user: CreateUserRecordData;
+
+  session: {
+    id: string;
+    tokenHash: string;
+    userAgent: string | null;
+    ipAddress: string | null;
+    expiresAt: Date;
+  };
+
+  organization?: RegistrationOrganizationData;
+}
+
+//************************************************************** */
+
+export async function createRegistrationRecords(
+  data: CreateRegistrationRecordsData,
+) {
+  return runTransaction(
+    async (transaction) => {
+      const user =
+        await transaction.user.create({
+          data: {
+            email: data.user.email,
+            passwordHash:
+              data.user.passwordHash,
+            firstName:
+              data.user.firstName,
+            lastName:
+              data.user.lastName,
+            phone: data.user.phone,
+            isActive: true,
+          },
+          select: authenticationUserSelect,
+        });
+
+      let membership = null;
+
+      if (data.organization) {
+        const organization =
+          await transaction.organization.create({
+            data: {
+              name:
+                data.organization.name,
+              slug:
+                data.organization.slug,
+
+              ...(data.organization.email !==
+              undefined
+                ? {
+                    email:
+                      data.organization.email,
+                  }
+                : {}),
+
+              ...(data.organization.phone !==
+              undefined
+                ? {
+                    phone:
+                      data.organization.phone,
+                  }
+                : {}),
+            },
+          });
+
+        membership =
+          await transaction.membership.create({
+            data: {
+              userId: user.id,
+              organizationId:
+                organization.id,
+              role:
+                MembershipRole.OWNER,
+              status:
+                MembershipStatus.ACTIVE,
+            },
+            select:
+              authenticationMembershipSelect,
+          });
+      }
+
+      const session =
+        await transaction.session.create({
+          data: {
+            id: data.session.id,
+            userId: user.id,
+            tokenHash:
+              data.session.tokenHash,
+            userAgent:
+              data.session.userAgent,
+            ipAddress:
+              data.session.ipAddress,
+            expiresAt:
+              data.session.expiresAt,
+          },
+        });
+
+      return {
+        user,
+        membership,
+        session,
+      };
+    },
+  );
 }
