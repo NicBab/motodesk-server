@@ -5,6 +5,10 @@ import {
   MembershipStatus,
 } from "../../generated/prisma/client.js";
 
+import {
+  paginationQuerySchema,
+} from "../../platform/http/pagination.schema.js";
+
 //************************************************************** */
 
 export const updateMembershipSchema = z.object({
@@ -23,6 +27,11 @@ export const membershipIdSchema = z.object({
 
 //************************************************************** */
 
+export const listMembershipsQuerySchema =
+  paginationQuerySchema;
+
+//************************************************************** */
+
 export type UpdateMembershipInput = z.infer<
   typeof updateMembershipSchema
 >;
@@ -30,3 +39,8 @@ export type UpdateMembershipInput = z.infer<
 export type MembershipIdInput = z.infer<
   typeof membershipIdSchema
 >;
+
+export type ListMembershipsQueryInput =
+  z.infer<
+    typeof listMembershipsQuerySchema
+  >;

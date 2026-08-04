@@ -3,25 +3,54 @@ import type {
   MembershipUpdateData,
 } from "./membership.types.js";
 
+import type {
+  PaginationInput,
+} from "../../platform/http/pagination.js";
+
+import {
+  buildPagination,
+} from "../../platform/database/repository.js";
+
 //************************************************************** */
 
 export async function findMembershipsByOrganization(
   organizationId: string,
+  pagination?: PaginationInput,
 ) {
   return prisma.membership.findMany({
     where: {
       organizationId,
     },
+
+    ...(pagination !== undefined
+      ? buildPagination(
+          pagination.page,
+          pagination.pageSize,
+        )
+      : {}),
+
     include: {
       user: true,
       organization: true,
     },
+
     orderBy: {
       createdAt: "asc",
     },
   });
 }
 
+//************************************************************** */
+
+export async function countMembershipsByOrganization(
+  organizationId: string,
+): Promise<number> {
+  return prisma.membership.count({
+    where: {
+      organizationId,
+    },
+  });
+}
 //************************************************************** */
 
 export async function findMembershipById(

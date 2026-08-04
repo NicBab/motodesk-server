@@ -1,18 +1,22 @@
 import type { Response } from "express";
-
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
-import type { UpdateMembershipInput } from "./membership.schemas.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
+
 import {
   getMembershipById,
   listMemberships,
   updateMembership,
 } from "./membership.service.js";
+
 import {
-  list as listResponse,
   ok,
 } from "../../platform/http/api-response.js";
+
+import type {
+  ListMembershipsQueryInput,
+  UpdateMembershipInput,
+} from "./membership.schemas.js";
 
 //************************************************************** */
 
@@ -51,14 +55,25 @@ export async function listMembershipsHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId = requireOrganizationId(request);
+  const organizationId =
+    requireOrganizationId(request);
 
-  const memberships = await listMemberships(organizationId);
+  const query =
+    request.query as unknown as ListMembershipsQueryInput;
 
- listResponse(
-  response,
-  memberships,
-);
+  const memberships =
+    await listMemberships(
+      organizationId,
+      {
+        page: query.page,
+        pageSize: query.pageSize,
+      },
+    );
+
+  ok(
+    response,
+    memberships,
+  );
 }
 
 //************************************************************** */

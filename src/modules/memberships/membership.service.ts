@@ -1,34 +1,59 @@
 import { AppError } from "../../platform/errors/app-error.js";
 import { assertMembershipUpdateAllowed } from "./membership.policy.js";
+
 import {
+  countMembershipsByOrganization,
   findMembershipById,
   findMembershipForUpdate,
   findMembershipsByOrganization,
   updateMembershipRecord,
 } from "./membership.repository.js";
+
 import type {
   MembershipActorContext,
   MembershipListItem,
   MembershipRecord,
   MembershipUpdateData,
 } from "./membership.types.js";
+
 import {
   toMembershipListItem,
   toMembershipRecord,
 } from "./membership.utils.js";
 
+import {
+  createPaginatedData,
+  type PaginatedData,
+  type PaginationInput,
+} from "../../platform/http/pagination.js";
+
 //************************************************************** */
 
 export async function listMemberships(
   organizationId: string,
-): Promise<MembershipListItem[]> {
-  const memberships =
-    await findMembershipsByOrganization(
+  pagination: PaginationInput,
+): Promise<PaginatedData<MembershipListItem>> {
+  const [
+    memberships,
+    totalItems,
+  ] = await Promise.all([
+    findMembershipsByOrganization(
       organizationId,
-    );
+      pagination,
+    ),
+    countMembershipsByOrganization(
+      organizationId,
+    ),
+  ]);
 
-  return memberships.map(
+  const items = memberships.map(
     toMembershipListItem,
+  );
+
+  return createPaginatedData(
+    items,
+    pagination,
+    totalItems,
   );
 }
 

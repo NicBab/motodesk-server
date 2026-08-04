@@ -1,7 +1,6 @@
 import { Router } from "express";
 
-import { validateBody } from "../../platform/validation/validate-body.js";
-import { validateParams } from "../../platform/validation/validate-params.js";
+
 import { authenticateRequest } from "../auth/auth.middleware.js";
 import { requireOrganizationAccess } from "../organizations/organization.middleware.js";
 import { Permissions } from "../permissions/permission.constants.js";
@@ -12,10 +11,18 @@ import {
   listMembershipsHandler,
   updateMembershipHandler,
 } from "./membership.controller.js";
+
 import {
+  listMembershipsQuerySchema,
   membershipIdSchema,
   updateMembershipSchema,
 } from "./membership.schemas.js";
+
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../../platform/validation/index.js";
 
 //************************************************************** */
 
@@ -32,6 +39,9 @@ router.get(
   requireOrganizationAccess,
   requirePermissions(
     Permissions.MEMBERSHIPS_VIEW,
+  ),
+  validateQuery(
+    listMembershipsQuerySchema,
   ),
   listMembershipsHandler,
 );
