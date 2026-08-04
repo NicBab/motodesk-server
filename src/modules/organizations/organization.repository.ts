@@ -3,6 +3,7 @@ import type {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from "./organization.types.js";
+import { runTransaction } from "../../platform/database/repository.js";
 
 //************************************************************** */
 
@@ -36,7 +37,7 @@ export async function findOrganizationById(
 export async function createOrganizationWithOwner(
   input: CreateOrganizationInput,
 ) {
-  return prisma.$transaction(
+  return runTransaction(
     async (transaction) => {
       const organization =
         await transaction.organization.create({
@@ -61,7 +62,8 @@ export async function createOrganizationWithOwner(
       await transaction.membership.create({
         data: {
           userId: input.ownerUserId,
-          organizationId: organization.id,
+          organizationId:
+            organization.id,
           role: "OWNER",
           status: "ACTIVE",
         },
