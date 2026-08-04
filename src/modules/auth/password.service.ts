@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { PASSWORD_HASH_ROUNDS } from "./auth.constants.js";
 
 //************************************************************** */
+
 export async function hashPassword(
   password: string,
 ): Promise<string> {

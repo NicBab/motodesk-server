@@ -2,8 +2,11 @@ import type { Response } from "express";
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
-import type { ValidatedRequest } from "../../platform/validation/validated-request.js";
 
+import {
+  requireValidatedBody,
+  requireValidatedParams,
+} from "../../platform/validation/validated-request.js";
 import type {
   CreateOrganizationRequest,
   OrganizationIdInput,
@@ -69,32 +72,25 @@ export async function createOrganizationHandler(
 ): Promise<void> {
   const context = getRequestContext();
 
-  const body = (request as ValidatedRequest<CreateOrganizationRequest>)
-    .validatedBody;
+  const body =
+    requireValidatedBody<CreateOrganizationRequest>(
+      request,
+    );
 
-  if (!body) {
-    throw new AppError(500, "Validated request body is unavailable.", {
-      code: "VALIDATED_BODY_UNAVAILABLE",
+  const organization =
+    await createOrganization({
+      name: body.name,
+      slug: body.slug,
+      ownerUserId: context.user.id,
+
+      ...(body.email !== undefined
+        ? { email: body.email }
+        : {}),
+
+      ...(body.phone !== undefined
+        ? { phone: body.phone }
+        : {}),
     });
-  }
-
-  const organization = await createOrganization({
-    name: body.name,
-    slug: body.slug,
-    ownerUserId: context.user.id,
-
-    ...(body.email !== undefined
-      ? {
-          email: body.email,
-        }
-      : {}),
-
-    ...(body.phone !== undefined
-      ? {
-          phone: body.phone,
-        }
-      : {}),
-  });
 
   created(response, organization);
 }
@@ -113,26 +109,15 @@ export async function getMyOrganizationsHandler(
 }
 
 //************************************************************** */
+
 export async function getOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const params = (
-    request as ValidatedRequest<
-      unknown,
-      OrganizationIdInput
-    >
-  ).validatedParams;
-
-  if (!params) {
-    throw new AppError(
-      500,
-      "Validated route parameters are unavailable.",
-      {
-        code: "VALIDATED_PARAMS_UNAVAILABLE",
-      },
+  const params =
+    requireValidatedParams<OrganizationIdInput>(
+      request,
     );
-  }
 
   const organization =
     await getOrganizationById(
@@ -143,69 +128,41 @@ export async function getOrganizationHandler(
 }
 
 //************************************************************** */
+
 export async function updateOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
   const context = getRequestContext();
 
-  const params = (
-    request as ValidatedRequest<
-      UpdateOrganizationRequest,
-      OrganizationIdInput
-    >
-  ).validatedParams;
-
-  if (!params) {
-    throw new AppError(
-      500,
-      "Validated route parameters are unavailable.",
-      {
-        code: "VALIDATED_PARAMS_UNAVAILABLE",
-      },
+  const params =
+    requireValidatedParams<OrganizationIdInput>(
+      request,
     );
-  }
 
-  const body = (
-    request as ValidatedRequest<
-      UpdateOrganizationRequest,
-      OrganizationIdInput
-    >
-  ).validatedBody;
-
-  if (!body) {
-    throw new AppError(
-      500,
-      "Validated request body is unavailable.",
-      {
-        code: "VALIDATED_BODY_UNAVAILABLE",
-      },
+  const body =
+    requireValidatedBody<UpdateOrganizationRequest>(
+      request,
     );
-  }
 
-  const organization = await updateOrganization(
-    params.organizationId,
-    {
-      ...(body.name !== undefined
-        ? {
-            name: body.name,
-          }
-        : {}),
+  const organization =
+    await updateOrganization(
+      params.organizationId,
+      {
+        ...(body.name !== undefined
+          ? { name: body.name }
+          : {}),
 
-      ...(body.email !== undefined
-        ? {
-            email: body.email,
-          }
-        : {}),
+        ...(body.email !== undefined
+          ? { email: body.email }
+          : {}),
 
-      ...(body.phone !== undefined
-        ? {
-            phone: body.phone,
-          }
-        : {}),
-    },
-    context.user.id,
-  );
+        ...(body.phone !== undefined
+          ? { phone: body.phone }
+          : {}),
+      },
+      context.user.id,
+    );
 
   ok(response, organization);
 }

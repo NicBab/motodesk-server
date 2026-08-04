@@ -32,7 +32,9 @@ import { created, ok } from "../../platform/http/api-response.js";
 
 import { AppError } from "../../platform/errors/app-error.js";
 
-import type { ValidatedRequest } from "../../platform/validation/validated-request.js";
+import {
+  requireValidatedBody,
+} from "../../platform/validation/validated-request.js";
 
 //************************************************************** */
 
@@ -49,16 +51,15 @@ export async function register(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input = (request as ValidatedRequest<RegisterInput>).validatedBody;
+  const input =
+    requireValidatedBody<RegisterInput>(
+      request,
+    );
 
-  if (!input) {
-    throw new AppError(500, "Validated request body is unavailable.", {
-      code: "VALIDATED_BODY_UNAVAILABLE",
-    });
-  }
-
-  const result = await registerUser(input, getRequestContext(request));
-
+  const result = await registerUser(
+    input,
+    getRequestContext(request),
+  );
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   const permissions = result.membership
@@ -80,13 +81,10 @@ export async function login(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input = (request as ValidatedRequest<LoginInput>).validatedBody;
-
-  if (!input) {
-    throw new AppError(500, "Validated request body is unavailable.", {
-      code: "VALIDATED_BODY_UNAVAILABLE",
-    });
-  }
+  const input =
+  requireValidatedBody<LoginInput>(
+    request,
+  );
 
   const result = await loginUser(input, getRequestContext(request));
 
@@ -111,14 +109,10 @@ export async function refresh(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input = (request as ValidatedRequest<RefreshSessionInput>)
-    .validatedBody;
-
-  if (!input) {
-    throw new AppError(500, "Validated request body is unavailable.", {
-      code: "VALIDATED_BODY_UNAVAILABLE",
-    });
-  }
+ const input =
+  requireValidatedBody<RefreshSessionInput>(
+    request,
+  );
 
   const result = await refreshSession(input, getRequestContext(request));
 
@@ -153,21 +147,10 @@ export async function switchOrganizationHandler(
     });
   }
 
-  const input = (
-  request as ValidatedRequest<
-    SwitchOrganizationInput
-  >
-).validatedBody;
-
-if (!input) {
-  throw new AppError(
-    500,
-    "Validated request body is unavailable.",
-    {
-      code: "VALIDATED_BODY_UNAVAILABLE",
-    },
+const input =
+  requireValidatedBody<SwitchOrganizationInput>(
+    request,
   );
-}
 
   const result = await switchOrganization(userId, sessionId, input);
 
@@ -188,21 +171,10 @@ export async function logout(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input = (
-    request as ValidatedRequest<
-      LogoutInput
-    >
-  ).validatedBody;
-
-  if (!input) {
-    throw new AppError(
-      500,
-      "Validated request body is unavailable.",
-      {
-        code: "VALIDATED_BODY_UNAVAILABLE",
-      },
-    );
-  }
+const input =
+  requireValidatedBody<LogoutInput>(
+    request,
+  );
 
   await logoutUser(input);
 

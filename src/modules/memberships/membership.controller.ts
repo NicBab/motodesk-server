@@ -3,7 +3,11 @@ import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
 
-import type { ValidatedRequest } from "../../platform/validation/validated-request.js";
+import {
+  requireValidatedBody,
+  requireValidatedParams,
+  requireValidatedQuery,
+} from "../../platform/validation/validated-request.js";
 
 import {
   getMembershipById,
@@ -56,22 +60,22 @@ export async function listMembershipsHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId = requireOrganizationId(request);
+  const organizationId =
+    requireOrganizationId(request);
 
-  const query = (
-    request as ValidatedRequest<unknown, unknown, ListMembershipsQueryInput>
-  ).validatedQuery;
+  const query =
+    requireValidatedQuery<ListMembershipsQueryInput>(
+      request,
+    );
 
-  if (!query) {
-    throw new AppError(500, "Validated query data is unavailable.", {
-      code: "VALIDATED_QUERY_UNAVAILABLE",
-    });
-  }
-
-  const memberships = await listMemberships(organizationId, {
-    page: query.page,
-    pageSize: query.pageSize,
-  });
+  const memberships =
+    await listMemberships(
+      organizationId,
+      {
+        page: query.page,
+        pageSize: query.pageSize,
+      },
+    );
 
   ok(response, memberships);
 }
@@ -82,20 +86,19 @@ export async function getMembershipHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId = requireOrganizationId(request);
+  const organizationId =
+    requireOrganizationId(request);
 
-  const params = (request as ValidatedRequest<unknown, MembershipIdInput>)
-    .validatedParams;
+  const params =
+    requireValidatedParams<MembershipIdInput>(
+      request,
+    );
 
-  if (!params) {
-    throw new AppError(500, "Validated route parameters are unavailable.", {
-      code: "VALIDATED_PARAMS_UNAVAILABLE",
-    });
-  }
-
-  const membershipId = params.membershipId;
-
-  const membership = await getMembershipById(organizationId, membershipId);
+  const membership =
+    await getMembershipById(
+      organizationId,
+      params.membershipId,
+    );
 
   ok(response, membership);
 }
@@ -106,58 +109,58 @@ export async function updateMembershipHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId = requireOrganizationId(request);
+  const organizationId =
+    requireOrganizationId(request);
 
-  const params = (request as ValidatedRequest<unknown, MembershipIdInput>)
-    .validatedParams;
+  const params =
+    requireValidatedParams<MembershipIdInput>(
+      request,
+    );
 
-  if (!params) {
-    throw new AppError(500, "Validated route parameters are unavailable.", {
-      code: "VALIDATED_PARAMS_UNAVAILABLE",
-    });
-  }
-
-  const membershipId = params.membershipId;
-
-  const context = getRequestContext();
+  const context =
+    getRequestContext();
 
   if (!context.membership) {
-    throw new AppError(403, "Organization membership is required.", {
-      code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
-    });
+    throw new AppError(
+      403,
+      "Organization membership is required.",
+      {
+        code:
+          "ORGANIZATION_MEMBERSHIP_REQUIRED",
+      },
+    );
   }
 
-  const input = (request as ValidatedRequest<UpdateMembershipInput>)
-    .validatedBody;
+  const input =
+    requireValidatedBody<UpdateMembershipInput>(
+      request,
+    );
 
-  if (!input) {
-    throw new AppError(500, "Validated request body is unavailable.", {
-      code: "VALIDATED_BODY_UNAVAILABLE",
-    });
-  }
-
-  const membership = await updateMembership(
-    organizationId,
-    membershipId,
-    {
-      organizationId: context.membership.organizationId,
-      membershipId: context.membership.id,
-      role: context.membership.role,
-    },
-    {
-      ...(input.role !== undefined
-        ? {
-            role: input.role,
-          }
-        : {}),
-
-      ...(input.status !== undefined
-        ? {
-            status: input.status,
-          }
-        : {}),
-    },
-  );
+  const membership =
+    await updateMembership(
+      organizationId,
+      params.membershipId,
+      {
+        organizationId:
+          context.membership.organizationId,
+        membershipId:
+          context.membership.id,
+        role:
+          context.membership.role,
+      },
+      {
+        ...(input.role !== undefined
+          ? {
+              role: input.role,
+            }
+          : {}),
+        ...(input.status !== undefined
+          ? {
+              status: input.status,
+            }
+          : {}),
+      },
+    );
 
   ok(response, membership);
 }
