@@ -1,18 +1,17 @@
 import type { NextFunction, Request, Response } from "express";
-// import { prisma } from "../../config/prisma.js";
-import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
-import { validateAccessSession } from "./session.service.js";
-import { verifyAccessToken } from "./token.service.js";
 
-import type {
-  AuthenticatedMembership,
-  AuthenticatedUser,
-} from "./auth.types.js";
-
+import { AppError } from "../../platform/errors/app-error.js";
 import {
   findAuthenticatedMembership,
   findAuthenticatedUserById,
 } from "./auth.repository.js";
+import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
+import type {
+  AuthenticatedMembership,
+  AuthenticatedUser,
+} from "./auth.types.js";
+import { validateAccessSession } from "./session.service.js";
+import { verifyAccessToken } from "./token.service.js";
 
 //************************************************************** */
 
@@ -38,15 +37,17 @@ function getAccessToken(request: Request): string | null {
 
 export async function authenticateRequest(
   request: AuthenticatedRequest,
-  response: Response,
+  _response: Response,
   next: NextFunction,
 ): Promise<void> {
   const accessToken = getAccessToken(request);
 
   if (!accessToken) {
-    response.status(401).json({
-      message: "Authentication required.",
-    });
+    next(
+      new AppError(401, "Authentication required.", {
+        code: "AUTHENTICATION_REQUIRED",
+      }),
+    );
 
     return;
   }
@@ -60,22 +61,23 @@ export async function authenticateRequest(
     );
 
     if (!validatedSession) {
-      response.status(401).json({
-        message: "Session is invalid or expired.",
-      });
+      next(
+        new AppError(401, "Session is invalid or expired.", {
+          code: "AUTHENTICATION_SESSION_INVALID",
+        }),
+      );
 
       return;
     }
 
-const user =
-  await findAuthenticatedUserById(
-    tokenPayload.sub,
-  );
+    const user = await findAuthenticatedUserById(tokenPayload.sub);
 
     if (!user || !user.isActive) {
-      response.status(401).json({
-        message: "Account is unavailable.",
-      });
+      next(
+        new AppError(401, "Account is unavailable.", {
+          code: "ACCOUNT_UNAVAILABLE",
+        }),
+      );
 
       return;
     }
@@ -86,17 +88,18 @@ const user =
     request.authenticatedMembership = null;
 
     if (tokenPayload.membershipId) {
-const membership =
-  await findAuthenticatedMembership(
-    tokenPayload.membershipId,
-    user.id,
-    tokenPayload.organizationId,
-  );
+      const membership = await findAuthenticatedMembership(
+        tokenPayload.membershipId,
+        user.id,
+        tokenPayload.organizationId,
+      );
 
       if (!membership) {
-        response.status(401).json({
-          message: "Organization membership is unavailable.",
-        });
+        next(
+          new AppError(401, "Organization membership is unavailable.", {
+            code: "ORGANIZATION_MEMBERSHIP_UNAVAILABLE",
+          }),
+        );
 
         return;
       }
@@ -112,9 +115,11 @@ const membership =
 
     next();
   } catch {
-    response.status(401).json({
-      message: "Access token is invalid or expired.",
-    });
+    next(
+      new AppError(401, "Access token is invalid or expired.", {
+        code: "ACCESS_TOKEN_INVALID_OR_EXPIRED",
+      }),
+    );
   }
 }
 

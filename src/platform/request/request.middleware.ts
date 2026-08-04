@@ -1,49 +1,33 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-  NextFunction,
-  Response,
-} from "express";
+import type { NextFunction, Response } from "express";
 
-import type {
-  AuthenticatedRequest,
-} from "../../modules/auth/auth.middleware.js";
+import type { AuthenticatedRequest } from "../../modules/auth/auth.middleware.js";
 
-import {
-  runWithRequestContext,
-} from "./request.context.js";
+import { runWithRequestContext } from "./request.context.js";
 
-import type {
-  RequestContext,
-} from "./request.types.js";
+import type { RequestContext } from "./request.types.js";
+
+import { AppError } from "../errors/app-error.js";
 
 //************************************************************** */
 
-function getRequestId(
-  request: AuthenticatedRequest,
-): string {
-  const headerValue =
-    request.get("x-request-id");
+function getRequestId(request: AuthenticatedRequest): string {
+  const headerValue = request.get("x-request-id");
 
   return headerValue?.trim() || randomUUID();
 }
 
 //************************************************************** */
 
-function getIpAddress(
-  request: AuthenticatedRequest,
-): string | null {
+function getIpAddress(request: AuthenticatedRequest): string | null {
   return request.ip || null;
 }
 
 //************************************************************** */
 
-function getUserAgent(
-  request: AuthenticatedRequest,
-): string | null {
-  return (
-    request.get("user-agent") ?? null
-  );
+function getUserAgent(request: AuthenticatedRequest): string | null {
+  return request.get("user-agent") ?? null;
 }
 
 //************************************************************** */
@@ -53,33 +37,31 @@ export function initializeRequestContext(
   response: Response,
   next: NextFunction,
 ): void {
-  const user =
-    request.authenticatedUser;
+  const user = request.authenticatedUser;
 
-  const sessionId =
-    request.authenticationSessionId;
+  const sessionId = request.authenticationSessionId;
 
   if (!user || !sessionId) {
-    response.status(401).json({
-      success: false,
-      message:
+    next(
+      new AppError(
+        401,
         "Authenticated request context could not be initialized.",
-      code: "AUTHENTICATION_REQUIRED",
-    });
+        {
+          code: "AUTHENTICATION_REQUIRED",
+        },
+      ),
+    );
 
     return;
   }
 
-  const requestId =
-    getRequestId(request);
+  const requestId = getRequestId(request);
 
   const context: RequestContext = {
     requestId,
     sessionId,
-    ipAddress:
-      getIpAddress(request),
-    userAgent:
-      getUserAgent(request),
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
 
     user: {
       id: user.id,
@@ -89,34 +71,20 @@ export function initializeRequestContext(
       phone: user.phone,
     },
 
-    membership:
-      request.authenticatedMembership
-        ? {
-            id:
-              request.authenticatedMembership.id,
-            organizationId:
-              request.authenticatedMembership
-                .organizationId,
-            organizationName:
-              request.authenticatedMembership
-                .organizationName,
-            role:
-              request.authenticatedMembership.role,
-            status:
-              request.authenticatedMembership.status,
-          }
-        : null,
+    membership: request.authenticatedMembership
+      ? {
+          id: request.authenticatedMembership.id,
+          organizationId: request.authenticatedMembership.organizationId,
+          organizationName: request.authenticatedMembership.organizationName,
+          role: request.authenticatedMembership.role,
+          status: request.authenticatedMembership.status,
+        }
+      : null,
   };
 
-  response.setHeader(
-    "x-request-id",
-    requestId,
-  );
+  response.setHeader("x-request-id", requestId);
 
-  runWithRequestContext(
-    context,
-    next,
-  );
+  runWithRequestContext(context, next);
 }
 
 //************************************************************** */

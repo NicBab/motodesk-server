@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 import type { RequestContext } from "./auth.types.js";
 import type { AuthenticatedRequest } from "./auth.middleware.js";
 import { getPermissionsForRole } from "../permissions/permission.utils.js";
+
 import {
   clearAuthenticationCookies,
   setAccessTokenCookie,
@@ -31,6 +32,7 @@ import {
   created,
   ok,
 } from "../../platform/http/api-response.js";
+import { AppError } from "../../platform/errors/app-error.js";
 
 //************************************************************** */
 
@@ -128,13 +130,15 @@ export async function switchOrganizationHandler(
   const sessionId =
     request.authenticationSessionId;
 
-  if (!userId || !sessionId) {
-    response.status(401).json({
-      message: "Authentication required.",
-    });
-
-    return;
-  }
+if (!userId || !sessionId) {
+  throw new AppError(
+    401,
+    "Authentication required.",
+    {
+      code: "AUTHENTICATION_REQUIRED",
+    },
+  );
+}
 
   const input =
     request.body as SwitchOrganizationInput;
@@ -188,13 +192,15 @@ export async function logoutAll(
   const userId =
     request.authenticatedUser?.id;
 
-  if (!userId) {
-    response.status(401).json({
-      message: "Authentication required.",
-    });
-
-    return;
-  }
+if (!userId) {
+  throw new AppError(
+    401,
+    "Authentication required.",
+    {
+      code: "AUTHENTICATION_REQUIRED",
+    },
+  );
+}
 
   const revokedSessionCount =
     await logoutAllUserSessions(userId);
@@ -215,13 +221,15 @@ export async function me(
   const user =
     request.authenticatedUser;
 
-  if (!user) {
-    response.status(401).json({
-      message: "Authentication required.",
-    });
-
-    return;
-  }
+if (!user) {
+  throw new AppError(
+    401,
+    "Authentication required.",
+    {
+      code: "AUTHENTICATION_REQUIRED",
+    },
+  );
+}
 
   const permissions =
     request.authenticatedMembership
