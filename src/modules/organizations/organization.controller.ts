@@ -1,23 +1,29 @@
 import type { Response } from "express";
-
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
+import type { ValidatedRequest } from "../../platform/validation/validated-request.js";
+
 import type {
   CreateOrganizationRequest,
+  OrganizationIdInput,
   UpdateOrganizationRequest,
 } from "./organization.schemas.js";
+
 import {
   createOrganization,
   getOrganizationById,
   getOrganizationsForUser,
   updateOrganization,
 } from "./organization.service.js";
+
 import {
   created,
   list as listResponse,
   ok,
 } from "../../platform/http/api-response.js";
+
+
 
 //************************************************************** */
 // function requireAuthenticatedUserId(
@@ -40,27 +46,20 @@ import {
 
 //************************************************************** */
 
-function requireOrganizationId(
-  request: AuthenticatedRequest,
-): string {
-  const organizationId =
-    request.params.organizationId;
+// function requireOrganizationId(request: AuthenticatedRequest): string {
+//   const organizationId = request.params.organizationId;
 
-  if (
-    typeof organizationId !== "string" ||
-    organizationId.trim().length === 0
-  ) {
-    throw new AppError(
-      400,
-      "A valid organization ID is required.",
-      {
-        code: "ORGANIZATION_ID_REQUIRED",
-      },
-    );
-  }
+//   if (
+//     typeof organizationId !== "string" ||
+//     organizationId.trim().length === 0
+//   ) {
+//     throw new AppError(400, "A valid organization ID is required.", {
+//       code: "ORGANIZATION_ID_REQUIRED",
+//     });
+//   }
 
-  return organizationId;
-}
+//   return organizationId;
+// }
 
 //************************************************************** */
 
@@ -70,14 +69,128 @@ export async function createOrganizationHandler(
 ): Promise<void> {
   const context = getRequestContext();
 
-  const body =
-    request.body as CreateOrganizationRequest;
+  const body = (request as ValidatedRequest<CreateOrganizationRequest>)
+    .validatedBody;
+
+  if (!body) {
+    throw new AppError(500, "Validated request body is unavailable.", {
+      code: "VALIDATED_BODY_UNAVAILABLE",
+    });
+  }
+
+  const organization = await createOrganization({
+    name: body.name,
+    slug: body.slug,
+    ownerUserId: context.user.id,
+
+    ...(body.email !== undefined
+      ? {
+          email: body.email,
+        }
+      : {}),
+
+    ...(body.phone !== undefined
+      ? {
+          phone: body.phone,
+        }
+      : {}),
+  });
+
+  created(response, organization);
+}
+
+//************************************************************** */
+
+export async function getMyOrganizationsHandler(
+  _request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const context = getRequestContext();
+
+  const memberships = await getOrganizationsForUser(context.user.id);
+
+  listResponse(response, memberships);
+}
+
+//************************************************************** */
+export async function getOrganizationHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const params = (
+    request as ValidatedRequest<
+      unknown,
+      OrganizationIdInput
+    >
+  ).validatedParams;
+
+  if (!params) {
+    throw new AppError(
+      500,
+      "Validated route parameters are unavailable.",
+      {
+        code: "VALIDATED_PARAMS_UNAVAILABLE",
+      },
+    );
+  }
 
   const organization =
-    await createOrganization({
-      name: body.name,
-      slug: body.slug,
-      ownerUserId: context.user.id,
+    await getOrganizationById(
+      params.organizationId,
+    );
+
+  ok(response, organization);
+}
+
+//************************************************************** */
+export async function updateOrganizationHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const context = getRequestContext();
+
+  const params = (
+    request as ValidatedRequest<
+      UpdateOrganizationRequest,
+      OrganizationIdInput
+    >
+  ).validatedParams;
+
+  if (!params) {
+    throw new AppError(
+      500,
+      "Validated route parameters are unavailable.",
+      {
+        code: "VALIDATED_PARAMS_UNAVAILABLE",
+      },
+    );
+  }
+
+  const body = (
+    request as ValidatedRequest<
+      UpdateOrganizationRequest,
+      OrganizationIdInput
+    >
+  ).validatedBody;
+
+  if (!body) {
+    throw new AppError(
+      500,
+      "Validated request body is unavailable.",
+      {
+        code: "VALIDATED_BODY_UNAVAILABLE",
+      },
+    );
+  }
+
+  const organization = await updateOrganization(
+    params.organizationId,
+    {
+      ...(body.name !== undefined
+        ? {
+            name: body.name,
+          }
+        : {}),
 
       ...(body.email !== undefined
         ? {
@@ -90,91 +203,11 @@ export async function createOrganizationHandler(
             phone: body.phone,
           }
         : {}),
-    });
+    },
+    context.user.id,
+  );
 
-  created(
-  response,
-  organization,
-);
-}
-
-//************************************************************** */
-
-export async function getMyOrganizationsHandler(
-  _request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const context = getRequestContext();
-
-  const memberships =
-    await getOrganizationsForUser(
-      context.user.id,
-    );
-
-listResponse(
-  response,
-  memberships,
-);
-}
-
-//************************************************************** */
-export async function getOrganizationHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const organization =
-    await getOrganizationById(
-      requireOrganizationId(request),
-    );
-
-ok(
-  response,
-  organization,
-);
-}
-
-//************************************************************** */
-export async function updateOrganizationHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const context = getRequestContext();
-
-  const organizationId =
-    requireOrganizationId(request);
-
-  const body =
-    request.body as UpdateOrganizationRequest;
-
-  const organization =
-    await updateOrganization(
-      organizationId,
-      {
-        ...(body.name !== undefined
-          ? {
-              name: body.name,
-            }
-          : {}),
-
-        ...(body.email !== undefined
-          ? {
-              email: body.email,
-            }
-          : {}),
-
-        ...(body.phone !== undefined
-          ? {
-              phone: body.phone,
-            }
-          : {}),
-      },
-      context.user.id,
-    );
-
-ok(
-  response,
-  organization,
-);
+  ok(response, organization);
 }
 
 //************************************************************** */

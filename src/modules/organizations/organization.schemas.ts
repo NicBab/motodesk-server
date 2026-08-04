@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+//************************************************************** */
+
 export const createOrganizationSchema = z.object({
   name: z
     .string()
@@ -25,11 +27,34 @@ export const createOrganizationSchema = z.object({
     .optional(),
 });
 
+//************************************************************** */
+
+export const organizationIdSchema = z.object({
+  organizationId: z
+    .string()
+    .trim()
+    .min(1, "Organization ID is required."),
+});
+
+//************************************************************** */
+
 export const updateOrganizationSchema =
   createOrganizationSchema.partial();
+
+//************************************************************** */
 
 export type CreateOrganizationRequest =
   z.infer<typeof createOrganizationSchema>;
 
+//************************************************************** */
+
 export type UpdateOrganizationRequest =
   z.infer<typeof updateOrganizationSchema>;
+
+//************************************************************** */
+
+export type OrganizationIdInput = z.infer<
+  typeof organizationIdSchema
+>;
+
+//************************************************************** */

@@ -28,11 +28,11 @@ import type {
   SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
-import {
-  created,
-  ok,
-} from "../../platform/http/api-response.js";
+import { created, ok } from "../../platform/http/api-response.js";
+
 import { AppError } from "../../platform/errors/app-error.js";
+
+import type { ValidatedRequest } from "../../platform/validation/validated-request.js";
 
 //************************************************************** */
 
@@ -46,10 +46,18 @@ function getRequestContext(request: Request): RequestContext {
 //************************************************************** */
 
 export async function register(
-  request: Request<Record<string, never>, unknown, RegisterInput>,
+  request: Request,
   response: Response,
 ): Promise<void> {
-  const result = await registerUser(request.body, getRequestContext(request));
+  const input = (request as ValidatedRequest<RegisterInput>).validatedBody;
+
+  if (!input) {
+    throw new AppError(500, "Validated request body is unavailable.", {
+      code: "VALIDATED_BODY_UNAVAILABLE",
+    });
+  }
+
+  const result = await registerUser(input, getRequestContext(request));
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
@@ -57,24 +65,30 @@ export async function register(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-created(response, {
-  user: result.user,
-  membership: result.membership,
-  permissions,
-  accessTokenExpiresAt:
-    result.accessTokenExpiresAt,
-  refreshTokenExpiresAt:
-    result.refreshTokenExpiresAt,
-});
+  created(response, {
+    user: result.user,
+    membership: result.membership,
+    permissions,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+  });
 }
 
 //************************************************************** */
 
 export async function login(
-  request: Request<Record<string, never>, unknown, LoginInput>,
+  request: Request,
   response: Response,
 ): Promise<void> {
-  const result = await loginUser(request.body, getRequestContext(request));
+  const input = (request as ValidatedRequest<LoginInput>).validatedBody;
+
+  if (!input) {
+    throw new AppError(500, "Validated request body is unavailable.", {
+      code: "VALIDATED_BODY_UNAVAILABLE",
+    });
+  }
+
+  const result = await loginUser(input, getRequestContext(request));
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
@@ -82,24 +96,31 @@ export async function login(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-ok(response, {
-  user: result.user,
-  membership: result.membership,
-  permissions,
-  accessTokenExpiresAt:
-    result.accessTokenExpiresAt,
-  refreshTokenExpiresAt:
-    result.refreshTokenExpiresAt,
-});
+  ok(response, {
+    user: result.user,
+    membership: result.membership,
+    permissions,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+  });
 }
 
 //************************************************************** */
 
 export async function refresh(
-  request: Request<Record<string, never>, unknown, RefreshSessionInput>,
+  request: Request,
   response: Response,
 ): Promise<void> {
-  const result = await refreshSession(request.body, getRequestContext(request));
+  const input = (request as ValidatedRequest<RefreshSessionInput>)
+    .validatedBody;
+
+  if (!input) {
+    throw new AppError(500, "Validated request body is unavailable.", {
+      code: "VALIDATED_BODY_UNAVAILABLE",
+    });
+  }
+
+  const result = await refreshSession(input, getRequestContext(request));
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
@@ -107,15 +128,13 @@ export async function refresh(
     ? getPermissionsForRole(result.membership.role)
     : [];
 
-ok(response, {
-  user: result.user,
-  membership: result.membership,
-  permissions,
-  accessTokenExpiresAt:
-    result.accessTokenExpiresAt,
-  refreshTokenExpiresAt:
-    result.refreshTokenExpiresAt,
-});
+  ok(response, {
+    user: result.user,
+    membership: result.membership,
+    permissions,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+  });
 }
 
 //************************************************************** */
@@ -124,63 +143,74 @@ export async function switchOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
+  const userId = request.authenticatedUser?.id;
 
-  const sessionId =
-    request.authenticationSessionId;
+  const sessionId = request.authenticationSessionId;
 
-if (!userId || !sessionId) {
-  throw new AppError(
-    401,
-    "Authentication required.",
-    {
+  if (!userId || !sessionId) {
+    throw new AppError(401, "Authentication required.", {
       code: "AUTHENTICATION_REQUIRED",
+    });
+  }
+
+  const input = (
+  request as ValidatedRequest<
+    SwitchOrganizationInput
+  >
+).validatedBody;
+
+if (!input) {
+  throw new AppError(
+    500,
+    "Validated request body is unavailable.",
+    {
+      code: "VALIDATED_BODY_UNAVAILABLE",
     },
   );
 }
 
-  const input =
-    request.body as SwitchOrganizationInput;
+  const result = await switchOrganization(userId, sessionId, input);
 
-  const result =
-    await switchOrganization(
-      userId,
-      sessionId,
-      input,
-    );
+  setAccessTokenCookie(response, result.accessToken);
 
-  setAccessTokenCookie(
-    response,
-    result.accessToken,
-  );
+  const permissions = getPermissionsForRole(result.membership.role);
 
-  const permissions =
-    getPermissionsForRole(
-      result.membership.role,
-    );
-
-ok(response, {
-  membership: result.membership,
-  permissions,
-  accessTokenExpiresAt:
-    result.accessTokenExpiresAt,
-});
+  ok(response, {
+    membership: result.membership,
+    permissions,
+    accessTokenExpiresAt: result.accessTokenExpiresAt,
+  });
 }
 
 //************************************************************** */
 
 export async function logout(
-  request: Request<Record<string, never>, unknown, LogoutInput>,
+  request: Request,
   response: Response,
 ): Promise<void> {
-  await logoutUser(request.body);
+  const input = (
+    request as ValidatedRequest<
+      LogoutInput
+    >
+  ).validatedBody;
+
+  if (!input) {
+    throw new AppError(
+      500,
+      "Validated request body is unavailable.",
+      {
+        code: "VALIDATED_BODY_UNAVAILABLE",
+      },
+    );
+  }
+
+  await logoutUser(input);
 
   clearAuthenticationCookies(response);
 
   ok(response, {
-  message: "Logged out successfully.",
-});
+    message: "Logged out successfully.",
+  });
 }
 
 //************************************************************** */
@@ -189,27 +219,21 @@ export async function logoutAll(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
+  const userId = request.authenticatedUser?.id;
 
-if (!userId) {
-  throw new AppError(
-    401,
-    "Authentication required.",
-    {
+  if (!userId) {
+    throw new AppError(401, "Authentication required.", {
       code: "AUTHENTICATION_REQUIRED",
-    },
-  );
-}
+    });
+  }
 
-  const revokedSessionCount =
-    await logoutAllUserSessions(userId);
+  const revokedSessionCount = await logoutAllUserSessions(userId);
 
   clearAuthenticationCookies(response);
 
-ok(response, {
-  revokedSessionCount,
-});
+  ok(response, {
+    revokedSessionCount,
+  });
 }
 
 //************************************************************** */
@@ -218,31 +242,23 @@ export async function me(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const user =
-    request.authenticatedUser;
+  const user = request.authenticatedUser;
 
-if (!user) {
-  throw new AppError(
-    401,
-    "Authentication required.",
-    {
+  if (!user) {
+    throw new AppError(401, "Authentication required.", {
       code: "AUTHENTICATION_REQUIRED",
-    },
-  );
-}
+    });
+  }
 
-  const permissions =
-    request.authenticatedMembership
-      ? getPermissionsForRole(
-          request.authenticatedMembership.role,
-        )
-      : [];
+  const permissions = request.authenticatedMembership
+    ? getPermissionsForRole(request.authenticatedMembership.role)
+    : [];
 
-ok(response, {
-  user,
-  membership: request.authenticatedMembership,
-  permissions,
-});
+  ok(response, {
+    user,
+    membership: request.authenticatedMembership,
+    permissions,
+  });
 }
 
 //************************************************************** */

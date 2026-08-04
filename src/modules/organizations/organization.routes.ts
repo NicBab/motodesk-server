@@ -6,9 +6,11 @@ import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
 import membershipRouter from "../memberships/membership.routes.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
+import { validateParams } from "../../platform/validation/validate-params.js"
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
+  organizationIdSchema,
 } from "./organization.schemas.js";
 import {
   createOrganizationHandler,
@@ -52,6 +54,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  validateParams(organizationIdSchema),
   getOrganizationHandler,
 );
 
@@ -65,6 +68,7 @@ router.patch(
   requirePermissions(
     Permissions.ORGANIZATION_UPDATE,
   ),
+  validateParams(organizationIdSchema),
   validateBody(updateOrganizationSchema),
   updateOrganizationHandler,
 );

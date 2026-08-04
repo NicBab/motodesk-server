@@ -6,6 +6,9 @@ import type {
 } from "express";
 import type { ZodType } from "zod";
 
+import type {
+  ValidatedRequest,
+} from "./validated-request.js";
 import { mapValidationErrors } from "./validate-response.js";
 
 //************************************************************** */
@@ -34,7 +37,9 @@ export function validateBody<T>(
       return;
     }
 
-    request.body = result.data;
+    (
+      request as ValidatedRequest<T>
+    ).validatedBody = result.data;
 
     next();
   };
