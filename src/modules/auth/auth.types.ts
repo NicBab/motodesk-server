@@ -55,3 +55,9 @@ export interface RefreshTokenParts {
 }
 
 //************************************************************** */
+
+export interface ChangePasswordResult {
+  revokedSessionCount: number;
+
+//************************************************************** */
+}

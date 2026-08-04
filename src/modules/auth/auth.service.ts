@@ -19,11 +19,14 @@ import {
 } from "../../generated/prisma/client.js";
 
 import type {
+  ChangePasswordInput,
   LoginInput,
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
   SwitchOrganizationInput,
+  UpdateProfileInput,
+  ChangeEmailInput,
 } from "./auth.schemas.js";
 
 import type {
@@ -31,6 +34,7 @@ import type {
   AuthenticatedUser,
   AuthenticationResult,
   RequestContext,
+  ChangePasswordResult,
 } from "./auth.types.js";
 
 import {
@@ -47,7 +51,19 @@ import {
   findUserForLogin,
   findUserForOrganizationSwitch,
   findUserIdByEmail,
+  findUserPasswordById,
+  updateUserPasswordHash,
+  updateUserProfileRecord,
+  findUserEmailById,
+  updateUserEmailRecord,
 } from "./auth.repository.js";
+
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ENTITY_TYPES,
+} from "../audit/audit.constants.js";
+
+import { createAuditLog } from "../audit/audit.service.js";
 
 
 //************************************************************** */
@@ -99,6 +115,8 @@ export const authenticationMembershipSelect = {
     },
   },
 } as const;
+
+
 
 //************************************************************** */
 
@@ -512,6 +530,269 @@ export async function switchOrganization(
     accessTokenExpiresAt:
       accessToken.expiresAt,
   };
+}
+
+//************************************************************** */
+
+export async function changePassword(
+  userId: string,
+  currentSessionId: string,
+  input: ChangePasswordInput,
+  context: RequestContext,
+): Promise<ChangePasswordResult> {
+  const user =
+    await findUserPasswordById(userId);
+
+  if (!user) {
+    throw new AppError(
+      404,
+      "User account not found.",
+      {
+        code: "USER_NOT_FOUND",
+      },
+    );
+  }
+
+  if (!user.isActive) {
+    throw new AppError(
+      403,
+      "This account is currently inactive.",
+      {
+        code: "ACCOUNT_INACTIVE",
+      },
+    );
+  }
+
+  const currentPasswordMatches =
+    await verifyPassword(
+      input.currentPassword,
+      user.passwordHash,
+    );
+
+  if (!currentPasswordMatches) {
+    throw new AppError(
+      401,
+      "Current password is incorrect.",
+      {
+        code: "CURRENT_PASSWORD_INCORRECT",
+      },
+    );
+  }
+
+  const newPasswordMatchesCurrent =
+    await verifyPassword(
+      input.newPassword,
+      user.passwordHash,
+    );
+
+  if (newPasswordMatchesCurrent) {
+    throw new AppError(
+      400,
+      "The new password must be different from the current password.",
+      {
+        code:
+          "NEW_PASSWORD_MUST_BE_DIFFERENT",
+      },
+    );
+  }
+
+  const newPasswordHash =
+    await hashPassword(
+      input.newPassword,
+    );
+
+  await updateUserPasswordHash(
+    userId,
+    newPasswordHash,
+  );
+
+  const revokedSessions =
+    await revokeUserSessions(
+      userId,
+      SessionRevocationReason.PASSWORD_CHANGED,
+      currentSessionId,
+    );
+
+  await createAuditLog({
+    action:
+      AUDIT_ACTIONS.AUTH_PASSWORD_CHANGED,
+    entityType:
+      AUDIT_ENTITY_TYPES.USER,
+    entityId: userId,
+    actor: {
+      userId,
+      sessionId: currentSessionId,
+    },
+    context: {
+      ...(context.ipAddress !== null
+        ? {
+            ipAddress:
+              context.ipAddress,
+          }
+        : {}),
+      ...(context.userAgent !== null
+        ? {
+            userAgent:
+              context.userAgent,
+          }
+        : {}),
+    },
+    metadata: {
+      revokedSessionCount:
+        revokedSessions.revokedSessionCount,
+    },
+  });
+
+  return {
+    revokedSessionCount:
+      revokedSessions.revokedSessionCount,
+  };
+}
+
+//************************************************************** */
+
+export async function changeEmail(
+  userId: string,
+  sessionId: string,
+  input: ChangeEmailInput,
+  context: RequestContext,
+): Promise<AuthenticatedUser> {
+  const user =
+    await findUserEmailById(userId);
+
+  if (!user) {
+    throw new AppError(
+      404,
+      "User account not found.",
+      {
+        code: "USER_NOT_FOUND",
+      },
+    );
+  }
+
+  if (!user.isActive) {
+    throw new AppError(
+      403,
+      "This account is currently inactive.",
+      {
+        code: "ACCOUNT_INACTIVE",
+      },
+    );
+  }
+
+  const passwordMatches =
+    await verifyPassword(
+      input.currentPassword,
+      user.passwordHash,
+    );
+
+  if (!passwordMatches) {
+    throw new AppError(
+      401,
+      "Current password is incorrect.",
+      {
+        code: "CURRENT_PASSWORD_INCORRECT",
+      },
+    );
+  }
+
+  if (input.newEmail === user.email) {
+    throw new AppError(
+      400,
+      "The new email address must be different from the current email address.",
+      {
+        code: "NEW_EMAIL_MUST_BE_DIFFERENT",
+      },
+    );
+  }
+
+  const existingUser =
+    await findUserIdByEmail(
+      input.newEmail,
+    );
+
+  if (existingUser) {
+    throw new AppError(
+      409,
+      "An account with this email address already exists.",
+      {
+        code: "EMAIL_ALREADY_REGISTERED",
+      },
+    );
+  }
+
+  const updatedUser =
+    await updateUserEmailRecord(
+      userId,
+      input.newEmail,
+    );
+
+  await createAuditLog({
+    action:
+      AUDIT_ACTIONS.AUTH_EMAIL_CHANGED,
+    entityType:
+      AUDIT_ENTITY_TYPES.USER,
+    entityId: userId,
+    actor: {
+      userId,
+      sessionId,
+    },
+    context: {
+      ...(context.ipAddress !== null
+        ? {
+            ipAddress:
+              context.ipAddress,
+          }
+        : {}),
+      ...(context.userAgent !== null
+        ? {
+            userAgent:
+              context.userAgent,
+          }
+        : {}),
+    },
+    metadata: {
+      previousEmail: user.email,
+      newEmail: updatedUser.email,
+    },
+  });
+
+  return toAuthenticatedUser(
+    updatedUser,
+  );
+}
+
+//************************************************************** */
+
+export async function updateProfile(
+  userId: string,
+  input: UpdateProfileInput,
+): Promise<AuthenticatedUser> {
+  const user =
+    await updateUserProfileRecord(
+      userId,
+      {
+        ...(input.firstName !== undefined
+          ? {
+              firstName: input.firstName,
+            }
+          : {}),
+
+        ...(input.lastName !== undefined
+          ? {
+              lastName: input.lastName,
+            }
+          : {}),
+
+        ...(input.phone !== undefined
+          ? {
+              phone: input.phone,
+            }
+          : {}),
+      },
+    );
+
+  return toAuthenticatedUser(user);
 }
 
 //************************************************************** */

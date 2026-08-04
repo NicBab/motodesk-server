@@ -12,6 +12,9 @@ import {
   register,
   me,
   switchOrganizationHandler,
+  changePasswordHandler,
+  updateProfileHandler,
+  changeEmailHandler,
 } from "./auth.controller.js";
 
 import {
@@ -20,6 +23,9 @@ import {
   refreshSessionSchema,
   registerSchema,
   switchOrganizationSchema,
+  changePasswordSchema,
+  updateProfileSchema,
+  changeEmailSchema,
 } from "./auth.schemas.js";
 
 //*********************************************************************** */
@@ -40,10 +46,36 @@ router.post(
   switchOrganizationHandler,
 );
 
+router.post(
+  "/change-password",
+  authenticateRequest,
+  initializeRequestContext,
+  validateBody(changePasswordSchema),
+  changePasswordHandler,
+);
+
+router.post(
+  "/change-email",
+  authenticateRequest,
+  initializeRequestContext,
+  validateBody(changeEmailSchema),
+  changeEmailHandler,
+);
+
+router.patch(
+  "/profile",
+  authenticateRequest,
+  initializeRequestContext,
+  validateBody(updateProfileSchema),
+  updateProfileHandler,
+);
+
 router.post("/logout", validateBody(logoutSchema), logout);
 
 router.post("/logout-all", authenticateRequest, initializeRequestContext, logoutAll);
 
 router.get("/me", authenticateRequest, initializeRequestContext, me);
+
+
 
 export default router;

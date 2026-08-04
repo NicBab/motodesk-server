@@ -1,9 +1,10 @@
-// HTTP request and response handling
-
 import type { Request, Response } from "express";
 import type { RequestContext } from "./auth.types.js";
 import type { AuthenticatedRequest } from "./auth.middleware.js";
 import { getPermissionsForRole } from "../permissions/permission.utils.js";
+import { created, ok } from "../../platform/http/api-response.js";
+import { AppError } from "../../platform/errors/app-error.js";
+import { requireValidatedBody } from "../../platform/validation/validated-request.js";
 
 import {
   clearAuthenticationCookies,
@@ -18,6 +19,9 @@ import {
   refreshSession,
   registerUser,
   switchOrganization,
+  changePassword,
+  updateProfile,
+  changeEmail,
 } from "./auth.service.js";
 
 import type {
@@ -26,15 +30,10 @@ import type {
   RefreshSessionInput,
   RegisterInput,
   SwitchOrganizationInput,
+  ChangePasswordInput,
+  UpdateProfileInput,
+  ChangeEmailInput
 } from "./auth.schemas.js";
-
-import { created, ok } from "../../platform/http/api-response.js";
-
-import { AppError } from "../../platform/errors/app-error.js";
-
-import {
-  requireValidatedBody,
-} from "../../platform/validation/validated-request.js";
 
 //************************************************************** */
 
@@ -167,6 +166,49 @@ const input =
 
 //************************************************************** */
 
+export async function changePasswordHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const userId =
+    request.authenticatedUser?.id;
+
+  const sessionId =
+    request.authenticationSessionId;
+
+  if (!userId || !sessionId) {
+    throw new AppError(
+      401,
+      "Authentication required.",
+      {
+        code: "AUTHENTICATION_REQUIRED",
+      },
+    );
+  }
+
+  const input =
+    requireValidatedBody<ChangePasswordInput>(
+      request,
+    );
+
+  const result =
+    await changePassword(
+      userId,
+      sessionId,
+      input,
+      getRequestContext(request),
+    );
+
+  ok(response, {
+    message:
+      "Password changed successfully.",
+    revokedSessionCount:
+      result.revokedSessionCount,
+  });
+}
+
+//************************************************************** */
+
 export async function logout(
   request: Request,
   response: Response,
@@ -230,6 +272,85 @@ export async function me(
     user,
     membership: request.authenticatedMembership,
     permissions,
+  });
+}
+
+//************************************************************** */
+
+export async function updateProfileHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const userId =
+    request.authenticatedUser?.id;
+
+  if (!userId) {
+    throw new AppError(
+      401,
+      "Authentication required.",
+      {
+        code: "AUTHENTICATION_REQUIRED",
+      },
+    );
+  }
+
+  const input =
+    requireValidatedBody<UpdateProfileInput>(
+      request,
+    );
+
+  const user =
+    await updateProfile(
+      userId,
+      input,
+    );
+
+  ok(response, {
+    message:
+      "Profile updated successfully.",
+    user,
+  });
+}
+
+//************************************************************** */
+
+export async function changeEmailHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const userId =
+    request.authenticatedUser?.id;
+
+  const sessionId =
+    request.authenticationSessionId;
+
+  if (!userId || !sessionId) {
+    throw new AppError(
+      401,
+      "Authentication required.",
+      {
+        code: "AUTHENTICATION_REQUIRED",
+      },
+    );
+  }
+
+  const input =
+    requireValidatedBody<ChangeEmailInput>(
+      request,
+    );
+
+  const user =
+    await changeEmail(
+      userId,
+      sessionId,
+      input,
+      getRequestContext(request),
+    );
+
+  ok(response, {
+    message:
+      "Email changed successfully.",
+    user,
   });
 }
 

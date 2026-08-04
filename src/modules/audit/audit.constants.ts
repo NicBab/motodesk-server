@@ -5,6 +5,8 @@ export const AUDIT_ACTIONS = {
   AUTH_LOGOUT: "auth.logout",
   AUTH_LOGOUT_ALL: "auth.logout_all",
   AUTH_SESSION_REFRESHED: "auth.session_refreshed",
+  AUTH_PASSWORD_CHANGED: "auth.password_changed",
+  AUTH_EMAIL_CHANGED: "auth.email_changed",
 
   ORGANIZATION_CREATED: "organization.created",
   ORGANIZATION_UPDATED: "organization.updated",
@@ -37,6 +39,7 @@ export const AUDIT_ENTITY_TYPES = {
 } as const;
 
 //************************************************************** */
+
 
 export type AuditEntityType =
   (typeof AUDIT_ENTITY_TYPES)[keyof typeof AUDIT_ENTITY_TYPES];

@@ -1,10 +1,12 @@
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 import { env } from "../../config/env.js";
+import type { AccessTokenPayload, RefreshTokenParts } from "./auth.types.js";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_MILLISECONDS,
+  PASSWORD_RESET_TTL_MILLISECONDS,
 } from "./auth.constants.js";
-import type { AccessTokenPayload, RefreshTokenParts } from "./auth.types.js";
+
 import {
   buildRefreshToken,
   generateRandomToken,
@@ -31,6 +33,14 @@ export interface GeneratedRefreshToken {
   token: string;
   tokenHash: string;
   secret: string;
+  expiresAt: Date;
+}
+
+//************************************************************** */
+
+export interface GeneratedOneTimeToken {
+  token: string;
+  tokenHash: string;
   expiresAt: Date;
 }
 
@@ -77,6 +87,25 @@ export function generateRefreshToken(sessionId: string): GeneratedRefreshToken {
     token,
     tokenHash,
     secret,
+    expiresAt,
+  };
+}
+
+//************************************************************** */
+
+export function generatePasswordResetToken():
+  GeneratedOneTimeToken {
+  const token = generateRandomToken();
+  const tokenHash = hashToken(token);
+
+  const expiresAt = new Date(
+    Date.now() +
+      PASSWORD_RESET_TTL_MILLISECONDS,
+  );
+
+  return {
+    token,
+    tokenHash,
     expiresAt,
   };
 }
