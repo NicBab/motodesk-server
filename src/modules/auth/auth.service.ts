@@ -2,6 +2,8 @@
 import { hashPassword, verifyPassword } from "./password.service.js";
 import { AppError } from "../../platform/errors/app-error.js";
 import { randomUUID } from "node:crypto";
+import { createAuditLog } from "../audit/audit.service.js";
+import { env } from "../../config/env.js";
 
 import {
   generateAccessToken,
@@ -27,7 +29,15 @@ import type {
   SwitchOrganizationInput,
   UpdateProfileInput,
   ChangeEmailInput,
+  RequestPasswordResetInput,
+  ResetPasswordInput,
 } from "./auth.schemas.js";
+
+import {
+  consumePasswordResetAuthToken,
+  createPasswordResetAuthToken,
+  validatePasswordResetAuthToken,
+} from "./auth-token.service.js";
 
 import type {
   AuthenticatedMembership,
@@ -43,6 +53,7 @@ import {
   revokeUserSessions,
   rotateSessionToken,
   validateSession,
+  revokeAllUserSessions,
 } from "./session.service.js";
 
 import {
@@ -63,7 +74,7 @@ import {
   AUDIT_ENTITY_TYPES,
 } from "../audit/audit.constants.js";
 
-import { createAuditLog } from "../audit/audit.service.js";
+
 
 
 //************************************************************** */
@@ -647,6 +658,148 @@ export async function changePassword(
     revokedSessionCount:
       revokedSessions.revokedSessionCount,
   };
+}
+
+//************************************************************** */
+
+export interface RequestPasswordResetResult {
+  message: string;
+
+  // Development-only delivery until email service is implemented.
+  resetToken?: string;
+  expiresAt?: Date;
+}
+
+//************************************************************** */
+
+export async function requestPasswordReset(
+  input: RequestPasswordResetInput,
+  context: RequestContext,
+): Promise<RequestPasswordResetResult> {
+  const user =
+    await findUserForLogin(input.email);
+
+  const genericMessage =
+    "If an account exists for this email address, password reset instructions have been sent.";
+
+  if (!user || !user.isActive) {
+    return {
+      message: genericMessage,
+    };
+  }
+
+  const resetToken =
+    await createPasswordResetAuthToken(
+      user.id,
+    );
+
+  await createAuditLog({
+    action:
+      AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
+    entityType:
+      AUDIT_ENTITY_TYPES.USER,
+    entityId: user.id,
+    actor: {
+      userId: user.id,
+    },
+    context: {
+      ...(context.ipAddress !== null
+        ? {
+            ipAddress:
+              context.ipAddress,
+          }
+        : {}),
+
+      ...(context.userAgent !== null
+        ? {
+            userAgent:
+              context.userAgent,
+          }
+        : {}),
+    },
+  });
+
+  return {
+    message: genericMessage,
+
+    ...(env.NODE_ENV === "development"
+      ? {
+          resetToken: resetToken.token,
+          expiresAt:
+            resetToken.expiresAt,
+        }
+      : {}),
+  };
+}
+
+//************************************************************** */
+
+export async function resetPassword(
+  input: ResetPasswordInput,
+  context: RequestContext,
+): Promise<void> {
+  const authToken =
+    await validatePasswordResetAuthToken(
+      input.token,
+    );
+
+  if (!authToken) {
+    throw new AppError(
+      400,
+      "Password reset token is invalid or expired.",
+      {
+        code:
+          "PASSWORD_RESET_TOKEN_INVALID",
+      },
+    );
+  }
+
+  const newPasswordHash =
+    await hashPassword(
+      input.password,
+    );
+
+  await updateUserPasswordHash(
+    authToken.userId,
+    newPasswordHash,
+  );
+
+  await consumePasswordResetAuthToken(
+    authToken.id,
+  );
+
+  await revokeAllUserSessions(
+    authToken.userId,
+    SessionRevocationReason.PASSWORD_RESET,
+  );
+
+  await createAuditLog({
+    action:
+      AUDIT_ACTIONS.AUTH_PASSWORD_RESET_COMPLETED,
+    entityType:
+      AUDIT_ENTITY_TYPES.USER,
+    entityId:
+      authToken.userId,
+    actor: {
+      userId:
+        authToken.userId,
+    },
+    context: {
+      ...(context.ipAddress !== null
+        ? {
+            ipAddress:
+              context.ipAddress,
+          }
+        : {}),
+
+      ...(context.userAgent !== null
+        ? {
+            userAgent:
+              context.userAgent,
+          }
+        : {}),
+    },
+  });
 }
 
 //************************************************************** */

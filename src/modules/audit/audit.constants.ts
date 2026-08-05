@@ -7,6 +7,8 @@ export const AUDIT_ACTIONS = {
   AUTH_SESSION_REFRESHED: "auth.session_refreshed",
   AUTH_PASSWORD_CHANGED: "auth.password_changed",
   AUTH_EMAIL_CHANGED: "auth.email_changed",
+  AUTH_PASSWORD_RESET_REQUESTED: "auth.password_reset_requested",
+  AUTH_PASSWORD_RESET_COMPLETED: "auth.password_reset_completed",
 
   ORGANIZATION_CREATED: "organization.created",
   ORGANIZATION_UPDATED: "organization.updated",
