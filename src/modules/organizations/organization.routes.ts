@@ -1,17 +1,19 @@
 import { Router } from "express";
 import { validateBody } from "../../platform/validation/validate-body.js";
-import { authenticateRequest } from "../auth/auth.middleware.js";
+import { authenticateRequest } from "../auth/index.js";
 import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
 import membershipRouter from "../memberships/membership.routes.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
-import { validateParams } from "../../platform/validation/validate-params.js"
+import { validateParams } from "../../platform/validation/validate-params.js";
+
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
   organizationIdSchema,
 } from "./organization.schemas.js";
+
 import {
   createOrganizationHandler,
   getMyOrganizationsHandler,

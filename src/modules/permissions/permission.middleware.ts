@@ -4,7 +4,7 @@ import type {
 } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
-import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 import type { Permission } from "./permission.constants.js";
 import { checkPermissions } from "./permission.utils.js";
 

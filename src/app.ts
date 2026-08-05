@@ -56,8 +56,8 @@ import { env } from "./config/env.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 import { apiRouter } from "./routes/index.js";
 import cookieParser from "cookie-parser";
-import authRouter from "./modules/auth/auth.routes.js";
-import organizationRouter from "./modules/organizations/organization.routes.js";
+import { authRouter } from "./modules/auth/index.js";
+import { organizationRouter } from "./modules/organizations/index.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 export const app = express();

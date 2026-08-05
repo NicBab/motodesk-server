@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import { AppError } from "../../platform/errors/app-error.js";
-import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
 
 import {
@@ -40,19 +40,6 @@ function requireOrganizationId(request: AuthenticatedRequest): string {
   return organizationId;
 }
 
-//************************************************************** */
-
-// function requireMembershipId(request: AuthenticatedRequest): string {
-//   const membershipId = request.params.membershipId;
-
-//   if (typeof membershipId !== "string" || membershipId.trim().length === 0) {
-//     throw new AppError(400, "A valid membership ID is required.", {
-//       code: "MEMBERSHIP_ID_REQUIRED",
-//     });
-//   }
-
-//   return membershipId;
-// }
 
 //************************************************************** */
 
@@ -164,3 +151,5 @@ export async function updateMembershipHandler(
 
   ok(response, membership);
 }
+
+//************************************************************** */

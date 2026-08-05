@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import { AppError } from "../../platform/errors/app-error.js";
-import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
 
 import {

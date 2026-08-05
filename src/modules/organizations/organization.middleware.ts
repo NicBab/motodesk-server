@@ -4,9 +4,10 @@ import type {
 } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
-import type { AuthenticatedRequest } from "../auth/auth.middleware.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 
 //************************************************************** */
+
 export function requireOrganizationAccess(
   request: AuthenticatedRequest,
   _response: Response,

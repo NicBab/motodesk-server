@@ -1,14 +1,10 @@
 import { randomUUID } from "node:crypto";
-
-import type { NextFunction, Response } from "express";
-
-import type { AuthenticatedRequest } from "../../modules/auth/auth.middleware.js";
-
+import { AppError } from "../errors/app-error.js";
 import { runWithRequestContext } from "./request.context.js";
-
+import type { NextFunction, Response } from "express";
+import type { AuthenticatedRequest } from "../../modules/auth/index.js";
 import type { RequestContext } from "./request.types.js";
 
-import { AppError } from "../errors/app-error.js";
 
 //************************************************************** */
 
