@@ -22,6 +22,8 @@ import {
   changePassword,
   updateProfile,
   changeEmail,
+  requestPasswordReset,
+  resetPassword,
 } from "./auth.service.js";
 
 import type {
@@ -32,7 +34,9 @@ import type {
   SwitchOrganizationInput,
   ChangePasswordInput,
   UpdateProfileInput,
-  ChangeEmailInput
+  ChangeEmailInput,
+  RequestPasswordResetInput,
+  ResetPasswordInput,
 } from "./auth.schemas.js";
 
 //************************************************************** */
@@ -204,6 +208,48 @@ export async function changePasswordHandler(
       "Password changed successfully.",
     revokedSessionCount:
       result.revokedSessionCount,
+  });
+}
+
+//************************************************************** */
+
+export async function requestPasswordResetHandler(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  const input =
+    requireValidatedBody<RequestPasswordResetInput>(
+      request,
+    );
+
+  const result =
+    await requestPasswordReset(
+      input,
+      getRequestContext(request),
+    );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function resetPasswordHandler(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  const input =
+    requireValidatedBody<ResetPasswordInput>(
+      request,
+    );
+
+  await resetPassword(
+    input,
+    getRequestContext(request),
+  );
+
+  ok(response, {
+    message:
+      "Password reset successfully.",
   });
 }
 

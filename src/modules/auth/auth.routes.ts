@@ -15,6 +15,8 @@ import {
   changePasswordHandler,
   updateProfileHandler,
   changeEmailHandler,
+  requestPasswordResetHandler,
+  resetPasswordHandler,
 } from "./auth.controller.js";
 
 import {
@@ -26,13 +28,15 @@ import {
   changePasswordSchema,
   updateProfileSchema,
   changeEmailSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
 } from "./auth.schemas.js";
 
 //*********************************************************************** */
 
 const router = Router();
 
-router.post("/register",validateBody(registerSchema), register);
+router.post("/register", validateBody(registerSchema), register);
 
 router.post("/login", validateBody(loginSchema), login);
 
@@ -55,6 +59,18 @@ router.post(
 );
 
 router.post(
+  "/request-password-reset",
+  validateBody(requestPasswordResetSchema),
+  requestPasswordResetHandler,
+);
+
+router.post(
+  "/reset-password",
+  validateBody(resetPasswordSchema),
+  resetPasswordHandler,
+);
+
+router.post(
   "/change-email",
   authenticateRequest,
   initializeRequestContext,
@@ -72,10 +88,13 @@ router.patch(
 
 router.post("/logout", validateBody(logoutSchema), logout);
 
-router.post("/logout-all", authenticateRequest, initializeRequestContext, logoutAll);
+router.post(
+  "/logout-all",
+  authenticateRequest,
+  initializeRequestContext,
+  logoutAll,
+);
 
 router.get("/me", authenticateRequest, initializeRequestContext, me);
-
-
 
 export default router;

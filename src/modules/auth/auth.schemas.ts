@@ -95,10 +95,34 @@ export const requestPasswordResetSchema = z.object({
 
 //************************************************************** */
 
-export const resetPasswordSchema = z.object({
-  token: z.string().trim().min(1, "Password-reset token is required."),
-  password: passwordSchema,
-});
+export const resetPasswordSchema = z
+  .object({
+    token: z
+      .string()
+      .min(
+        1,
+        "Password reset token is required.",
+      ),
+
+    password: passwordSchema,
+
+    confirmPassword: z
+      .string()
+      .min(
+        1,
+        "Password confirmation is required.",
+      ),
+  })
+  .refine(
+    (input) =>
+      input.password ===
+      input.confirmPassword,
+    {
+      path: ["confirmPassword"],
+      message:
+        "Password confirmation does not match.",
+    },
+  );
 
 //************************************************************** */
 
