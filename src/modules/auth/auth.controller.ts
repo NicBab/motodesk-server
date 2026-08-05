@@ -20,7 +20,7 @@ import {
   registerUser,
   switchOrganization,
   changePassword,
-  updateProfile,
+  // updateProfile,
   changeEmail,
   requestPasswordReset,
   resetPassword,
@@ -33,7 +33,7 @@ import type {
   RegisterInput,
   SwitchOrganizationInput,
   ChangePasswordInput,
-  UpdateProfileInput,
+  // UpdateProfileInput,
   ChangeEmailInput,
   RequestPasswordResetInput,
   ResetPasswordInput,
@@ -323,40 +323,6 @@ export async function me(
 
 //************************************************************** */
 
-export async function updateProfileHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
-
-  if (!userId) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code: "AUTHENTICATION_REQUIRED",
-      },
-    );
-  }
-
-  const input =
-    requireValidatedBody<UpdateProfileInput>(
-      request,
-    );
-
-  const user =
-    await updateProfile(
-      userId,
-      input,
-    );
-
-  ok(response, {
-    message:
-      "Profile updated successfully.",
-    user,
-  });
-}
 
 //************************************************************** */
 

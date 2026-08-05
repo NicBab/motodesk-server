@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { authenticateRequest } from "../auth/index.js";
-import { requireOrganizationAccess } from "../organizations/organization.middleware.js";
 import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
+
+import {
+  requireOrganizationAccess,
+} from "../organizations/organization.contracts.js";
 
 import {
   getMembershipHandler,

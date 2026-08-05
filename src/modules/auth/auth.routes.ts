@@ -4,6 +4,7 @@ import { Router } from "express";
 import { authenticateRequest } from "./auth.middleware.js";
 import { validateBody } from "../../platform/validation/validate-body.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
+
 import {
   login,
   logout,
@@ -13,7 +14,7 @@ import {
   me,
   switchOrganizationHandler,
   changePasswordHandler,
-  updateProfileHandler,
+  //updateProfileHandler
   changeEmailHandler,
   requestPasswordResetHandler,
   resetPasswordHandler,
@@ -31,6 +32,10 @@ import {
   requestPasswordResetSchema,
   resetPasswordSchema,
 } from "./auth.schemas.js";
+
+import {
+  updateProfileHandler,
+} from "./identity/update-profile/index.js";
 
 //*********************************************************************** */
 

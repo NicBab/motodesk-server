@@ -1,8 +1,5 @@
-// Zod request validation
-
 import { z } from "zod";
-
-import { createOrganizationSchema } from "../organizations/organization.schemas.js";
+import { createOrganizationSchema } from "../organizations/organization.contracts.js";
 
 //************************************************************** */
 

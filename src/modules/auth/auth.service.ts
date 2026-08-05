@@ -27,7 +27,7 @@ import type {
   RefreshSessionInput,
   RegisterInput,
   SwitchOrganizationInput,
-  UpdateProfileInput,
+  // UpdateProfileInput,
   ChangeEmailInput,
   RequestPasswordResetInput,
   ResetPasswordInput,
@@ -64,7 +64,7 @@ import {
   findUserIdByEmail,
   findUserPasswordById,
   updateUserPasswordHash,
-  updateUserProfileRecord,
+  // updateUserProfileRecord,
   findUserEmailById,
   updateUserEmailRecord,
 } from "./auth.repository.js";
@@ -915,38 +915,6 @@ export async function changeEmail(
   );
 }
 
-//************************************************************** */
-
-export async function updateProfile(
-  userId: string,
-  input: UpdateProfileInput,
-): Promise<AuthenticatedUser> {
-  const user =
-    await updateUserProfileRecord(
-      userId,
-      {
-        ...(input.firstName !== undefined
-          ? {
-              firstName: input.firstName,
-            }
-          : {}),
-
-        ...(input.lastName !== undefined
-          ? {
-              lastName: input.lastName,
-            }
-          : {}),
-
-        ...(input.phone !== undefined
-          ? {
-              phone: input.phone,
-            }
-          : {}),
-      },
-    );
-
-  return toAuthenticatedUser(user);
-}
 
 //************************************************************** */
 
