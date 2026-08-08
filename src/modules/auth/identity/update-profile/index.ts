@@ -1,6 +1,15 @@
-export { updateProfileHandler } from "./controller.js";
+export {
+  updateProfileSchema,
+} from "./schema.js";
 
-export { updateProfile } from "./service.js";
+export type {
+  UpdateProfileInput,
+} from "./schema.js";
 
-export { updateProfileSchema, UpdateProfileInput } from "./schema.js";
+export {
+  updateProfileHandler,
+} from "./controller.js";
 
+export {
+  updateProfile,
+} from "./service.js";

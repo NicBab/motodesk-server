@@ -36,6 +36,8 @@ export interface AuthenticatedMembership {
 export interface AuthenticationResult {
   user: AuthenticatedUser;
   membership: AuthenticatedMembership | null;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: Date;
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: Date;
@@ -59,5 +61,5 @@ export interface RefreshTokenParts {
 export interface ChangePasswordResult {
   revokedSessionCount: number;
 
-//************************************************************** */
+  //************************************************************** */
 }

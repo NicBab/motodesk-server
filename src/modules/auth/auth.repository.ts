@@ -1,6 +1,7 @@
 import {
   MembershipStatus,
   MembershipRole,
+  AuthTokenType,
   type Prisma,
 } from "../../generated/prisma/client.js";
 
@@ -29,6 +30,7 @@ export const authenticationMembershipSelect = {
 export const authenticationUserSelect = {
   id: true,
   email: true,
+  emailVerifiedAt: true,
   passwordHash: true,
   firstName: true,
   lastName: true,
@@ -240,6 +242,27 @@ export interface CreateRegistrationRecordsData {
 
 //************************************************************** */
 
+export interface CreateRegistrationRecordsData {
+  user: CreateUserRecordData;
+
+  session: {
+    id: string;
+    tokenHash: string;
+    userAgent: string | null;
+    ipAddress: string | null;
+    expiresAt: Date;
+  };
+
+  emailVerificationToken: {
+    tokenHash: string;
+    expiresAt: Date;
+  };
+
+  organization?: RegistrationOrganizationData;
+}
+
+//************************************************************** */
+
 export async function createRegistrationRecords(
   data: CreateRegistrationRecordsData,
 ) {
@@ -322,11 +345,25 @@ export async function createRegistrationRecords(
           },
         });
 
+        const emailVerificationToken =
+  await transaction.authToken.create({
+    data: {
+      userId: user.id,
+      type:
+        AuthTokenType.EMAIL_VERIFICATION,
+      tokenHash:
+        data.emailVerificationToken.tokenHash,
+      expiresAt:
+        data.emailVerificationToken.expiresAt,
+    },
+  });
+
       return {
-        user,
-        membership,
-        session,
-      };
+  user,
+  membership,
+  session,
+  emailVerificationToken,
+};
     },
   );
 }

@@ -9,28 +9,28 @@ import {
 } from "../../../../platform/validation/validated-request.js";
 
 import type {
-  VerifyEmailInput,
+  ResendEmailVerificationInput,
 } from "./schema.js";
 
 import {
-  verifyEmail,
+  resendEmailVerification,
 } from "./service.js";
 
 //************************************************************** */
 
-export async function verifyEmailHandler(
+export async function resendEmailVerificationHandler(
   request: Request,
   response: Response,
 ): Promise<void> {
   const input =
-    requireValidatedBody<VerifyEmailInput>(
+    requireValidatedBody<ResendEmailVerificationInput>(
       request,
     );
 
-  await verifyEmail(input);
+  const result =
+    await resendEmailVerification(
+      input,
+    );
 
-  ok(response, {
-    message:
-      "Email verified successfully.",
-  });
+  ok(response, result);
 }

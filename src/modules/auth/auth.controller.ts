@@ -26,7 +26,7 @@ import type {
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
-  SwitchOrganizationInput, 
+  SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
 //************************************************************** */
@@ -44,15 +44,9 @@ export async function register(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input =
-    requireValidatedBody<RegisterInput>(
-      request,
-    );
+  const input = requireValidatedBody<RegisterInput>(request);
 
-  const result = await registerUser(
-    input,
-    getRequestContext(request),
-  );
+  const result = await registerUser(input, getRequestContext(request));
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   const permissions = result.membership
@@ -65,6 +59,18 @@ export async function register(
     permissions,
     accessTokenExpiresAt: result.accessTokenExpiresAt,
     refreshTokenExpiresAt: result.refreshTokenExpiresAt,
+
+    ...(result.emailVerificationToken !== undefined
+      ? {
+          emailVerificationToken: result.emailVerificationToken,
+        }
+      : {}),
+
+    ...(result.emailVerificationExpiresAt !== undefined
+      ? {
+          emailVerificationExpiresAt: result.emailVerificationExpiresAt,
+        }
+      : {}),
   });
 }
 
@@ -74,10 +80,7 @@ export async function login(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input =
-  requireValidatedBody<LoginInput>(
-    request,
-  );
+  const input = requireValidatedBody<LoginInput>(request);
 
   const result = await loginUser(input, getRequestContext(request));
 
@@ -102,10 +105,7 @@ export async function refresh(
   request: Request,
   response: Response,
 ): Promise<void> {
- const input =
-  requireValidatedBody<RefreshSessionInput>(
-    request,
-  );
+  const input = requireValidatedBody<RefreshSessionInput>(request);
 
   const result = await refreshSession(input, getRequestContext(request));
 
@@ -140,10 +140,7 @@ export async function switchOrganizationHandler(
     });
   }
 
-const input =
-  requireValidatedBody<SwitchOrganizationInput>(
-    request,
-  );
+  const input = requireValidatedBody<SwitchOrganizationInput>(request);
 
   const result = await switchOrganization(userId, sessionId, input);
 
@@ -164,10 +161,7 @@ export async function logout(
   request: Request,
   response: Response,
 ): Promise<void> {
-const input =
-  requireValidatedBody<LogoutInput>(
-    request,
-  );
+  const input = requireValidatedBody<LogoutInput>(request);
 
   await logoutUser(input);
 
@@ -227,4 +221,3 @@ export async function me(
 }
 
 //************************************************************** */
-

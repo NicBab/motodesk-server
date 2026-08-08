@@ -1,8 +1,10 @@
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 import { env } from "../../config/env.js";
 import type { AccessTokenPayload, RefreshTokenParts } from "./auth.types.js";
+
 import {
   ACCESS_TOKEN_TTL_SECONDS,
+  EMAIL_VERIFICATION_TTL_MILLISECONDS,
   REFRESH_TOKEN_TTL_MILLISECONDS,
   PASSWORD_RESET_TTL_MILLISECONDS,
 } from "./auth.constants.js";
@@ -109,6 +111,44 @@ export function generatePasswordResetToken():
     expiresAt,
   };
 }
+
+//************************************************************** */
+
+export function generateEmailVerificationToken():
+  GeneratedOneTimeToken {
+  const token = generateRandomToken();
+  const tokenHash = hashToken(token);
+
+  const expiresAt = new Date(
+    Date.now() +
+      EMAIL_VERIFICATION_TTL_MILLISECONDS,
+  );
+
+  return {
+    token,
+    tokenHash,
+    expiresAt,
+  };
+}
+
+//************************************************************** */
+
+// export function generateEmailVerificationToken():
+//   GeneratedOneTimeToken {
+//   const token = generateRandomToken();
+//   const tokenHash = hashToken(token);
+
+//   const expiresAt = new Date(
+//     Date.now() +
+//       EMAIL_VERIFICATION_TTL_MILLISECONDS,
+//   );
+
+//   return {
+//     token,
+//     tokenHash,
+//     expiresAt,
+//   };
+// }
 
 //************************************************************** */
 export function parseRefreshToken(token: string): RefreshTokenParts {

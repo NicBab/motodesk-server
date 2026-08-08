@@ -86,28 +86,15 @@ export const switchOrganizationSchema = z.object({
 
 //************************************************************** */
 
-export const verifyEmailSchema = z.object({
-  token: z.string().trim().min(1, "Email-verification token is required."),
-});
-
-//************************************************************** */
-
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshSessionInput = z.infer<typeof refreshSessionSchema>;
 export type LogoutInput = z.infer<typeof logoutSchema>;
-export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type SwitchOrganizationInput = z.infer<typeof switchOrganizationSchema>;
 
 //************************************************************** */
 
-export {
-  updateProfileSchema, UpdateProfileInput,
-} from "./identity/update-profile/index.js";
 
-export {
-  changePasswordSchema, ChangePasswordInput
-} from "./identity/change-password/index.js";
 
 
 

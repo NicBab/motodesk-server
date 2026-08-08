@@ -21,17 +21,17 @@ import {
   refreshSessionSchema,
   registerSchema,
   switchOrganizationSchema,
-  changePasswordSchema,
-  updateProfileSchema,
 } from "./auth.schemas.js";
 
 import {
   updateProfileHandler,
+  updateProfileSchema,
 } from "./identity/update-profile/index.js";
 
 import {
   changePasswordHandler,
-} from "./identity/change-password/controller.js";
+  changePasswordSchema,
+} from "./identity/change-password/index.js";
 
 import {
   changeEmailHandler,
@@ -48,6 +48,15 @@ import {
   resetPasswordSchema,
 } from "./identity/reset-password/index.js";
 
+import {
+  verifyEmailHandler,
+  verifyEmailSchema,
+} from "./identity/verify-email/index.js";
+
+import {
+  resendEmailVerificationHandler,
+  resendEmailVerificationSchema,
+} from "./identity/resend-email-verification/index.js";
 
 //*********************************************************************** */
 
@@ -85,6 +94,18 @@ router.post(
   "/reset-password",
   validateBody(resetPasswordSchema),
   resetPasswordHandler,
+);
+
+router.post(
+  "/verify-email",
+  validateBody(verifyEmailSchema),
+  verifyEmailHandler,
+);
+
+router.post(
+  "/resend-email-verification",
+  validateBody(resendEmailVerificationSchema),
+  resendEmailVerificationHandler,
 );
 
 router.post(
