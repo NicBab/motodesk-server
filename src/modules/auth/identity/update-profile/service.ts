@@ -1,6 +1,8 @@
 import type { AuthenticatedUser } from "../../auth.types.js";
-import type { UpdateProfileInput } from "../../auth.schemas.js";
+
 import { updateUserProfileRecord } from "./repository.js";
+
+import type { UpdateProfileInput } from "./schema.js";
 
 //************************************************************** */
 

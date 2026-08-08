@@ -19,11 +19,6 @@ import {
   refreshSession,
   registerUser,
   switchOrganization,
-  changePassword,
-  // updateProfile,
-  changeEmail,
-  requestPasswordReset,
-  resetPassword,
 } from "./auth.service.js";
 
 import type {
@@ -31,12 +26,7 @@ import type {
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
-  SwitchOrganizationInput,
-  ChangePasswordInput,
-  // UpdateProfileInput,
-  ChangeEmailInput,
-  RequestPasswordResetInput,
-  ResetPasswordInput,
+  SwitchOrganizationInput, 
 } from "./auth.schemas.js";
 
 //************************************************************** */
@@ -170,91 +160,6 @@ const input =
 
 //************************************************************** */
 
-export async function changePasswordHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
-
-  const sessionId =
-    request.authenticationSessionId;
-
-  if (!userId || !sessionId) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code: "AUTHENTICATION_REQUIRED",
-      },
-    );
-  }
-
-  const input =
-    requireValidatedBody<ChangePasswordInput>(
-      request,
-    );
-
-  const result =
-    await changePassword(
-      userId,
-      sessionId,
-      input,
-      getRequestContext(request),
-    );
-
-  ok(response, {
-    message:
-      "Password changed successfully.",
-    revokedSessionCount:
-      result.revokedSessionCount,
-  });
-}
-
-//************************************************************** */
-
-export async function requestPasswordResetHandler(
-  request: Request,
-  response: Response,
-): Promise<void> {
-  const input =
-    requireValidatedBody<RequestPasswordResetInput>(
-      request,
-    );
-
-  const result =
-    await requestPasswordReset(
-      input,
-      getRequestContext(request),
-    );
-
-  ok(response, result);
-}
-
-//************************************************************** */
-
-export async function resetPasswordHandler(
-  request: Request,
-  response: Response,
-): Promise<void> {
-  const input =
-    requireValidatedBody<ResetPasswordInput>(
-      request,
-    );
-
-  await resetPassword(
-    input,
-    getRequestContext(request),
-  );
-
-  ok(response, {
-    message:
-      "Password reset successfully.",
-  });
-}
-
-//************************************************************** */
-
 export async function logout(
   request: Request,
   response: Response,
@@ -323,47 +228,3 @@ export async function me(
 
 //************************************************************** */
 
-
-//************************************************************** */
-
-export async function changeEmailHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
-
-  const sessionId =
-    request.authenticationSessionId;
-
-  if (!userId || !sessionId) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code: "AUTHENTICATION_REQUIRED",
-      },
-    );
-  }
-
-  const input =
-    requireValidatedBody<ChangeEmailInput>(
-      request,
-    );
-
-  const user =
-    await changeEmail(
-      userId,
-      sessionId,
-      input,
-      getRequestContext(request),
-    );
-
-  ok(response, {
-    message:
-      "Email changed successfully.",
-    user,
-  });
-}
-
-//************************************************************** */

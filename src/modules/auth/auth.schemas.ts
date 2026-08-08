@@ -86,86 +86,8 @@ export const switchOrganizationSchema = z.object({
 
 //************************************************************** */
 
-export const requestPasswordResetSchema = z.object({
-  email: emailSchema,
-});
-
-//************************************************************** */
-
-export const resetPasswordSchema = z
-  .object({
-    token: z
-      .string()
-      .min(
-        1,
-        "Password reset token is required.",
-      ),
-
-    password: passwordSchema,
-
-    confirmPassword: z
-      .string()
-      .min(
-        1,
-        "Password confirmation is required.",
-      ),
-  })
-  .refine(
-    (input) =>
-      input.password ===
-      input.confirmPassword,
-    {
-      path: ["confirmPassword"],
-      message:
-        "Password confirmation does not match.",
-    },
-  );
-
-//************************************************************** */
-
 export const verifyEmailSchema = z.object({
   token: z.string().trim().min(1, "Email-verification token is required."),
-});
-
-//************************************************************** */
-
-export const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required."),
-
-    newPassword: passwordSchema,
-
-    confirmNewPassword: z.string().min(1, "Password confirmation is required."),
-  })
-  .refine((input) => input.newPassword === input.confirmNewPassword, {
-    path: ["confirmNewPassword"],
-    message: "New password confirmation does not match.",
-  });
-
-//************************************************************** */
-
-export const updateProfileSchema = z
-  .object({
-    firstName: nameSchema.optional(),
-    lastName: nameSchema.optional(),
-    phone: optionalPhoneSchema,
-  })
-  .refine(
-    (input) =>
-      input.firstName !== undefined ||
-      input.lastName !== undefined ||
-      input.phone !== undefined,
-    {
-      message: "At least one profile field must be provided.",
-    },
-  );
-
-//************************************************************** */
-
-export const changeEmailSchema = z.object({
-  newEmail: emailSchema,
-
-  currentPassword: z.string().min(1, "Current password is required."),
 });
 
 //************************************************************** */
@@ -174,14 +96,22 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshSessionInput = z.infer<typeof refreshSessionSchema>;
 export type LogoutInput = z.infer<typeof logoutSchema>;
-export type RequestPasswordResetInput = z.infer<
-  typeof requestPasswordResetSchema
->;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type SwitchOrganizationInput = z.infer<typeof switchOrganizationSchema>;
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
 
 //************************************************************** */
+
+export {
+  updateProfileSchema, UpdateProfileInput,
+} from "./identity/update-profile/index.js";
+
+export {
+  changePasswordSchema, ChangePasswordInput
+} from "./identity/change-password/index.js";
+
+
+
+
+
+
+

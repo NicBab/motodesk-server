@@ -13,11 +13,6 @@ import {
   register,
   me,
   switchOrganizationHandler,
-  changePasswordHandler,
-  //updateProfileHandler
-  changeEmailHandler,
-  requestPasswordResetHandler,
-  resetPasswordHandler,
 } from "./auth.controller.js";
 
 import {
@@ -28,14 +23,31 @@ import {
   switchOrganizationSchema,
   changePasswordSchema,
   updateProfileSchema,
-  changeEmailSchema,
-  requestPasswordResetSchema,
-  resetPasswordSchema,
 } from "./auth.schemas.js";
 
 import {
   updateProfileHandler,
 } from "./identity/update-profile/index.js";
+
+import {
+  changePasswordHandler,
+} from "./identity/change-password/controller.js";
+
+import {
+  changeEmailHandler,
+  changeEmailSchema,
+} from "./identity/change-email/index.js";
+
+import {
+  requestPasswordResetHandler,
+  requestPasswordResetSchema,
+} from "./identity/request-password-reset/index.js";
+
+import {
+  resetPasswordHandler,
+  resetPasswordSchema,
+} from "./identity/reset-password/index.js";
+
 
 //*********************************************************************** */
 
