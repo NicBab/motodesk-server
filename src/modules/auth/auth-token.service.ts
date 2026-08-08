@@ -17,7 +17,7 @@ import {
 
 import {
   hashToken,
-} from "./auth.utils.js";
+} from "./tokens/token.crypto.js"
 
 //************************************************************** */
 

@@ -11,7 +11,10 @@ import type {
   AuthenticatedUser,
 } from "./auth.types.js";
 import { validateAccessSession } from "./session.service.js";
-import { verifyAccessToken } from "./token.service.js";
+
+import {
+  verifyAccessToken,
+} from "./tokens/jwt.service.js";
 
 //************************************************************** */
 

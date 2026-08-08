@@ -14,7 +14,9 @@ import {
   type GeneratedRefreshToken,
 } from "./token.service.js";
 
-import { verifyTokenHash } from "./auth.utils.js";
+import {
+  verifyTokenHash,
+} from "./tokens/token.crypto.js";
 
 import {
   createSessionRecord,

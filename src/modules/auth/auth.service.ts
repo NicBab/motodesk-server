@@ -6,7 +6,6 @@ import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 
 import {
-  generateAccessToken,
   generateRefreshToken,
   generateEmailVerificationToken,
   parseRefreshToken,
@@ -62,6 +61,10 @@ import {
 //   AUDIT_ACTIONS,
 //   AUDIT_ENTITY_TYPES,
 // } from "../audit/audit.constants.js";
+
+import {
+  generateAccessToken,
+} from "./tokens/jwt.service.js";
 
 //************************************************************** */
 

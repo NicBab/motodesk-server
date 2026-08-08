@@ -1,9 +1,13 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 import {
   REFRESH_TOKEN_BYTE_LENGTH,
   TOKEN_HASH_ALGORITHM,
-} from "./auth.constants.js";
+} from "../auth.constants.js";
 
 //************************************************************** */
 export function generateRandomToken(
