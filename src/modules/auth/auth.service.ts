@@ -7,7 +7,7 @@ import { env } from "../../config/env.js";
 
 import {
   generateEmailVerificationToken,
-} from "./tokens/one-time-token.service.js";
+} from "./tokens/one-time-token.factory.js";
 
 import {
   generateRefreshToken,
@@ -30,11 +30,6 @@ import type {
   RegisterInput,
   SwitchOrganizationInput,
 } from "./auth.schemas.js";
-
-// import {
-//   consumePasswordResetAuthToken,
-//   validatePasswordResetAuthToken,
-// } from "./auth-token.service.js";
 
 import type {
   AuthenticatedMembership,

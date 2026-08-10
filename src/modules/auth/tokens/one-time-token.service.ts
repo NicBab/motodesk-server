@@ -1,58 +1,145 @@
 import {
-  EMAIL_VERIFICATION_TTL_MILLISECONDS,
-  PASSWORD_RESET_TTL_MILLISECONDS,
-} from "../auth.constants.js";
+  AuthTokenType,
+} from "../../../generated/prisma/client.js";
 
 import {
-  generateRandomToken,
+  consumeAuthTokenRecord,
+  createAuthTokenRecord,
+  deleteExpiredAuthTokenRecords,
+  findValidAuthTokenRecord,
+  invalidateUserAuthTokens,
+} from "../auth-token.repository.js";
+
+import {
+  generateEmailVerificationToken,
+  generatePasswordResetToken,
+} from "./one-time-token.factory.js";
+
+import {
   hashToken,
 } from "./token.crypto.js";
 
-
 //************************************************************** */
 
-export interface GeneratedOneTimeToken {
+export interface CreatedAuthToken {
   token: string;
-  tokenHash: string;
   expiresAt: Date;
 }
 
 //************************************************************** */
 
-export function generatePasswordResetToken():
-  GeneratedOneTimeToken {
-  const token = generateRandomToken();
-  const tokenHash = hashToken(token);
-
-  const expiresAt = new Date(
-    Date.now() +
-      PASSWORD_RESET_TTL_MILLISECONDS,
+export async function createPasswordResetAuthToken(
+  userId: string,
+): Promise<CreatedAuthToken> {
+  await invalidateUserAuthTokens(
+    userId,
+    AuthTokenType.PASSWORD_RESET,
   );
 
+  const generatedToken =
+    generatePasswordResetToken();
+
+  await createAuthTokenRecord({
+    userId,
+    type:
+      AuthTokenType.PASSWORD_RESET,
+    tokenHash:
+      generatedToken.tokenHash,
+    expiresAt:
+      generatedToken.expiresAt,
+  });
+
   return {
-    token,
-    tokenHash,
-    expiresAt,
+    token: generatedToken.token,
+    expiresAt:
+      generatedToken.expiresAt,
   };
 }
 
 //************************************************************** */
 
-export function generateEmailVerificationToken():
-  GeneratedOneTimeToken {
-  const token = generateRandomToken();
-  const tokenHash = hashToken(token);
-
-  const expiresAt = new Date(
-    Date.now() +
-      EMAIL_VERIFICATION_TTL_MILLISECONDS,
+export async function createEmailVerificationAuthToken(
+  userId: string,
+): Promise<CreatedAuthToken> {
+  await invalidateUserAuthTokens(
+    userId,
+    AuthTokenType.EMAIL_VERIFICATION,
   );
 
+  const generatedToken =
+    generateEmailVerificationToken();
+
+  await createAuthTokenRecord({
+    userId,
+    type:
+      AuthTokenType.EMAIL_VERIFICATION,
+    tokenHash:
+      generatedToken.tokenHash,
+    expiresAt:
+      generatedToken.expiresAt,
+  });
+
   return {
-    token,
-    tokenHash,
-    expiresAt,
+    token: generatedToken.token,
+    expiresAt:
+      generatedToken.expiresAt,
   };
 }
 
 //************************************************************** */
+
+export async function validateEmailVerificationAuthToken(
+  token: string,
+) {
+  const tokenHash =
+    hashToken(token);
+
+  return findValidAuthTokenRecord(
+    tokenHash,
+    AuthTokenType.EMAIL_VERIFICATION,
+  );
+}
+
+//************************************************************** */
+
+export async function consumeEmailVerificationAuthToken(
+  authTokenId: string,
+): Promise<void> {
+  await consumeAuthTokenRecord(
+    authTokenId,
+  );
+}
+
+//************************************************************** */
+
+export async function validatePasswordResetAuthToken(
+  token: string,
+) {
+  const tokenHash =
+    hashToken(token);
+
+  return findValidAuthTokenRecord(
+    tokenHash,
+    AuthTokenType.PASSWORD_RESET,
+  );
+}
+
+//************************************************************** */
+
+export async function consumePasswordResetAuthToken(
+  authTokenId: string,
+): Promise<void> {
+  await consumeAuthTokenRecord(
+    authTokenId,
+  );
+}
+
+//************************************************************** */
+
+export async function deleteExpiredAuthTokens():
+  Promise<number> {
+  const result =
+    await deleteExpiredAuthTokenRecords();
+
+  return result.count;
+}

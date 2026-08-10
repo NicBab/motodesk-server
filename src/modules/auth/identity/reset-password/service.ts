@@ -31,7 +31,7 @@ import {
 import {
   consumePasswordResetAuthToken,
   validatePasswordResetAuthToken,
-} from "../../auth-token.service.js";
+} from "../../tokens/one-time-token.service.js";
 
 import {
   revokeAllUserSessions,

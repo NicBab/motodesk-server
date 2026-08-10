@@ -6,7 +6,7 @@ import {
 
 import {
   createEmailVerificationAuthToken,
-} from "../../auth-token.service.js";
+} from "../../tokens/one-time-token.service.js";
 
 import type {
   ResendEmailVerificationInput,

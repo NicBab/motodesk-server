@@ -22,7 +22,7 @@ import {
 
 import {
   createPasswordResetAuthToken,
-} from "../../auth-token.service.js";
+} from "../../tokens/one-time-token.service.js";
 
 //************************************************************** */
 

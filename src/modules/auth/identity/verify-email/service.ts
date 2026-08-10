@@ -3,7 +3,7 @@ import { AppError } from "../../../../platform/errors/app-error.js";
 import {
   consumeEmailVerificationAuthToken,
   validateEmailVerificationAuthToken,
-} from "../../auth-token.service.js";
+} from "../../tokens/one-time-token.service.js";
 
 import {
   markUserEmailVerified,
