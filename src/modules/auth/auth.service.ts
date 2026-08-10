@@ -6,11 +6,14 @@ import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 
 import {
-  generateRefreshToken,
   generateEmailVerificationToken,
+} from "./tokens/one-time-token.service.js";
+
+import {
+  generateRefreshToken,
   parseRefreshToken,
   type GeneratedRefreshToken,
-} from "./token.service.js";
+} from "./tokens/refresh-token.service.js";
 
 import {
   MembershipStatus,

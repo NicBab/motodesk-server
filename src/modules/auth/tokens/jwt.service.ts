@@ -1,3 +1,5 @@
+//access JWT generation/verification
+
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 
 import { env } from "../../../config/env.js";

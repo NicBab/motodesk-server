@@ -1,3 +1,5 @@
+//random/hash/split/build helpers
+
 import {
   createHash,
   randomBytes,

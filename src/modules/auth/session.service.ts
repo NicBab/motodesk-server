@@ -12,7 +12,7 @@ import type { RequestContext } from "./auth.types.js";
 import {
   generateRefreshToken,
   type GeneratedRefreshToken,
-} from "./token.service.js";
+} from "./tokens/refresh-token.service.js";
 
 import {
   verifyTokenHash,

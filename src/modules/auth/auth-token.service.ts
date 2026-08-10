@@ -13,7 +13,7 @@ import {
 import {
   generateEmailVerificationToken,
   generatePasswordResetToken,
-} from "./token.service.js";
+} from "./tokens/one-time-token.service.js";
 
 import {
   hashToken,
