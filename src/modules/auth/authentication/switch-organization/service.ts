@@ -8,7 +8,7 @@ import type { SwitchOrganizationInput } from "./schema.js";
 
 import type { AuthenticatedMembership } from "../../auth.types.js";
 
-import { toAuthenticatedMembership } from "../../auth.service.js";
+import { toAuthenticatedMembership } from "../../shared/mappers/membership.mapper.js";
 
 //************************************************************** */
 

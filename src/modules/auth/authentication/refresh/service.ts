@@ -8,7 +8,7 @@ import { generateAccessToken } from "../../tokens/jwt.service.js";
 
 import { rotateSessionToken, validateSession } from "../../session.service.js";
 
-import { toAuthenticatedMembership } from "../../auth.service.js";
+import { toAuthenticatedMembership } from "../../shared/mappers/membership.mapper.js";
 
 import { toAuthenticatedUser } from "../../shared/mappers/auth.mapper.js";
 

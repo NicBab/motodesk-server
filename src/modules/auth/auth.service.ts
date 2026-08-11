@@ -6,12 +6,9 @@ import {
   MembershipStatus,
   type Membership,
   type Organization,
-  type User,
 } from "../../generated/prisma/client.js";
 
 import type {
-  AuthenticatedMembership,
-  AuthenticatedUser,
   AuthenticationResult,
   RequestContext,
 } from "./auth.types.js";
@@ -22,18 +19,9 @@ import {
 
 import { generateAccessToken } from "./tokens/jwt.service.js";
 
-//************************************************************** */
+import { toAuthenticatedMembership, toAuthenticatedUser, UserWithPassword } from "./shared/mappers/membership.mapper.js";
 
-type UserWithPassword = Pick<
-  User,
-  | "id"
-  | "email"
-  | "passwordHash"
-  | "firstName"
-  | "lastName"
-  | "phone"
-  | "isActive"
->;
+//************************************************************** */
 
 type MembershipWithOrganization = Pick<
   Membership,
@@ -65,33 +53,6 @@ export const authenticationMembershipSelect = {
     },
   },
 } as const;
-
-//************************************************************** */
-
-export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
-  return {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
-    isActive: user.isActive,
-  };
-}
-
-//************************************************************** */
-
-export function toAuthenticatedMembership(
-  membership: MembershipWithOrganization,
-): AuthenticatedMembership {
-  return {
-    id: membership.id,
-    organizationId: membership.organizationId,
-    organizationName: membership.organization.name,
-    role: membership.role,
-    status: membership.status,
-  };
-}
 
 //************************************************************** */
 
