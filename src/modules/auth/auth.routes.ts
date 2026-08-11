@@ -5,7 +5,7 @@ import { authenticateRequest } from "./auth.middleware.js";
 import { validateBody } from "../../platform/validation/validate-body.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
-import { me } from "./auth.controller.js";
+import { me } from "./authentication/me/index.js";
 
 import { register, registerSchema } from "./authentication/register/index.js";
 

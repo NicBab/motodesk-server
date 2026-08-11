@@ -1,8 +1,8 @@
 import type { Response } from "express";
-import type { AuthenticatedRequest } from "./auth.middleware.js";
-import { getPermissionsForRole } from "../permissions/permission.utils.js";
-import { ok } from "../../platform/http/api-response.js";
-import { AppError } from "../../platform/errors/app-error.js";
+import type { AuthenticatedRequest } from "../../auth.middleware.js";
+import { getPermissionsForRole } from "../../../permissions/permission.utils.js";
+import { ok } from "../../../../platform/http/api-response.js";
+import { AppError } from "../../../../platform/errors/app-error.js";
 
 //************************************************************** */
 
