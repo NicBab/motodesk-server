@@ -1,5 +1,3 @@
-import { AppError } from "../../platform/errors/app-error.js";
-
 import {
   parseRefreshToken,
   type GeneratedRefreshToken,
@@ -15,7 +13,6 @@ import {
 
 import type {
   LogoutInput,
-  SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
 import type {
@@ -30,10 +27,6 @@ import {
   revokeSession,
   revokeUserSessions,
 } from "./session.service.js";
-
-import {
-  findUserForOrganizationSwitch,
-} from "./auth.repository.js";
 
 import { generateAccessToken } from "./tokens/jwt.service.js";
 
@@ -116,17 +109,6 @@ export function toAuthenticatedMembership(
 
 //************************************************************** */
 
-// Creates a database session.
-// Generates the refresh token.
-// Removes the password hash from the user response.
-// Accepts only an active organization membership.
-// Generates the short-lived JWT.
-// Returns both tokens and their expiration dates.
-// An invited or suspended membership does not enter the JWT:
-// This prevents a non-active membership from accidentally granting organization access.
-
-//************************************************************** */
-
 export function buildAuthenticationResult(
   user: UserWithPassword,
   membership: MembershipWithOrganization | null,
@@ -173,59 +155,6 @@ export async function createAuthenticationResult(
 
 //************************************************************** */
 
-export async function switchOrganization(
-  userId: string,
-  sessionId: string,
-  input: SwitchOrganizationInput,
-): Promise<SwitchOrganizationResult> {
-  const user = await findUserForOrganizationSwitch(
-    userId,
-    input.organizationId,
-  );
-
-  if (!user) {
-    throw new AppError(401, "The authenticated user no longer exists.", {
-      code: "AUTHENTICATED_USER_NOT_FOUND",
-    });
-  }
-
-  if (!user.isActive) {
-    throw new AppError(403, "This account is currently inactive.", {
-      code: "ACCOUNT_INACTIVE",
-    });
-  }
-
-  const membership = user.memberships[0] ?? null;
-
-  if (!membership) {
-    throw new AppError(
-      403,
-      "You do not have an active membership in this organization.",
-      {
-        code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
-      },
-    );
-  }
-
-  const authenticatedMembership = toAuthenticatedMembership(membership);
-
-  const accessToken = generateAccessToken({
-    sub: user.id,
-    email: user.email,
-    sessionId,
-    organizationId: authenticatedMembership.organizationId,
-    membershipId: authenticatedMembership.id,
-    role: authenticatedMembership.role,
-  });
-
-  return {
-    membership: authenticatedMembership,
-    accessToken: accessToken.token,
-    accessTokenExpiresAt: accessToken.expiresAt,
-  };
-}
-
-//************************************************************** */
 
 export async function logoutUser(input: LogoutInput): Promise<void> {
   const parsedRefreshToken = parseRefreshToken(input.refreshToken);

@@ -14,8 +14,12 @@ import {
   logout,
   logoutAll,
   me,
-  switchOrganizationHandler,
 } from "./auth.controller.js";
+
+import {
+  switchOrganizationHandler,
+  switchOrganizationSchema,
+} from "./authentication/switch-organization/index.js";
 
 import {
   login,
@@ -24,7 +28,6 @@ import {
 
 import {
   logoutSchema,
-  switchOrganizationSchema,
 } from "./auth.schemas.js";
 
 import {

@@ -7,47 +7,14 @@ import { requireValidatedBody } from "../../platform/validation/validated-reques
 
 import {
   clearAuthenticationCookies,
-  setAccessTokenCookie,
 } from "./cookie.service.js";
 
 import {
   logoutAllUserSessions,
   logoutUser,
-  switchOrganization,
 } from "./auth.service.js";
 
-import type { LogoutInput, SwitchOrganizationInput } from "./auth.schemas.js";
-
-//************************************************************** */
-
-export async function switchOrganizationHandler(
-  request: AuthenticatedRequest,
-  response: Response,
-): Promise<void> {
-  const userId = request.authenticatedUser?.id;
-
-  const sessionId = request.authenticationSessionId;
-
-  if (!userId || !sessionId) {
-    throw new AppError(401, "Authentication required.", {
-      code: "AUTHENTICATION_REQUIRED",
-    });
-  }
-
-  const input = requireValidatedBody<SwitchOrganizationInput>(request);
-
-  const result = await switchOrganization(userId, sessionId, input);
-
-  setAccessTokenCookie(response, result.accessToken);
-
-  const permissions = getPermissionsForRole(result.membership.role);
-
-  ok(response, {
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-  });
-}
+import type { LogoutInput } from "./auth.schemas.js";
 
 //************************************************************** */
 
