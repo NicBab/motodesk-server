@@ -1,45 +1,20 @@
-import type {
-  Request,
-  Response,
-} from "express";
+import type { Request, Response } from "express";
 
-import {
-  setAuthenticationCookies,
-} from "../../cookie.service.js";
+import { setAuthenticationCookies } from "../../cookie.service.js";
 
-import {
-  loginUser,
-} from "./service.js";
+import { loginUser } from "./service.js";
 
-import type {
-  LoginInput,
-} from "./schema.js";
+import type { LoginInput } from "./schema.js";
 
-import type {
-  RequestContext,
-} from "../../auth.types.js";
+import { requireValidatedBody } from "../../../../platform/validation/validated-request.js";
 
-import {
-  requireValidatedBody,
-} from "../../../../platform/validation/validated-request.js";
+import { ok } from "../../../../platform/http/api-response.js";
 
-import {
-  ok,
-} from "../../../../platform/http/api-response.js";
+import { getPermissionsForRole } from "../../../permissions/permission.utils.js";
 
-import { getPermissionsForRole } from "../../../permissions/permission.utils.js"
+import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
 //************************************************************** */
-
-function getRequestContext(request: Request): RequestContext {
-  return {
-    ipAddress: request.ip ?? null,
-    userAgent: request.get("user-agent") ?? null,
-  };
-}
-
-//************************************************************** */
-
 
 export async function login(
   request: Request,
@@ -47,7 +22,7 @@ export async function login(
 ): Promise<void> {
   const input = requireValidatedBody<LoginInput>(request);
 
-  const result = await loginUser(input, getRequestContext(request));
+  const result = await loginUser(input, getRequestMetadata(request));
 
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 

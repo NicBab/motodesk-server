@@ -13,7 +13,6 @@ import {
 import {
   logout,
   logoutAll,
-  refresh,
   me,
   switchOrganizationHandler,
 } from "./auth.controller.js";
@@ -25,9 +24,13 @@ import {
 
 import {
   logoutSchema,
-  refreshSessionSchema,
   switchOrganizationSchema,
 } from "./auth.schemas.js";
+
+import {
+  refresh,
+  refreshSessionSchema,
+} from "./authentication/refresh/index.js";
 
 
 import {

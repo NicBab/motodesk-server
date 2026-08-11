@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import type { RequestContext } from "./auth.types.js";
 import type { AuthenticatedRequest } from "./auth.middleware.js";
 import { getPermissionsForRole } from "../permissions/permission.utils.js";
 import { ok } from "../../platform/http/api-response.js";
@@ -9,56 +8,15 @@ import { requireValidatedBody } from "../../platform/validation/validated-reques
 import {
   clearAuthenticationCookies,
   setAccessTokenCookie,
-  setAuthenticationCookies,
 } from "./cookie.service.js";
 
 import {
   logoutAllUserSessions,
   logoutUser,
-  refreshSession,
   switchOrganization,
 } from "./auth.service.js";
 
-import type {
-  LogoutInput,
-  RefreshSessionInput,
-  SwitchOrganizationInput,
-} from "./auth.schemas.js";
-
-//************************************************************** */
-
-function getRequestContext(request: Request): RequestContext {
-  return {
-    ipAddress: request.ip ?? null,
-    userAgent: request.get("user-agent") ?? null,
-  };
-}
-
-//************************************************************** */
-
-
-export async function refresh(
-  request: Request,
-  response: Response,
-): Promise<void> {
-  const input = requireValidatedBody<RefreshSessionInput>(request);
-
-  const result = await refreshSession(input, getRequestContext(request));
-
-  setAuthenticationCookies(response, result.accessToken, result.refreshToken);
-
-  const permissions = result.membership
-    ? getPermissionsForRole(result.membership.role)
-    : [];
-
-  ok(response, {
-    user: result.user,
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-  });
-}
+import type { LogoutInput, SwitchOrganizationInput } from "./auth.schemas.js";
 
 //************************************************************** */
 

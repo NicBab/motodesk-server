@@ -1,42 +1,18 @@
-import type {
-  Request,
-  Response,
-} from "express";
+import type { Request, Response } from "express";
 
-import {
-  created,
-} from "../../../../platform/http/api-response.js";
+import { created } from "../../../../platform/http/api-response.js";
 
-import {
-  requireValidatedBody,
-} from "../../../../platform/validation/validated-request.js";
+import { requireValidatedBody } from "../../../../platform/validation/validated-request.js";
 
-import {
-  setAuthenticationCookies,
-} from "../../cookie.service.js";
+import { setAuthenticationCookies } from "../../cookie.service.js";
 
-import { getPermissionsForRole } from "../../../permissions/permission.utils.js"
+import { getPermissionsForRole } from "../../../permissions/permission.utils.js";
 
-import type {
-  RegisterInput,
-} from "./schema.js";
+import type { RegisterInput } from "./schema.js";
 
-import type {
-  RequestContext,
-} from "../../auth.types.js";
+import { registerUser } from "./service.js";
 
-import {
-  registerUser,
-} from "./service.js";
-
-//************************************************************** */
-
-function getRequestContext(request: Request): RequestContext {
-  return {
-    ipAddress: request.ip ?? null,
-    userAgent: request.get("user-agent") ?? null,
-  };
-}
+import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
 //************************************************************** */
 
@@ -46,7 +22,7 @@ export async function register(
 ): Promise<void> {
   const input = requireValidatedBody<RegisterInput>(request);
 
-  const result = await registerUser(input, getRequestContext(request));
+  const result = await registerUser(input, getRequestMetadata(request));
   setAuthenticationCookies(response, result.accessToken, result.refreshToken);
 
   const permissions = result.membership

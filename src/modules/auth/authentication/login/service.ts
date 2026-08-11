@@ -1,25 +1,14 @@
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import {
-  findUserForLogin,
-} from "../../auth.repository.js";
+import { findUserForLogin } from "../../auth.repository.js";
 
-import {
-  verifyPassword,
-} from "../../password.service.js";
+import { verifyPassword } from "../../password.service.js";
 
-import {
-  createAuthenticationResult,
-} from "../../auth.service.js";
+import { createAuthenticationResult } from "../../auth.service.js";
 
-import type {
-  LoginInput,
-} from "./schema.js";
+import type { LoginInput } from "./schema.js";
 
-import type {
-  AuthenticationResult,
-  RequestContext,
-} from "../../auth.types.js";
+import type { AuthenticationResult, RequestContext } from "../../auth.types.js";
 
 //************************************************************** */
 

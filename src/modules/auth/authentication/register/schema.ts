@@ -1,15 +1,13 @@
 import { z } from "zod";
 
+import { createOrganizationSchema } from "../../../organizations/organization.contracts.js";
+
 import {
   emailSchema,
   nameSchema,
   optionalPhoneSchema,
   passwordSchema,
 } from "../../shared/validation/index.js";
-
-import {
-  createOrganizationSchema,
-} from "../../../organizations/organization.contracts.js";
 
 //************************************************************** */
 
@@ -20,11 +18,9 @@ export const registerSchema = z.object({
   lastName: nameSchema,
   phone: optionalPhoneSchema,
 
-  organization:
-    createOrganizationSchema.optional(),
+  organization: createOrganizationSchema.optional(),
 });
 
 //************************************************************** */
 
-export type RegisterInput =
-  z.infer<typeof registerSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
