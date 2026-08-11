@@ -1,19 +1,13 @@
 import {
-  parseRefreshToken,
   type GeneratedRefreshToken,
 } from "./tokens/refresh-token.service.js";
 
 import {
   MembershipStatus,
-  SessionRevocationReason,
   type Membership,
   type Organization,
   type User,
 } from "../../generated/prisma/client.js";
-
-import type {
-  LogoutInput,
-} from "./auth.schemas.js";
 
 import type {
   AuthenticatedMembership,
@@ -24,8 +18,6 @@ import type {
 
 import {
   createSession,
-  revokeSession,
-  revokeUserSessions,
 } from "./session.service.js";
 
 import { generateAccessToken } from "./tokens/jwt.service.js";
@@ -48,12 +40,6 @@ type MembershipWithOrganization = Pick<
   "id" | "organizationId" | "role" | "status"
 > & {
   organization: Pick<Organization, "name">;
-};
-
-type SwitchOrganizationResult = {
-  membership: AuthenticatedMembership;
-  accessToken: string;
-  accessTokenExpiresAt: Date;
 };
 
 //************************************************************** */
@@ -155,25 +141,3 @@ export async function createAuthenticationResult(
 
 //************************************************************** */
 
-
-export async function logoutUser(input: LogoutInput): Promise<void> {
-  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
-
-  await revokeSession(
-    parsedRefreshToken.sessionId,
-    SessionRevocationReason.LOGOUT,
-  );
-}
-
-//************************************************************** */
-
-export async function logoutAllUserSessions(userId: string): Promise<number> {
-  const result = await revokeUserSessions(
-    userId,
-    SessionRevocationReason.LOGOUT_ALL,
-  );
-
-  return result.revokedSessionCount;
-}
-
-//************************************************************** */

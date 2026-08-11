@@ -5,36 +5,25 @@ import { authenticateRequest } from "./auth.middleware.js";
 import { validateBody } from "../../platform/validation/validate-body.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
-import {
-  register,
-  registerSchema,
-} from "./authentication/register/index.js";
+import { me } from "./auth.controller.js";
 
-import {
-  logout,
-  logoutAll,
-  me,
-} from "./auth.controller.js";
+import { register, registerSchema } from "./authentication/register/index.js";
 
 import {
   switchOrganizationHandler,
   switchOrganizationSchema,
 } from "./authentication/switch-organization/index.js";
 
-import {
-  login,
-  loginSchema
-} from "./authentication/login/index.js";
-
-import {
-  logoutSchema,
-} from "./auth.schemas.js";
+import { login, loginSchema } from "./authentication/login/index.js";
 
 import {
   refresh,
   refreshSessionSchema,
 } from "./authentication/refresh/index.js";
 
+import { logout, logoutSchema } from "./authentication/logout/index.js";
+
+import { logoutAll } from "./authentication/logout-all/index.js";
 
 import {
   updateProfileHandler,
@@ -70,7 +59,6 @@ import {
   resendEmailVerificationHandler,
   resendEmailVerificationSchema,
 } from "./identity/resend-email-verification/index.js";
-
 
 //*********************************************************************** */
 
