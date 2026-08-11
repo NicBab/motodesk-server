@@ -1,12 +1,10 @@
-import { hashPassword } from "./password.service.js";
 import { AppError } from "../../platform/errors/app-error.js";
-import { randomUUID } from "node:crypto";
-import { env } from "../../config/env.js";
+// import { randomUUID } from "node:crypto";
+// import { env } from "../../config/env.js";
 
-import { generateEmailVerificationToken } from "./tokens/one-time-token.factory.js";
 
 import {
-  generateRefreshToken,
+  // generateRefreshToken,
   parseRefreshToken,
   type GeneratedRefreshToken,
 } from "./tokens/refresh-token.service.js";
@@ -22,7 +20,6 @@ import {
 import type {
   LogoutInput,
   RefreshSessionInput,
-  RegisterInput,
   SwitchOrganizationInput,
 } from "./auth.schemas.js";
 
@@ -42,10 +39,8 @@ import {
 } from "./session.service.js";
 
 import {
-  createRegistrationRecords,
   findUserForAuthentication,
   findUserForOrganizationSwitch,
-  findUserIdByEmail,
 } from "./auth.repository.js";
 
 import { generateAccessToken } from "./tokens/jwt.service.js";
@@ -140,7 +135,7 @@ export function toAuthenticatedMembership(
 
 //************************************************************** */
 
-function buildAuthenticationResult(
+export function buildAuthenticationResult(
   user: UserWithPassword,
   membership: MembershipWithOrganization | null,
   sessionId: string,
@@ -184,94 +179,6 @@ export async function createAuthenticationResult(
   return buildAuthenticationResult(user, membership, session.id, refreshToken);
 }
 
-//************************************************************** */
-
-export async function registerUser(
-  input: RegisterInput,
-  context: RequestContext,
-): Promise<AuthenticationResult> {
-  const existingUser = await findUserIdByEmail(input.email);
-
-  if (existingUser) {
-    throw new AppError(
-      409,
-      "An account with this email address already exists.",
-      {
-        code: "EMAIL_ALREADY_REGISTERED",
-      },
-    );
-  }
-
-  const passwordHash = await hashPassword(input.password);
-
-  const sessionId = randomUUID();
-
-  const refreshToken = generateRefreshToken(sessionId);
-
-  const emailVerificationToken = generateEmailVerificationToken();
-
-  const records = await createRegistrationRecords({
-    user: {
-      email: input.email,
-      passwordHash,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phone: input.phone ?? null,
-    },
-
-    session: {
-      id: sessionId,
-      tokenHash: refreshToken.tokenHash,
-      userAgent: context.userAgent,
-      ipAddress: context.ipAddress,
-      expiresAt: refreshToken.expiresAt,
-    },
-
-    emailVerificationToken: {
-      tokenHash: emailVerificationToken.tokenHash,
-      expiresAt: emailVerificationToken.expiresAt,
-    },
-
-    ...(input.organization !== undefined
-      ? {
-          organization: {
-            name: input.organization.name,
-            slug: input.organization.slug,
-
-            ...(input.organization.email !== undefined
-              ? {
-                  email: input.organization.email,
-                }
-              : {}),
-
-            ...(input.organization.phone !== undefined
-              ? {
-                  phone: input.organization.phone,
-                }
-              : {}),
-          },
-        }
-      : {}),
-  });
-
-  const authenticationResult = buildAuthenticationResult(
-    records.user,
-    records.membership,
-    records.session.id,
-    refreshToken,
-  );
-
-  return {
-    ...authenticationResult,
-
-    ...(env.NODE_ENV === "development"
-      ? {
-          emailVerificationToken: emailVerificationToken.token,
-          emailVerificationExpiresAt: emailVerificationToken.expiresAt,
-        }
-      : {}),
-  };
-}
 //************************************************************** */
 
 export async function refreshSession(

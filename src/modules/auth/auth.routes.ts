@@ -6,10 +6,14 @@ import { validateBody } from "../../platform/validation/validate-body.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
+  register,
+  registerSchema,
+} from "./authentication/register/index.js";
+
+import {
   logout,
   logoutAll,
   refresh,
-  register,
   me,
   switchOrganizationHandler,
 } from "./auth.controller.js";
@@ -22,9 +26,9 @@ import {
 import {
   logoutSchema,
   refreshSessionSchema,
-  registerSchema,
   switchOrganizationSchema,
 } from "./auth.schemas.js";
+
 
 import {
   updateProfileHandler,
