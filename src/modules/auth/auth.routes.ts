@@ -6,7 +6,6 @@ import { validateBody } from "../../platform/validation/validate-body.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
-  login,
   logout,
   logoutAll,
   refresh,
@@ -16,7 +15,11 @@ import {
 } from "./auth.controller.js";
 
 import {
-  loginSchema,
+  login,
+  loginSchema
+} from "./authentication/login/index.js";
+
+import {
   logoutSchema,
   refreshSessionSchema,
   registerSchema,
@@ -57,6 +60,7 @@ import {
   resendEmailVerificationHandler,
   resendEmailVerificationSchema,
 } from "./identity/resend-email-verification/index.js";
+
 
 //*********************************************************************** */
 

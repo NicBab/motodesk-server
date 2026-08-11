@@ -13,7 +13,6 @@ import {
 } from "./cookie.service.js";
 
 import {
-  loginUser,
   logoutAllUserSessions,
   logoutUser,
   refreshSession,
@@ -22,7 +21,6 @@ import {
 } from "./auth.service.js";
 
 import type {
-  LoginInput,
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
@@ -76,30 +74,6 @@ export async function register(
 
 //************************************************************** */
 
-export async function login(
-  request: Request,
-  response: Response,
-): Promise<void> {
-  const input = requireValidatedBody<LoginInput>(request);
-
-  const result = await loginUser(input, getRequestContext(request));
-
-  setAuthenticationCookies(response, result.accessToken, result.refreshToken);
-
-  const permissions = result.membership
-    ? getPermissionsForRole(result.membership.role)
-    : [];
-
-  ok(response, {
-    user: result.user,
-    membership: result.membership,
-    permissions,
-    accessTokenExpiresAt: result.accessTokenExpiresAt,
-    refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-  });
-}
-
-//************************************************************** */
 
 export async function refresh(
   request: Request,

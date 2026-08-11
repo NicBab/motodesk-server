@@ -1,12 +1,15 @@
 import type {
   MembershipRole,
 } from "../../generated/prisma/client.js";
+
 import type {
   Permission,
 } from "./permission.constants.js";
+
 import {
   rolePermissions,
 } from "./permission.roles.js";
+
 import type {
   PermissionCheckResult,
 } from "./permission.types.js";

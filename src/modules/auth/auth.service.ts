@@ -1,13 +1,9 @@
-// import { prisma } from "../../config/prisma.js";
-import { hashPassword, verifyPassword } from "./password.service.js";
+import { hashPassword } from "./password.service.js";
 import { AppError } from "../../platform/errors/app-error.js";
 import { randomUUID } from "node:crypto";
-// import { createAuditLog } from "../audit/audit.service.js";
 import { env } from "../../config/env.js";
 
-import {
-  generateEmailVerificationToken,
-} from "./tokens/one-time-token.factory.js";
+import { generateEmailVerificationToken } from "./tokens/one-time-token.factory.js";
 
 import {
   generateRefreshToken,
@@ -24,7 +20,6 @@ import {
 } from "../../generated/prisma/client.js";
 
 import type {
-  LoginInput,
   LogoutInput,
   RefreshSessionInput,
   RegisterInput,
@@ -44,25 +39,16 @@ import {
   revokeUserSessions,
   rotateSessionToken,
   validateSession,
-  // revokeAllUserSessions,
 } from "./session.service.js";
 
 import {
   createRegistrationRecords,
   findUserForAuthentication,
-  findUserForLogin,
   findUserForOrganizationSwitch,
   findUserIdByEmail,
 } from "./auth.repository.js";
 
-// import {
-//   AUDIT_ACTIONS,
-//   AUDIT_ENTITY_TYPES,
-// } from "../audit/audit.constants.js";
-
-import {
-  generateAccessToken,
-} from "./tokens/jwt.service.js";
+import { generateAccessToken } from "./tokens/jwt.service.js";
 
 //************************************************************** */
 
@@ -268,64 +254,24 @@ export async function registerUser(
       : {}),
   });
 
-  const authenticationResult =
-  buildAuthenticationResult(
+  const authenticationResult = buildAuthenticationResult(
     records.user,
     records.membership,
     records.session.id,
     refreshToken,
   );
 
-return {
-  ...authenticationResult,
+  return {
+    ...authenticationResult,
 
-  ...(env.NODE_ENV === "development"
-    ? {
-        emailVerificationToken:
-          emailVerificationToken.token,
-        emailVerificationExpiresAt:
-          emailVerificationToken.expiresAt,
-      }
-    : {}),
-};
+    ...(env.NODE_ENV === "development"
+      ? {
+          emailVerificationToken: emailVerificationToken.token,
+          emailVerificationExpiresAt: emailVerificationToken.expiresAt,
+        }
+      : {}),
+  };
 }
-
-//************************************************************** */
-
-export async function loginUser(
-  input: LoginInput,
-  context: RequestContext,
-): Promise<AuthenticationResult> {
-  const user = await findUserForLogin(input.email);
-
-  if (!user) {
-    throw new AppError(401, "Invalid email address or password.", {
-      code: "INVALID_CREDENTIALS",
-    });
-  }
-
-  if (!user.isActive) {
-    throw new AppError(403, "This account is currently inactive.", {
-      code: "ACCOUNT_INACTIVE",
-    });
-  }
-
-  const passwordMatches = await verifyPassword(
-    input.password,
-    user.passwordHash,
-  );
-
-  if (!passwordMatches) {
-    throw new AppError(401, "Invalid email address or password.", {
-      code: "INVALID_CREDENTIALS",
-    });
-  }
-
-  const membership = user.memberships[0] ?? null;
-
-  return createAuthenticationResult(user, membership, context);
-}
-
 //************************************************************** */
 
 export async function refreshSession(

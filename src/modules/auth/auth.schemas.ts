@@ -58,16 +58,6 @@ export const registerSchema = z.object({
 
 //************************************************************** */
 
-export const loginSchema = z.object({
-  email: emailSchema,
-  password: z
-    .string()
-    .min(1, "Password is required.")
-    .max(128, "Password cannot exceed 128 characters."),
-});
-
-//************************************************************** */
-
 export const refreshSessionSchema = z.object({
   refreshToken: z.string().trim().min(1, "Refresh token is required."),
 });
@@ -87,7 +77,6 @@ export const switchOrganizationSchema = z.object({
 //************************************************************** */
 
 export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshSessionInput = z.infer<typeof refreshSessionSchema>;
 export type LogoutInput = z.infer<typeof logoutSchema>;
 export type SwitchOrganizationInput = z.infer<typeof switchOrganizationSchema>;
