@@ -10,7 +10,9 @@ import { generateRefreshToken } from "../../tokens/refresh-token.service.js";
 
 import { generateEmailVerificationToken } from "../../tokens/one-time-token.factory.js";
 
-import { buildAuthenticationResult } from "../../auth.service.js";
+import {
+  buildAuthenticationResult,
+} from "../../shared/authentication-result.builder.js";
 
 import type { RegisterInput } from "./schema.js";
 

@@ -1,23 +1,14 @@
 import {
   type Membership,
   type Organization,
-  User
 } from "../../../../generated/prisma/client.js";
 
-import { AuthenticatedMembership, AuthenticatedUser } from "../../auth.types.js"
+import { 
+    AuthenticatedMembership, 
+} from "../../auth.types.js"
 
 //************************************************************** */
 
-export type UserWithPassword = Pick<
-  User,
-  | "id"
-  | "email"
-  | "passwordHash"
-  | "firstName"
-  | "lastName"
-  | "phone"
-  | "isActive"
->;
 
 type MembershipWithOrganization = Pick<
   Membership,
@@ -41,14 +32,3 @@ export function toAuthenticatedMembership(
 }
 
 //************************************************************** */
-
-export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
-  return {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
-    isActive: user.isActive,
-  };
-}

@@ -1,25 +1,32 @@
 import {
   type GeneratedRefreshToken,
-} from "./tokens/refresh-token.service.js";
+} from "../tokens/refresh-token.service.js";
 
 import {
   MembershipStatus,
   type Membership,
   type Organization,
-} from "../../generated/prisma/client.js";
+} from "../../../generated/prisma/client.js";
 
 import type {
   AuthenticationResult,
   RequestContext,
-} from "./auth.types.js";
+} from "../auth.types.js";
 
 import {
   createSession,
-} from "./session.service.js";
+} from "../session.service.js";
 
-import { generateAccessToken } from "./tokens/jwt.service.js";
+import { generateAccessToken } from "../tokens/jwt.service.js";
 
-import { toAuthenticatedMembership, toAuthenticatedUser, UserWithPassword } from "./shared/mappers/membership.mapper.js";
+import {
+  toAuthenticatedMembership,
+} from "../shared/mappers/membership.mapper.js";
+
+import {
+  toAuthenticatedUser,
+  type UserWithPassword,
+} from "../shared/mappers/auth.mapper.js";
 
 //************************************************************** */
 
@@ -30,29 +37,6 @@ type MembershipWithOrganization = Pick<
   organization: Pick<Organization, "name">;
 };
 
-//************************************************************** */
-
-export const authenticationUserSelect = {
-  id: true,
-  email: true,
-  passwordHash: true,
-  firstName: true,
-  lastName: true,
-  phone: true,
-  isActive: true,
-} as const;
-
-export const authenticationMembershipSelect = {
-  id: true,
-  organizationId: true,
-  role: true,
-  status: true,
-  organization: {
-    select: {
-      name: true,
-    },
-  },
-} as const;
 
 //************************************************************** */
 

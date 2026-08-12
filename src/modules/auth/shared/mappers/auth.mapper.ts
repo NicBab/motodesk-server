@@ -2,13 +2,14 @@ import type {
   User,
 } from "../../../../generated/prisma/client.js";
 
-//************************************************************** */
-
 import type {
   AuthenticatedUser,
 } from "../../auth.types.js";
 
-type UserWithPassword = Pick<
+//************************************************************** */
+
+
+export type UserWithPassword = Pick<
   User,
   | "id"
   | "email"

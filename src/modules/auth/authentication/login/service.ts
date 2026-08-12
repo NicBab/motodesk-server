@@ -4,7 +4,7 @@ import { findUserForLogin } from "../../auth.repository.js";
 
 import { verifyPassword } from "../../password.service.js";
 
-import { createAuthenticationResult } from "../../auth.service.js";
+import { createAuthenticationResult } from "../../shared/authentication-result.builder.js";
 
 import type { LoginInput } from "./schema.js";
 
