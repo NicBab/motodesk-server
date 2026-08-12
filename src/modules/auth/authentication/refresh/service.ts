@@ -6,7 +6,10 @@ import { parseRefreshToken } from "../../tokens/refresh-token.service.js";
 
 import { generateAccessToken } from "../../tokens/jwt.service.js";
 
-import { rotateSessionToken, validateSession } from "../../session.service.js";
+import {
+  rotateSessionToken,
+  validateSession,
+} from "../../sessions/session.service.js";
 
 import { toAuthenticatedMembership } from "../../shared/mappers/membership.mapper.js";
 

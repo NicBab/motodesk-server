@@ -4,7 +4,9 @@ import type { LogoutInput } from "./schema.js";
 
 import { parseRefreshToken } from "../../tokens/refresh-token.service.js";
 
-import { revokeSession } from "../../session.service.js";
+import {
+  revokeSession,
+} from "../../sessions/session.service.js";
 
 //************************************************************** */
 

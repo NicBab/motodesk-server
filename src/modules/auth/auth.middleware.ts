@@ -1,16 +1,22 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
+
 import {
   findAuthenticatedMembership,
   findAuthenticatedUserById,
 } from "./auth.repository.js";
+
 import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
+
 import type {
   AuthenticatedMembership,
   AuthenticatedUser,
 } from "./auth.types.js";
-import { validateAccessSession } from "./session.service.js";
+
+import {
+  validateAccessSession,
+} from "./sessions/session.service.js";
 
 import {
   verifyAccessToken,

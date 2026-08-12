@@ -15,7 +15,7 @@ import type {
 
 import {
   createSession,
-} from "../session.service.js";
+} from "../sessions/session.service.js";
 
 import { generateAccessToken } from "../tokens/jwt.service.js";
 

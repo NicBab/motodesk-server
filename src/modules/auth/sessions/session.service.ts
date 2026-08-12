@@ -1,22 +1,22 @@
-// Refresh-session creation, rotation and revocation
-
 import { randomUUID } from "node:crypto";
 
 import {
   SessionRevocationReason,
   type Session,
-} from "../../generated/prisma/client.js";
+} from "../../../generated/prisma/client.js";
 
-import type { RequestContext } from "./auth.types.js";
+import type {
+  RequestContext,
+} from "../auth.types.js";
 
 import {
   generateRefreshToken,
   type GeneratedRefreshToken,
-} from "./tokens/refresh-token.service.js";
+} from "../tokens/refresh-token.service.js";
 
 import {
   verifyTokenHash,
-} from "./tokens/token.crypto.js";
+} from "../tokens/token.crypto.js";
 
 import {
   createSessionRecord,

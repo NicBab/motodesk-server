@@ -20,7 +20,9 @@ import {
 
 import { hashPassword, verifyPassword } from "../../password.service.js";
 
-import { revokeUserSessions } from "../../session.service.js";
+import {
+  revokeUserSessions,
+} from "../../sessions/session.service.js";
 
 import type { ChangePasswordInput } from "./schema.js";
 

@@ -4,7 +4,7 @@ import {
 
 import {
   revokeUserSessions,
-} from "../../session.service.js";
+} from "../../sessions/session.service.js";
 
 //************************************************************** */
 
