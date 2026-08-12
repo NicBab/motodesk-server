@@ -8,7 +8,7 @@ import {
   deleteExpiredAuthTokenRecords,
   findValidAuthTokenRecord,
   invalidateUserAuthTokens,
-} from "../auth-token.repository.js";
+} from "./one-time-token.repository.js";
 
 import {
   generateEmailVerificationToken,

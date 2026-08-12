@@ -1,16 +1,10 @@
-import {
-  prisma,
-} from "../../../../config/prisma.js";
+import { prisma } from "../../../../config/prisma.js";
 
-import {
-  authenticationUserSelect,
-} from "../../auth.repository.js";
+import { authenticationUserSelect } from "../../shared/repositories/user-auth.repository.js";
 
 //************************************************************** */
 
-export async function findUserEmailById(
-  userId: string,
-) {
+export async function findUserEmailById(userId: string) {
   return prisma.user.findUnique({
     where: {
       id: userId,
@@ -26,10 +20,7 @@ export async function findUserEmailById(
 
 //************************************************************** */
 
-export async function updateUserEmailRecord(
-  userId: string,
-  email: string,
-) {
+export async function updateUserEmailRecord(userId: string, email: string) {
   return prisma.user.update({
     where: {
       id: userId,

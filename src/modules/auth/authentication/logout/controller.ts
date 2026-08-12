@@ -8,7 +8,7 @@ import type { LogoutInput } from "./schema.js";
 
 import { logoutUser } from "./service.js";
 
-import { clearAuthenticationCookies } from "../../cookie.service.js";
+import { clearAuthenticationCookies } from "../../http/cookie.service.js";
 
 //************************************************************** */
 

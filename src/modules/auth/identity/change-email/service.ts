@@ -4,35 +4,20 @@ import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } from "../../../audit/audit.constants.js";
-import {
-  createAuditLog,
-} from "../../../audit/audit.service.js";
 
-import type {
-  AuthenticatedUser,
-  RequestContext,
-} from "../../auth.types.js";
+import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type {
-  ChangeEmailInput,
-} from "./schema.js";
+import type { AuthenticatedUser, RequestContext } from "../../auth.types.js";
 
-import {
-  findUserIdByEmail,
-} from "../../auth.repository.js";
+import type { ChangeEmailInput } from "./schema.js";
 
-import {
-  findUserEmailById,
-  updateUserEmailRecord,
-} from "./repository.js";
+import { findUserIdByEmail } from "../../shared/repositories/user-auth.repository.js";
 
-import {
-  verifyPassword,
-} from "../../password.service.js";
+import { findUserEmailById, updateUserEmailRecord } from "./repository.js";
 
-import {
-  toAuthenticatedUser,
-} from "../../shared/mappers/auth.mapper.js";
+import { verifyPassword } from "../../security/password.service.js";
+
+import { toAuthenticatedUser } from "../../shared/mappers/auth.mapper.js";
 
 //************************************************************** */
 
@@ -42,43 +27,29 @@ export async function changeEmail(
   input: ChangeEmailInput,
   context: RequestContext,
 ): Promise<AuthenticatedUser> {
-  const user =
-    await findUserEmailById(userId);
+  const user = await findUserEmailById(userId);
 
   if (!user) {
-    throw new AppError(
-      404,
-      "User account not found.",
-      {
-        code: "USER_NOT_FOUND",
-      },
-    );
+    throw new AppError(404, "User account not found.", {
+      code: "USER_NOT_FOUND",
+    });
   }
 
   if (!user.isActive) {
-    throw new AppError(
-      403,
-      "This account is currently inactive.",
-      {
-        code: "ACCOUNT_INACTIVE",
-      },
-    );
+    throw new AppError(403, "This account is currently inactive.", {
+      code: "ACCOUNT_INACTIVE",
+    });
   }
 
-  const passwordMatches =
-    await verifyPassword(
-      input.currentPassword,
-      user.passwordHash,
-    );
+  const passwordMatches = await verifyPassword(
+    input.currentPassword,
+    user.passwordHash,
+  );
 
   if (!passwordMatches) {
-    throw new AppError(
-      401,
-      "Current password is incorrect.",
-      {
-        code: "CURRENT_PASSWORD_INCORRECT",
-      },
-    );
+    throw new AppError(401, "Current password is incorrect.", {
+      code: "CURRENT_PASSWORD_INCORRECT",
+    });
   }
 
   if (input.newEmail === user.email) {
@@ -91,10 +62,7 @@ export async function changeEmail(
     );
   }
 
-  const existingUser =
-    await findUserIdByEmail(
-      input.newEmail,
-    );
+  const existingUser = await findUserIdByEmail(input.newEmail);
 
   if (existingUser) {
     throw new AppError(
@@ -106,17 +74,11 @@ export async function changeEmail(
     );
   }
 
-  const updatedUser =
-    await updateUserEmailRecord(
-      userId,
-      input.newEmail,
-    );
+  const updatedUser = await updateUserEmailRecord(userId, input.newEmail);
 
   await createAuditLog({
-    action:
-      AUDIT_ACTIONS.AUTH_EMAIL_CHANGED,
-    entityType:
-      AUDIT_ENTITY_TYPES.USER,
+    action: AUDIT_ACTIONS.AUTH_EMAIL_CHANGED,
+    entityType: AUDIT_ENTITY_TYPES.USER,
     entityId: userId,
     actor: {
       userId,
@@ -125,14 +87,12 @@ export async function changeEmail(
     context: {
       ...(context.ipAddress !== null
         ? {
-            ipAddress:
-              context.ipAddress,
+            ipAddress: context.ipAddress,
           }
         : {}),
       ...(context.userAgent !== null
         ? {
-            userAgent:
-              context.userAgent,
+            userAgent: context.userAgent,
           }
         : {}),
     },
@@ -142,7 +102,5 @@ export async function changeEmail(
     },
   });
 
-  return toAuthenticatedUser(
-    updatedUser,
-  );
+  return toAuthenticatedUser(updatedUser);
 }

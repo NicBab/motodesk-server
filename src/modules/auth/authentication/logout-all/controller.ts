@@ -8,7 +8,7 @@ import type { AuthenticatedRequest } from "../../auth.middleware.js";
 
 import { logoutAllUserSessions } from "./service.js";
 
-import { clearAuthenticationCookies } from "../../cookie.service.js";
+import { clearAuthenticationCookies } from "../../http/cookie.service.js";
 
 //************************************************************** */
 

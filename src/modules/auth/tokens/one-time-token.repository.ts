@@ -1,8 +1,10 @@
 import {
   AuthTokenType,
-} from "../../generated/prisma/client.js";
+} from "../../../generated/prisma/client.js";
 
-import { prisma } from "../../config/prisma.js";
+import {
+  prisma,
+} from "../../../config/prisma.js";
 
 //************************************************************** */
 

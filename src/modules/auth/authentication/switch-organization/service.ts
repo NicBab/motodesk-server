@@ -1,6 +1,6 @@
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import { findUserForOrganizationSwitch } from "../../auth.repository.js";
+import { findUserForOrganizationSwitch } from "./repository.js";
 
 import { generateAccessToken } from "../../tokens/jwt.service.js";
 

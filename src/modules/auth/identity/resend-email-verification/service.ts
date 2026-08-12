@@ -2,7 +2,7 @@ import { env } from "../../../../config/env.js";
 
 import {
   findUserForLogin,
-} from "../../auth.repository.js";
+} from "../../shared/repositories/user-auth.repository.js";
 
 import {
   createEmailVerificationAuthToken,

@@ -1,8 +1,8 @@
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import { findUserForLogin } from "../../auth.repository.js";
+import { findUserForLogin } from "../../shared/repositories/user-auth.repository.js";
 
-import { verifyPassword } from "../../password.service.js";
+import { verifyPassword } from "../../security/password.service.js";
 
 import { createAuthenticationResult } from "../../shared/authentication-result.builder.js";
 

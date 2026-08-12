@@ -5,7 +5,7 @@ import { AppError } from "../../platform/errors/app-error.js";
 import {
   findAuthenticatedMembership,
   findAuthenticatedUserById,
-} from "./auth.repository.js";
+} from "./shared/repositories/authenticated-request.repository.js";
 
 import { ACCESS_TOKEN_COOKIE_NAME } from "./auth.constants.js";
 

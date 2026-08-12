@@ -4,25 +4,16 @@ import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } from "../../../audit/audit.constants.js";
-import {
-  createAuditLog,
-} from "../../../audit/audit.service.js";
 
-import type {
-  RequestContext,
-} from "../../auth.types.js";
+import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type {
-  RequestPasswordResetInput,
-} from "./schema.js";
+import type { RequestContext } from "../../auth.types.js";
 
-import {
-  findUserForLogin,
-} from "../../auth.repository.js";
+import type { RequestPasswordResetInput } from "./schema.js";
 
-import {
-  createPasswordResetAuthToken,
-} from "../../tokens/one-time-token.service.js";
+import { findUserForLogin } from "../../shared/repositories/user-auth.repository.js";
+
+import { createPasswordResetAuthToken } from "../../tokens/one-time-token.service.js";
 
 //************************************************************** */
 
@@ -38,8 +29,7 @@ export async function requestPasswordReset(
   input: RequestPasswordResetInput,
   context: RequestContext,
 ): Promise<RequestPasswordResetResult> {
-  const user =
-    await findUserForLogin(input.email);
+  const user = await findUserForLogin(input.email);
 
   const genericMessage =
     "If an account exists for this email address, password reset instructions have been sent.";
@@ -50,16 +40,11 @@ export async function requestPasswordReset(
     };
   }
 
-  const resetToken =
-    await createPasswordResetAuthToken(
-      user.id,
-    );
+  const resetToken = await createPasswordResetAuthToken(user.id);
 
   await createAuditLog({
-    action:
-      AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
-    entityType:
-      AUDIT_ENTITY_TYPES.USER,
+    action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
+    entityType: AUDIT_ENTITY_TYPES.USER,
     entityId: user.id,
     actor: {
       userId: user.id,
@@ -67,15 +52,13 @@ export async function requestPasswordReset(
     context: {
       ...(context.ipAddress !== null
         ? {
-            ipAddress:
-              context.ipAddress,
+            ipAddress: context.ipAddress,
           }
         : {}),
 
       ...(context.userAgent !== null
         ? {
-            userAgent:
-              context.userAgent,
+            userAgent: context.userAgent,
           }
         : {}),
     },
@@ -87,8 +70,7 @@ export async function requestPasswordReset(
     ...(env.NODE_ENV === "development"
       ? {
           resetToken: resetToken.token,
-          expiresAt:
-            resetToken.expiresAt,
+          expiresAt: resetToken.expiresAt,
         }
       : {}),
   };

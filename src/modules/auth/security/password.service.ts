@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { PASSWORD_HASH_ROUNDS } from "./auth.constants.js";
+import { PASSWORD_HASH_ROUNDS } from "../auth.constants.js";
 
 //************************************************************** */
 

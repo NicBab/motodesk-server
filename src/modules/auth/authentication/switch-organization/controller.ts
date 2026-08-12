@@ -12,7 +12,7 @@ import type { SwitchOrganizationInput } from "./schema.js";
 
 import { switchOrganization } from "./service.js";
 
-import { setAccessTokenCookie } from "../../cookie.service.js";
+import { setAccessTokenCookie } from "../../http/cookie.service.js";
 
 import { getPermissionsForRole } from "../../../permissions/permission.utils.js";
 

@@ -18,7 +18,10 @@ import {
   updateUserPasswordHash,
 } from "../shared/password.repository.js";
 
-import { hashPassword, verifyPassword } from "../../password.service.js";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../security/password.service.js";
 
 import {
   revokeUserSessions,

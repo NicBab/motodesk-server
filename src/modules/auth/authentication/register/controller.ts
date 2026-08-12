@@ -4,7 +4,7 @@ import { created } from "../../../../platform/http/api-response.js";
 
 import { requireValidatedBody } from "../../../../platform/validation/validated-request.js";
 
-import { setAuthenticationCookies } from "../../cookie.service.js";
+import { setAuthenticationCookies } from "../../http/cookie.service.js";
 
 import { getPermissionsForRole } from "../../../permissions/permission.utils.js";
 

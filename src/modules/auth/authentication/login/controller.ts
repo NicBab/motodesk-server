@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { setAuthenticationCookies } from "../../cookie.service.js";
+import { setAuthenticationCookies } from "../../http/cookie.service.js"
 
 import { loginUser } from "./service.js";
 

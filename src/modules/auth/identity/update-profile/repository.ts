@@ -1,6 +1,6 @@
 import { prisma } from "../../../../config/prisma.js";
 
-import { authenticationUserSelect } from "../../auth.repository.js";
+import { authenticationUserSelect } from "../../shared/repositories/user-auth.repository.js";
 
 //************************************************************** */
 
@@ -42,3 +42,5 @@ export async function updateUserProfileRecord(
     select: authenticationUserSelect,
   });
 }
+
+//************************************************************** */

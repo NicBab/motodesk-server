@@ -1,6 +1,6 @@
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import { findUserForAuthentication } from "../../auth.repository.js";
+import { findUserForAuthentication } from "./repository.js";
 
 import { parseRefreshToken } from "../../tokens/refresh-token.service.js";
 

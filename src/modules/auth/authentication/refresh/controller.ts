@@ -6,7 +6,7 @@ import { requireValidatedBody } from "../../../../platform/validation/validated-
 
 import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
-import { setAuthenticationCookies } from "../../cookie.service.js";
+import { setAuthenticationCookies } from "../../http/cookie.service.js";
 
 import type { RefreshSessionInput } from "./schema.js";
 

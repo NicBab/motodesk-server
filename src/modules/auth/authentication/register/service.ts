@@ -4,7 +4,9 @@ import { env } from "../../../../config/env.js";
 
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import { hashPassword } from "../../password.service.js";
+import {
+  hashPassword,
+} from "../../security/password.service.js";
 
 import { generateRefreshToken } from "../../tokens/refresh-token.service.js";
 
@@ -19,9 +21,12 @@ import type { RegisterInput } from "./schema.js";
 import type { AuthenticationResult, RequestContext } from "../../auth.types.js";
 
 import {
-  createRegistrationRecords,
   findUserIdByEmail,
-} from "../../auth.repository.js";
+} from "../../shared/repositories/user-auth.repository.js";
+
+import {
+  createRegistrationRecords,
+} from "./repository.js";
 
 //************************************************************** */
 

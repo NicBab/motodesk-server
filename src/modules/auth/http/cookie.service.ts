@@ -1,11 +1,11 @@
 import type { CookieOptions, Response } from "express";
-import { env } from "../../config/env.js";
+import { env } from "../../../config/env.js";
 import {
   ACCESS_TOKEN_COOKIE_NAME,
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_TTL_MILLISECONDS,
-} from "./auth.constants.js";
+} from "../auth.constants.js";
 
 //************************************************************** */
 
