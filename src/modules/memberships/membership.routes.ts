@@ -6,7 +6,7 @@ import { initializeRequestContext } from "../../platform/request/request.middlew
 
 import {
   requireOrganizationAccess,
-} from "../organizations/organization.contracts.js";
+} from "../organizations/index.js";
 
 import {
   getMembershipHandler,

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-import { createOrganizationSchema } from "../../../organizations/organization.contracts.js";
+import {
+  createOrganizationSchema,
+} from "../../../organizations/index.js";
 
 import {
   emailSchema,

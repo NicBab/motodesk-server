@@ -19,11 +19,3 @@ export interface UpdateOrganizationInput {
 }
 
 //************************************************************** */
-
-export interface OrganizationMembershipInput {
-  organizationId: string;
-  userId: string;
-  role: MembershipRole;
-}
-
-//************************************************************** */
