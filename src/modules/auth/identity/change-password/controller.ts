@@ -5,22 +5,12 @@ import { ok } from "../../../../platform/http/api-response.js";
 import { requireValidatedBody } from "../../../../platform/validation/validated-request.js";
 
 import type { AuthenticatedRequest } from "../../auth.middleware.js";
-import type { RequestContext } from "../../auth.types.js";
+
+import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
 import type { ChangePasswordInput } from "./schema.js";
 
-import {
-  changePassword,
-} from "./service.js";
-
-//************************************************************** */
-
-function getRequestContext(request: Request): RequestContext {
-  return {
-    ipAddress: request.ip ?? null,
-    userAgent: request.get("user-agent") ?? null,
-  };
-}
+import { changePassword } from "./service.js";
 
 //************************************************************** */
 
@@ -44,7 +34,7 @@ export async function changePasswordHandler(
     userId,
     sessionId,
     input,
-    getRequestContext(request),
+    getRequestMetadata(request),
   );
 
   ok(response, {
@@ -52,3 +42,5 @@ export async function changePasswordHandler(
     revokedSessionCount: result.revokedSessionCount,
   });
 }
+
+//************************************************************** */

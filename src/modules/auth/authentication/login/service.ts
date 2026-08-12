@@ -8,13 +8,16 @@ import { createAuthenticationResult } from "../../shared/authentication-result.b
 
 import type { LoginInput } from "./schema.js";
 
-import type { AuthenticationResult, RequestContext } from "../../auth.types.js";
+import type {
+  AuthenticationResult,
+  RequestMetadata,
+} from "../../auth.types.js";
 
 //************************************************************** */
 
 export async function loginUser(
   input: LoginInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<AuthenticationResult> {
   const user = await findUserForLogin(input.email);
 

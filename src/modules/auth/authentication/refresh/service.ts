@@ -17,13 +17,16 @@ import { toAuthenticatedUser } from "../../shared/mappers/auth.mapper.js";
 
 import type { RefreshSessionInput } from "./schema.js";
 
-import type { AuthenticationResult, RequestContext } from "../../auth.types.js";
+import type {
+  AuthenticationResult,
+  RequestMetadata,
+} from "../../auth.types.js";
 
 //************************************************************** */
 
 export async function refreshSession(
   input: RefreshSessionInput,
-  _context: RequestContext,
+  _context: RequestMetadata,
 ): Promise<AuthenticationResult> {
   const parsedRefreshToken = parseRefreshToken(input.refreshToken);
 

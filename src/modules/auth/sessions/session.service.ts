@@ -5,18 +5,14 @@ import {
   type Session,
 } from "../../../generated/prisma/client.js";
 
-import type {
-  RequestContext,
-} from "../auth.types.js";
+import type { RequestMetadata } from "../auth.types.js";
 
 import {
   generateRefreshToken,
   type GeneratedRefreshToken,
 } from "../tokens/refresh-token.service.js";
 
-import {
-  verifyTokenHash,
-} from "../tokens/token.crypto.js";
+import { verifyTokenHash } from "../tokens/token.crypto.js";
 
 import {
   createSessionRecord,
@@ -52,22 +48,20 @@ export interface RevokeUserSessionsResult {
 
 export async function createSession(
   userId: string,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<CreatedSession> {
   const sessionId = randomUUID();
 
-  const refreshToken =
-    generateRefreshToken(sessionId);
+  const refreshToken = generateRefreshToken(sessionId);
 
-  const session =
-    await createSessionRecord({
-      id: sessionId,
-      userId,
-      tokenHash: refreshToken.tokenHash,
-      userAgent: context.userAgent,
-      ipAddress: context.ipAddress,
-      expiresAt: refreshToken.expiresAt,
-    });
+  const session = await createSessionRecord({
+    id: sessionId,
+    userId,
+    tokenHash: refreshToken.tokenHash,
+    userAgent: context.userAgent,
+    ipAddress: context.ipAddress,
+    expiresAt: refreshToken.expiresAt,
+  });
 
   return {
     session,
@@ -81,8 +75,7 @@ export async function validateSession(
   sessionId: string,
   refreshTokenSecret: string,
 ): Promise<ValidatedSession | null> {
-  const session =
-    await findSessionById(sessionId);
+  const session = await findSessionById(sessionId);
 
   if (!session) {
     return null;
@@ -92,23 +85,13 @@ export async function validateSession(
     return null;
   }
 
-  if (
-    session.expiresAt.getTime() <=
-    Date.now()
-  ) {
-    await revokeSession(
-      session.id,
-      SessionRevocationReason.EXPIRED,
-    );
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
 
     return null;
   }
 
-  const tokenMatches =
-    verifyTokenHash(
-      refreshTokenSecret,
-      session.tokenHash,
-    );
+  const tokenMatches = verifyTokenHash(refreshTokenSecret, session.tokenHash);
 
   if (!tokenMatches) {
     return null;
@@ -128,8 +111,7 @@ export async function validateAccessSession(
   sessionId: string,
   userId: string,
 ): Promise<ValidatedAccessSession | null> {
-  const session =
-    await findSessionById(sessionId);
+  const session = await findSessionById(sessionId);
 
   if (!session) {
     return null;
@@ -143,14 +125,8 @@ export async function validateAccessSession(
     return null;
   }
 
-  if (
-    session.expiresAt.getTime() <=
-    Date.now()
-  ) {
-    await revokeSession(
-      session.id,
-      SessionRevocationReason.EXPIRED,
-    );
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
 
     return null;
   }
@@ -167,8 +143,7 @@ export async function validateAccessSession(
 export async function rotateSessionToken(
   sessionId: string,
 ): Promise<GeneratedRefreshToken> {
-  const refreshToken =
-    generateRefreshToken(sessionId);
+  const refreshToken = generateRefreshToken(sessionId);
 
   await rotateSessionRecord(
     sessionId,
@@ -185,10 +160,7 @@ export async function revokeSession(
   sessionId: string,
   reason: SessionRevocationReason,
 ): Promise<void> {
-  await revokeSessionRecord(
-    sessionId,
-    reason,
-  );
+  await revokeSessionRecord(sessionId, reason);
 }
 
 //************************************************************** */
@@ -198,12 +170,11 @@ export async function revokeUserSessions(
   reason: SessionRevocationReason,
   excludedSessionId?: string,
 ): Promise<RevokeUserSessionsResult> {
-  const result =
-    await revokeUserSessionRecords(
-      userId,
-      reason,
-      excludedSessionId,
-    );
+  const result = await revokeUserSessionRecords(
+    userId,
+    reason,
+    excludedSessionId,
+  );
 
   return {
     revokedSessionCount: result.count,
@@ -216,11 +187,7 @@ export async function revokeAllUserSessions(
   userId: string,
   reason: SessionRevocationReason,
 ): Promise<number> {
-  const result =
-    await revokeUserSessionRecords(
-      userId,
-      reason,
-    );
+  const result = await revokeUserSessionRecords(userId, reason);
 
   return result.count;
 }
@@ -228,8 +195,7 @@ export async function revokeAllUserSessions(
 //************************************************************** */
 
 export async function deleteExpiredSessions(): Promise<number> {
-  const result =
-    await deleteExpiredSessionRecords();
+  const result = await deleteExpiredSessionRecords();
 
   return result.count;
 }

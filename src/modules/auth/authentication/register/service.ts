@@ -4,35 +4,30 @@ import { env } from "../../../../config/env.js";
 
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import {
-  hashPassword,
-} from "../../security/password.service.js";
+import { hashPassword } from "../../security/password.service.js";
 
 import { generateRefreshToken } from "../../tokens/refresh-token.service.js";
 
 import { generateEmailVerificationToken } from "../../tokens/one-time-token.factory.js";
 
-import {
-  buildAuthenticationResult,
-} from "../../shared/authentication-result.builder.js";
+import { buildAuthenticationResult } from "../../shared/authentication-result.builder.js";
 
 import type { RegisterInput } from "./schema.js";
 
-import type { AuthenticationResult, RequestContext } from "../../auth.types.js";
+import type {
+  AuthenticationResult,
+  RequestMetadata,
+} from "../../auth.types.js";
 
-import {
-  findUserIdByEmail,
-} from "../../shared/repositories/user-auth.repository.js";
+import { findUserIdByEmail } from "../../shared/repositories/user-auth.repository.js";
 
-import {
-  createRegistrationRecords,
-} from "./repository.js";
+import { createRegistrationRecords } from "./repository.js";
 
 //************************************************************** */
 
 export async function registerUser(
   input: RegisterInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<AuthenticationResult> {
   const existingUser = await findUserIdByEmail(input.email);
 

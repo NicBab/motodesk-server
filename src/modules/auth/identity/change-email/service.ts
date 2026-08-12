@@ -7,7 +7,7 @@ import {
 
 import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type { AuthenticatedUser, RequestContext } from "../../auth.types.js";
+import type { AuthenticatedUser, RequestMetadata } from "../../auth.types.js";
 
 import type { ChangeEmailInput } from "./schema.js";
 
@@ -25,7 +25,7 @@ export async function changeEmail(
   userId: string,
   sessionId: string,
   input: ChangeEmailInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<AuthenticatedUser> {
   const user = await findUserEmailById(userId);
 

@@ -1,37 +1,14 @@
-import type {
-  Request,
-  Response,
-} from "express";
+import type { Request, Response } from "express";
 
 import { ok } from "../../../../platform/http/api-response.js";
-import {
-  requireValidatedBody,
-} from "../../../../platform/validation/validated-request.js";
 
-import type {
-  RequestContext,
-} from "../../auth.types.js";
+import { requireValidatedBody } from "../../../../platform/validation/validated-request.js";
 
-import type {
-  ResetPasswordInput,
-} from "./schema.js";
+import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
-import {
-  resetPassword,
-} from "./service.js";
+import type { ResetPasswordInput } from "./schema.js";
 
-//************************************************************** */
-
-function getRequestContext(
-  request: Request,
-): RequestContext {
-  return {
-    ipAddress:
-      request.ip ?? null,
-    userAgent:
-      request.get("user-agent") ?? null,
-  };
-}
+import { resetPassword } from "./service.js";
 
 //************************************************************** */
 
@@ -39,18 +16,13 @@ export async function resetPasswordHandler(
   request: Request,
   response: Response,
 ): Promise<void> {
-  const input =
-    requireValidatedBody<ResetPasswordInput>(
-      request,
-    );
+  const input = requireValidatedBody<ResetPasswordInput>(request);
 
-  await resetPassword(
-    input,
-    getRequestContext(request),
-  );
+  await resetPassword(input, getRequestMetadata(request));
 
   ok(response, {
-    message:
-      "Password reset successfully.",
+    message: "Password reset successfully.",
   });
 }
+
+//************************************************************** */

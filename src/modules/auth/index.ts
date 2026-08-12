@@ -14,5 +14,4 @@ export type {
   AuthenticatedMembership,
   AuthenticatedUser,
   AuthenticationResult,
-  RequestContext,
 } from "./auth.types.js";

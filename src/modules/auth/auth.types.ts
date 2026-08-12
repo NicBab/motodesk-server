@@ -45,7 +45,7 @@ export interface AuthenticationResult {
 }
 
 //************************************************************** */
-export interface RequestContext {
+export interface RequestMetadata {
   ipAddress: string | null;
   userAgent: string | null;
 }

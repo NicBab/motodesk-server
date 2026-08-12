@@ -9,7 +9,7 @@ import {
 
 import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type { RequestContext } from "../../auth.types.js";
+import type { RequestMetadata } from "../../auth.types.js";
 
 import type { ResetPasswordInput } from "./schema.js";
 
@@ -28,7 +28,7 @@ import { revokeAllUserSessions } from "../../sessions/session.service.js";
 
 export async function resetPassword(
   input: ResetPasswordInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<void> {
   const authToken = await validatePasswordResetAuthToken(input.token);
 

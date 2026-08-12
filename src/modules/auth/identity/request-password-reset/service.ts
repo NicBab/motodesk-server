@@ -7,7 +7,7 @@ import {
 
 import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type { RequestContext } from "../../auth.types.js";
+import type { RequestMetadata } from "../../auth.types.js";
 
 import type { RequestPasswordResetInput } from "./schema.js";
 
@@ -27,7 +27,7 @@ export interface RequestPasswordResetResult {
 
 export async function requestPasswordReset(
   input: RequestPasswordResetInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<RequestPasswordResetResult> {
   const user = await findUserForLogin(input.email);
 

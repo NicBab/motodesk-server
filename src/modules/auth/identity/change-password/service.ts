@@ -8,27 +8,23 @@ import {
 } from "../../../audit/audit.constants.js";
 import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type { ChangePasswordResult, RequestContext } from "../../auth.types.js";
+import type {
+  ChangePasswordResult,
+  RequestMetadata,
+} from "../../auth.types.js";
 
-import {
-  findUserPasswordById,
-} from "./repository.js";
+import { findUserPasswordById } from "./repository.js";
 
-import {
-  updateUserPasswordHash,
-} from "../shared/password.repository.js";
+import { updateUserPasswordHash } from "../shared/password.repository.js";
 
 import {
   hashPassword,
   verifyPassword,
 } from "../../security/password.service.js";
 
-import {
-  revokeUserSessions,
-} from "../../sessions/session.service.js";
+import { revokeUserSessions } from "../../sessions/session.service.js";
 
 import type { ChangePasswordInput } from "./schema.js";
-
 
 //************************************************************** */
 
@@ -36,7 +32,7 @@ export async function changePassword(
   userId: string,
   currentSessionId: string,
   input: ChangePasswordInput,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<ChangePasswordResult> {
   const user = await findUserPasswordById(userId);
 

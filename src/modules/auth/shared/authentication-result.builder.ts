@@ -10,7 +10,7 @@ import {
 
 import type {
   AuthenticationResult,
-  RequestContext,
+  RequestMetadata,
 } from "../auth.types.js";
 
 import {
@@ -77,7 +77,7 @@ export function buildAuthenticationResult(
 export async function createAuthenticationResult(
   user: UserWithPassword,
   membership: MembershipWithOrganization | null,
-  context: RequestContext,
+  context: RequestMetadata,
 ): Promise<AuthenticationResult> {
   const { session, refreshToken } = await createSession(user.id, context);
 
