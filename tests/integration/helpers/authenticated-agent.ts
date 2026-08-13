@@ -1,6 +1,6 @@
 import request from "supertest";
 
-import {app} from "../../../src/app.js";
+import { app } from "../../../src/app.js";
 
 //************************************************************** */
 
@@ -12,6 +12,15 @@ const DEV_USER_PASSWORD =
 
 const DEV_ORGANIZATION_SLUG =
   "motodesk-dev-shop";
+
+//************************************************************** */
+
+type OrganizationMembershipResponse = {
+  organization?: {
+    id?: unknown;
+    slug?: unknown;
+  };
+};
 
 //************************************************************** */
 
@@ -37,7 +46,7 @@ export async function createAuthenticatedAgent() {
     );
   }
 
-  // Find the seeded organization dynamically.
+  // Load the organizations available to the seeded user.
   const organizationsResponse =
     await agent.get(
       "/api/v1/organizations/me",
@@ -52,46 +61,34 @@ export async function createAuthenticatedAgent() {
     );
   }
 
-  const organizations =
+  const memberships =
     organizationsResponse.body.data;
 
-  if (!Array.isArray(organizations)) {
+  if (!Array.isArray(memberships)) {
     throw new Error(
       "Organization lookup did not return an array.",
     );
   }
 
-  const organization =
-    organizations.find(
-      (item: unknown) => {
-        if (
-          typeof item !== "object" ||
-          item === null
-        ) {
-          return false;
-        }
-
-        return (
-          "slug" in item &&
-          item.slug ===
-            DEV_ORGANIZATION_SLUG
-        );
-      },
+  const membership =
+    memberships.find(
+      (
+        item: OrganizationMembershipResponse,
+      ) =>
+        item.organization?.slug ===
+        DEV_ORGANIZATION_SLUG,
     );
 
+  const organizationId =
+    membership?.organization?.id;
+
   if (
-    typeof organization !== "object" ||
-    organization === null ||
-    !("id" in organization) ||
-    typeof organization.id !== "string"
+    typeof organizationId !== "string"
   ) {
     throw new Error(
       `Seeded organization "${DEV_ORGANIZATION_SLUG}" was not found.`,
     );
   }
-
-  const organizationId =
-    organization.id;
 
   // Switch the access token into the seeded organization.
   const switchResponse =
