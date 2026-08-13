@@ -37,6 +37,11 @@ enum SessionRevocationReason {
   EXPIRED
 }
 
+enum CustomerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -66,6 +71,7 @@ model Organization {
 
   memberships Membership[]
   auditLogs   AuditLog[]
+  customers   Customer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -156,4 +162,39 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([resourceType, resourceId])
   @@index([action])
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           CustomerType @default(INDIVIDUAL)
+
+  firstName   String?
+  lastName    String?
+  companyName String?
+
+  email          String?
+  phone          String?
+  alternatePhone String?
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
+
+  notes    String?
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, lastName])
+  @@index([organizationId, companyName])
+  @@index([organizationId, email])
+  @@index([organizationId, phone])
 }

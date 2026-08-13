@@ -5,6 +5,7 @@ import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
 import membershipRouter from "../memberships/membership.routes.js";
+import customerRouter from "../customers/customer.routes.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 import { validateParams } from "../../platform/validation/validate-params.js";
 
@@ -47,6 +48,13 @@ router.get(
 router.use(
   "/:organizationId/memberships",
   membershipRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/customers",
+  customerRouter,
 );
 
 //************************************************************** */
