@@ -20,7 +20,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "tsx --test",
     "test:customers": "tsx --test tests/integration/customers.test.ts",
-    "test:vehicles": "tsx --test tests/integration/vehicles.test.ts"
+    "test:vehicles": "tsx --test tests/integration/vehicles.test.ts",
+    "test:repair-orders": "tsx --test tests/integration/repair-orders.test.ts"
   },
   "keywords": [],
   "author": "",

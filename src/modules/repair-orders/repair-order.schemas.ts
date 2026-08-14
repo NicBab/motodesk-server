@@ -1,0 +1,347 @@
+import { z } from "zod";
+
+//************************************************************** */
+
+export const repairOrderStatusSchema = z.enum([
+  "ESTIMATE",
+  "AWAITING_CUSTOMER_APPROVAL",
+  "APPROVED",
+  "PARTS_REVIEW",
+  "WAITING_ON_PARTS",
+  "READY_TO_WORK",
+  "SCHEDULED",
+  "IN_PROGRESS",
+  "PAUSED",
+  "WAITING_ON_ADDITIONAL_APPROVAL",
+  "WAITING_ON_ADDITIONAL_PARTS",
+  "WORK_COMPLETE",
+  "QUALITY_CHECK",
+  "READY_FOR_PICKUP",
+  "CASHIERED",
+  "COMPLETED",
+  "PICKED_UP",
+  "CLOSED",
+  "CANCELLED",
+]);
+
+//************************************************************** */
+
+export const repairOrderPrioritySchema = z.enum([
+  "STANDARD",
+  "RUSH",
+  "EMERGENCY",
+  "HOLD",
+]);
+
+//************************************************************** */
+
+export const repairOrderApprovalMethodSchema = z.enum([
+  "PHONE",
+  "SMS",
+  "EMAIL",
+  "CUSTOMER_PORTAL",
+  "IN_PERSON",
+]);
+
+//************************************************************** */
+
+export const repairOrderCashierStatusSchema = z.enum([
+  "NOT_CASHIERED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "VOIDED",
+  "REVERSED",
+]);
+
+//************************************************************** */
+
+export const repairOrderPickupStatusSchema = z.enum([
+  "NOT_READY",
+  "READY",
+  "COMPLETED",
+  "REVERSED",
+]);
+
+//************************************************************** */
+
+const repairOrderSchema = z.object({
+  customerId: z
+    .string()
+    .trim()
+    .min(
+      1,
+      "Customer ID is required.",
+    ),
+
+  vehicleId: z
+    .string()
+    .trim()
+    .min(
+      1,
+      "Vehicle ID is required.",
+    ),
+
+  status:
+    repairOrderStatusSchema.default(
+      "ESTIMATE",
+    ),
+
+  priority:
+    repairOrderPrioritySchema.default(
+      "STANDARD",
+    ),
+
+  serviceAdvisorMembershipId: z
+    .string()
+    .trim()
+    .min(1)
+    .optional(),
+
+  primaryTechnicianMembershipId: z
+    .string()
+    .trim()
+    .min(1)
+    .optional(),
+
+  promisedDate: z
+    .coerce
+    .date()
+    .optional(),
+
+  scheduledDate: z
+    .coerce
+    .date()
+    .optional(),
+
+  complaint: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional(),
+
+  notes: z
+    .string()
+    .trim()
+    .max(10000)
+    .optional(),
+
+  taxRate: z
+    .number()
+    .min(0)
+    .max(100)
+    .optional(),
+
+  shopSuppliesRate: z
+    .number()
+    .min(0)
+    .max(100)
+    .default(6),
+
+  discount: z
+    .number()
+    .nonnegative()
+    .default(0),
+
+  deposit: z
+    .number()
+    .nonnegative()
+    .default(0),
+
+  approvalMethod:
+    repairOrderApprovalMethodSchema.optional(),
+
+  approvalDate: z
+    .coerce
+    .date()
+    .optional(),
+
+  approvedBy: z
+    .string()
+    .trim()
+    .max(200)
+    .optional(),
+
+  approvedAmount: z
+    .number()
+    .nonnegative()
+    .optional(),
+
+  approvalNotes: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional(),
+
+  cashierStatus:
+    repairOrderCashierStatusSchema.default(
+      "NOT_CASHIERED",
+    ),
+
+  cashieredDate: z
+    .coerce
+    .date()
+    .optional(),
+
+  paymentReference: z
+    .string()
+    .trim()
+    .max(250)
+    .optional(),
+
+  paymentRemote: z
+    .boolean()
+    .default(false),
+
+  remainingBalance: z
+    .number()
+    .nonnegative()
+    .default(0),
+
+  pickupStatus:
+    repairOrderPickupStatusSchema.default(
+      "NOT_READY",
+    ),
+
+  pickupDate: z
+    .coerce
+    .date()
+    .optional(),
+
+  pickupRecipient: z
+    .string()
+    .trim()
+    .max(200)
+    .optional(),
+
+  pickupNotes: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional(),
+});
+
+//************************************************************** */
+
+export const createRepairOrderSchema =
+  repairOrderSchema;
+
+//************************************************************** */
+
+export const updateRepairOrderSchema =
+  repairOrderSchema
+    .omit({
+      customerId: true,
+      vehicleId: true,
+      status: true,
+    })
+    .partial();
+
+//************************************************************** */
+
+export const repairOrderIdSchema =
+  z.object({
+    repairOrderId: z
+      .string()
+      .trim()
+      .min(
+        1,
+        "Repair Order ID is required.",
+      ),
+  });
+
+//************************************************************** */
+
+export const updateRepairOrderStatusSchema =
+  z.object({
+    status:
+      repairOrderStatusSchema,
+
+    notes: z
+      .string()
+      .trim()
+      .max(5000)
+      .optional(),
+
+    automatic: z
+      .boolean()
+      .default(false),
+  });
+
+//************************************************************** */
+
+export const listRepairOrdersQuerySchema =
+  z.object({
+    search: z
+      .string()
+      .trim()
+      .max(150)
+      .optional(),
+
+    customerId: z
+      .string()
+      .trim()
+      .min(1)
+      .optional(),
+
+    vehicleId: z
+      .string()
+      .trim()
+      .min(1)
+      .optional(),
+
+    status:
+      repairOrderStatusSchema.optional(),
+
+    priority:
+      repairOrderPrioritySchema.optional(),
+
+    serviceAdvisorMembershipId: z
+      .string()
+      .trim()
+      .min(1)
+      .optional(),
+
+    primaryTechnicianMembershipId: z
+      .string()
+      .trim()
+      .min(1)
+      .optional(),
+
+    isActive: z
+      .enum([
+        "true",
+        "false",
+      ])
+      .transform(
+        (value) =>
+          value === "true",
+      )
+      .optional(),
+  });
+
+//************************************************************** */
+
+export type CreateRepairOrderInput =
+  z.infer<
+    typeof createRepairOrderSchema
+  >;
+
+export type UpdateRepairOrderInput =
+  z.infer<
+    typeof updateRepairOrderSchema
+  >;
+
+export type RepairOrderIdInput =
+  z.infer<
+    typeof repairOrderIdSchema
+  >;
+
+export type UpdateRepairOrderStatusInput =
+  z.infer<
+    typeof updateRepairOrderStatusSchema
+  >;
+
+export type ListRepairOrdersQueryInput =
+  z.infer<
+    typeof listRepairOrdersQuerySchema
+  >;

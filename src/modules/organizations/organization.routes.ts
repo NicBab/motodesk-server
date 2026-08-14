@@ -8,7 +8,7 @@ import membershipRouter from "../memberships/membership.routes.js";
 import customerRouter from "../customers/customer.routes.js";
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 import { validateParams } from "../../platform/validation/validate-params.js";
-
+import repairOrderRouter from "../repair-orders/repair-order.routes.js";
 import vehicleRouter from "../vehicles/vehicle.routes.js";
 
 import {
@@ -64,6 +64,13 @@ router.use(
 router.use(
   "/:organizationId/vehicles",
   vehicleRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/repair-orders",
+  repairOrderRouter,
 );
 
 //************************************************************** */

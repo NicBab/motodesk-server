@@ -145,13 +145,14 @@ model Organization {
   email String?
   phone String?
 
-  memberships  Membership[]
-  auditLogs    AuditLog[]
-  customers    Customer[]
-  vehicles     Vehicle[]
-  repairOrders RepairOrder[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  memberships         Membership[]
+  auditLogs           AuditLog[]
+  customers           Customer[]
+  vehicles            Vehicle[]
+  repairOrders        RepairOrder[]
+  repairOrderSequence RepairOrderSequence?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Membership {
@@ -421,4 +422,13 @@ model RepairOrderStatusHistory {
   @@index([repairOrderId])
   @@index([repairOrderId, changedAt])
   @@index([changedByMembershipId])
+}
+
+model RepairOrderSequence {
+  organizationId String @id
+  nextNumber     Int    @default(1001)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
 }
