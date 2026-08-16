@@ -19,22 +19,19 @@ import {
 } from "../../platform/validation/index.js";
 
 import {
-  createRepairOrderSchema,
-  listRepairOrdersQuerySchema,
-  repairOrderIdSchema,
-  updateRepairOrderSchema,
-  updateRepairOrderStatusSchema,
-} from "./repair-order.schemas.js";
+  archivePartHandler,
+  createPartHandler,
+  getPartHandler,
+  listPartsHandler,
+  updatePartHandler,
+} from "./part.controller.js";
 
 import {
-  createRepairOrderHandler,
-  getRepairOrderHandler,
-  listRepairOrdersHandler,
-  updateRepairOrderHandler,
-  updateRepairOrderStatusHandler,
-} from "./repair-order.controller.js";
-
-import repairOrderLaborRouter from "./repair-order-labor.routes.js";
+  createPartSchema,
+  listPartsQuerySchema,
+  partIdSchema,
+  updatePartSchema,
+} from "./part.schemas.js";
 
 //************************************************************** */
 
@@ -49,8 +46,8 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateBody(createRepairOrderSchema),
-  createRepairOrderHandler,
+  validateBody(createPartSchema),
+  createPartHandler,
 );
 
 //************************************************************** */
@@ -60,53 +57,42 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateQuery(listRepairOrdersQuerySchema),
-  listRepairOrdersHandler,
+  validateQuery(listPartsQuerySchema),
+  listPartsHandler,
 );
 
 //************************************************************** */
 
 router.get(
-  "/:repairOrderId",
+  "/:partId",
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(repairOrderIdSchema),
-  getRepairOrderHandler,
+  validateParams(partIdSchema),
+  getPartHandler,
 );
 
 //************************************************************** */
 
 router.patch(
-  "/:repairOrderId",
+  "/:partId",
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(repairOrderIdSchema),
-  validateBody(updateRepairOrderSchema),
-  updateRepairOrderHandler,
+  validateParams(partIdSchema),
+  validateBody(updatePartSchema),
+  updatePartHandler,
 );
 
 //************************************************************** */
 
 router.post(
-  "/:repairOrderId/status",
+  "/:partId/archive",
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(repairOrderIdSchema),
-  validateBody(updateRepairOrderStatusSchema),
-  updateRepairOrderStatusHandler,
-);
-
-//************************************************************** */
-
-router.use(
-  "/:repairOrderId/labor-lines",
-  authenticateRequest,
-  initializeRequestContext,
-  requireOrganizationAccess,
-  repairOrderLaborRouter,
+  validateParams(partIdSchema),
+  archivePartHandler,
 );
 
 //************************************************************** */

@@ -7,6 +7,8 @@ datasource db {
   provider = "postgresql"
 }
 
+//************************************************************** */
+
 enum MembershipRole {
   OWNER
   ADMIN
@@ -16,16 +18,22 @@ enum MembershipRole {
   PARTS
 }
 
+//************************************************************** */
+
 enum MembershipStatus {
   INVITED
   ACTIVE
   SUSPENDED
 }
 
+//************************************************************** */
+
 enum AuthTokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
 }
+
+//************************************************************** */
 
 enum SessionRevocationReason {
   LOGOUT
@@ -37,10 +45,14 @@ enum SessionRevocationReason {
   EXPIRED
 }
 
+//************************************************************** */
+
 enum CustomerType {
   INDIVIDUAL
   BUSINESS
 }
+
+//************************************************************** */
 
 enum VehicleType {
   MOTORCYCLE
@@ -51,11 +63,15 @@ enum VehicleType {
   SNOWMOBILE
 }
 
+//************************************************************** */
+
 enum VehicleClassification {
   NEW
   USED
   SERVICE
 }
+
+//************************************************************** */
 
 enum VehicleInventoryStatus {
   AVAILABLE
@@ -65,6 +81,8 @@ enum VehicleInventoryStatus {
   WHOLESALE
   UNAVAILABLE
 }
+
+//************************************************************** */
 
 enum RepairOrderStatus {
   ESTIMATE
@@ -118,6 +136,24 @@ enum RepairOrderPickupStatus {
   REVERSED
 }
 
+//************************************************************** */
+
+enum PartInventoryTransactionType {
+  INITIAL
+  ADJUSTMENT
+  RECEIPT
+  ALLOCATION
+  DEALLOCATION
+  ISSUE
+  RETURN
+  SALE
+  DAMAGE
+  TRANSFER
+  CYCLE_COUNT
+}
+
+//************************************************************** */
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -138,6 +174,8 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+//************************************************************** */
+
 model Organization {
   id    String  @id @default(cuid())
   name  String
@@ -150,10 +188,13 @@ model Organization {
   customers           Customer[]
   vehicles            Vehicle[]
   repairOrders        RepairOrder[]
+  parts               Part[]
   repairOrderSequence RepairOrderSequence?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
+
+//************************************************************** */
 
 model Membership {
   id             String           @id @default(cuid())
@@ -171,6 +212,10 @@ model Membership {
 
   repairOrderStatusChanges RepairOrderStatusHistory[] @relation("RepairOrderStatusChangedBy")
 
+  repairOrderLaborLines RepairOrderLaborLine[] @relation("RepairOrderLaborTechnician")
+
+  partInventoryTransactions PartInventoryTransaction[] @relation("PartInventoryTransactionCreatedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -178,6 +223,8 @@ model Membership {
   @@index([userId])
   @@index([organizationId])
 }
+
+//************************************************************** */
 
 model Session {
   id String @id @default(cuid())
@@ -204,6 +251,8 @@ model Session {
   @@index([revokedAt])
 }
 
+//************************************************************** */
+
 model AuthToken {
   id String @id @default(cuid())
 
@@ -222,6 +271,7 @@ model AuthToken {
   @@index([expiresAt])
 }
 
+//************************************************************** */
 model AuditLog {
   id String @id @default(cuid())
 
@@ -248,6 +298,7 @@ model AuditLog {
   @@index([action])
 }
 
+//************************************************************** */
 model Customer {
   id             String        @id @default(cuid())
   organizationId String
@@ -284,6 +335,7 @@ model Customer {
   @@index([organizationId, phone])
 }
 
+//************************************************************** */
 model Vehicle {
   id             String  @id @default(cuid())
   organizationId String
@@ -331,6 +383,7 @@ model Vehicle {
   @@index([organizationId, inventoryStatus])
 }
 
+//************************************************************** */
 model RepairOrder {
   id             String @id @default(cuid())
   organizationId String
@@ -388,6 +441,8 @@ model RepairOrder {
 
   statusHistory RepairOrderStatusHistory[]
 
+  laborLines RepairOrderLaborLine[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -401,6 +456,8 @@ model RepairOrder {
   @@index([organizationId, serviceAdvisorMembershipId])
   @@index([organizationId, primaryTechnicianMembershipId])
 }
+
+//************************************************************** */
 
 model RepairOrderStatusHistory {
   id            String @id @default(cuid())
@@ -424,6 +481,8 @@ model RepairOrderStatusHistory {
   @@index([changedByMembershipId])
 }
 
+//************************************************************** */
+
 model RepairOrderSequence {
   organizationId String @id
   nextNumber     Int    @default(1001)
@@ -431,4 +490,102 @@ model RepairOrderSequence {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   updatedAt DateTime @updatedAt
+}
+
+//************************************************************** */
+
+model RepairOrderLaborLine {
+  id            String @id @default(cuid())
+  repairOrderId String
+
+  technicianMembershipId String?
+
+  description String
+
+  hours Decimal @default(0) @db.Decimal(8, 2)
+  rate  Decimal @default(0) @db.Decimal(12, 2)
+
+  completed Boolean @default(false)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  technician Membership? @relation("RepairOrderLaborTechnician", fields: [technicianMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([repairOrderId])
+  @@index([technicianMembershipId])
+  @@index([repairOrderId, completed])
+}
+
+model Part {
+  id             String @id @default(cuid())
+  organizationId String
+
+  partNumber    String
+  oemPartNumber String?
+
+  alternatePartNumbers String[]
+
+  description String
+  brand       String?
+  category    String?
+
+  qtyOnHand    Decimal @default(0) @db.Decimal(12, 3)
+  qtyAllocated Decimal @default(0) @db.Decimal(12, 3)
+  qtyOnOrder   Decimal @default(0) @db.Decimal(12, 3)
+
+  reorderPoint Decimal @default(0) @db.Decimal(12, 3)
+
+  costPrice Decimal @default(0) @db.Decimal(12, 2)
+  sellPrice Decimal @default(0) @db.Decimal(12, 2)
+
+  location String?
+
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  inventoryTransactions PartInventoryTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, partNumber])
+  @@index([organizationId])
+  @@index([organizationId, oemPartNumber])
+  @@index([organizationId, brand])
+  @@index([organizationId, category])
+  @@index([organizationId, isActive])
+}
+
+model PartInventoryTransaction {
+  id     String @id @default(cuid())
+  partId String
+
+  type PartInventoryTransactionType
+
+  quantity Decimal @db.Decimal(12, 3)
+
+  quantityBefore Decimal @db.Decimal(12, 3)
+  quantityAfter  Decimal @db.Decimal(12, 3)
+
+  referenceType String?
+  referenceId   String?
+
+  notes String?
+
+  createdByMembershipId String?
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  createdByMembership Membership? @relation("PartInventoryTransactionCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([partId])
+  @@index([partId, createdAt])
+  @@index([createdByMembershipId])
+  @@index([referenceType, referenceId])
 }

@@ -11,6 +11,8 @@ import { validateParams } from "../../platform/validation/validate-params.js";
 import repairOrderRouter from "../repair-orders/repair-order.routes.js";
 import vehicleRouter from "../vehicles/vehicle.routes.js";
 
+import partRouter from "../parts/part.routes.js";
+
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
@@ -71,6 +73,13 @@ router.use(
 router.use(
   "/:organizationId/repair-orders",
   repairOrderRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/parts",
+  partRouter,
 );
 
 //************************************************************** */
