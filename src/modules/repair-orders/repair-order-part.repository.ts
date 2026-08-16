@@ -584,6 +584,25 @@ export async function installRepairOrderPartLineRecord(
 
 //************************************************************** */
 
+export async function markRepairOrderPartToBeOrderedRecord(
+  repairOrderId: string,
+  partLineId: string,
+) {
+  return prisma.repairOrderPartLine.update({
+    where: {
+      id:
+        partLineId,
+    },
+
+    data: {
+      status:
+        "TO_BE_ORDERED",
+    },
+  });
+}
+
+//************************************************************** */
+
 export async function deleteRepairOrderPartLineRecord(
   repairOrderId: string,
   partLineId: string,

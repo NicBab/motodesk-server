@@ -21,7 +21,8 @@ import {
   allocateRepairOrderPartLineHandler,
   deallocateRepairOrderPartLineHandler,
   issueRepairOrderPartLineHandler,
-  installRepairOrderPartLineHandler
+  installRepairOrderPartLineHandler,
+  markRepairOrderPartToBeOrderedHandler
 } from "./repair-order-part.controller.js";
 
 import {
@@ -31,7 +32,8 @@ import {
   updateRepairOrderPartLineSchema,
   deallocateRepairOrderPartSchema,
   issueRepairOrderPartSchema,
-  installRepairOrderPartSchema
+  installRepairOrderPartSchema,
+  markRepairOrderPartToBeOrderedSchema
 } from "./repair-order-part.schemas.js";
 
 //************************************************************** */
@@ -114,6 +116,19 @@ router.post(
     installRepairOrderPartSchema,
   ),
   installRepairOrderPartLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/to-be-ordered",
+  validateParams(
+    repairOrderPartParamsSchema,
+  ),
+  validateBody(
+    markRepairOrderPartToBeOrderedSchema,
+  ),
+  markRepairOrderPartToBeOrderedHandler,
 );
 
 //************************************************************** */

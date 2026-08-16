@@ -19,7 +19,8 @@ import {
   findRepairOrderPartLines,
   updateRepairOrderPartLineRecord,
   issueRepairOrderPartLineRecord,
-  installRepairOrderPartLineRecord
+  installRepairOrderPartLineRecord,
+  markRepairOrderPartToBeOrderedRecord
 } from "./repair-order-part.repository.js";
 
 import type {
@@ -28,7 +29,8 @@ import type {
   DeallocateRepairOrderPartInput,
   UpdateRepairOrderPartLineInput,
   IssueRepairOrderPartInput,
-  InstallRepairOrderPartInput
+  InstallRepairOrderPartInput,
+  MarkRepairOrderPartToBeOrderedInput
 } from "./repair-order-part.schemas.js";
 
 //************************************************************** */
@@ -538,6 +540,63 @@ export async function installRepairOrderPartLine(
     input.quantity,
     installedQty,
     requiredQty,
+  );
+
+  return getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
+}
+
+//************************************************************** */
+
+export async function markRepairOrderPartToBeOrdered(
+  organizationId: string,
+  repairOrderId: string,
+  partLineId: string,
+  input: MarkRepairOrderPartToBeOrderedInput,
+) {
+  const partLine =
+    await getRepairOrderPartLineById(
+      organizationId,
+      repairOrderId,
+      partLineId,
+    );
+
+  const allocatedQty =
+    Number(
+      partLine.allocatedQty.toString(),
+    );
+
+  const pulledQty =
+    Number(
+      partLine.pulledQty.toString(),
+    );
+
+  const installedQty =
+    Number(
+      partLine.installedQty.toString(),
+    );
+
+  if (
+    allocatedQty > 0 ||
+    pulledQty > 0 ||
+    installedQty > 0
+  ) {
+    throw new AppError(
+      400,
+      "Cannot mark a part line for ordering while inventory is already allocated, issued, or installed.",
+      {
+        code:
+          "REPAIR_ORDER_PART_HAS_ACTIVE_INVENTORY",
+      },
+    );
+  }
+
+  await markRepairOrderPartToBeOrderedRecord(
+    repairOrderId,
+    partLineId,
   );
 
   return getRepairOrderPartLineById(

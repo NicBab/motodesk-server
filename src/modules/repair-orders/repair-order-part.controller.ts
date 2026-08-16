@@ -29,7 +29,8 @@ import {
   updateRepairOrderPartLine,
   deallocateRepairOrderPartLine,
   issueRepairOrderPartLine,
-  installRepairOrderPartLine
+  installRepairOrderPartLine,
+  markRepairOrderPartToBeOrdered
 } from "./repair-order-part.service.js";
 
 import type {
@@ -46,7 +47,8 @@ import type {
 import type {
   AllocateRepairOrderPartInput,
   IssueRepairOrderPartInput,
-  InstallRepairOrderPartInput
+  InstallRepairOrderPartInput,
+  MarkRepairOrderPartToBeOrderedInput
 } from "./repair-order-part.schemas.js";
 
 import {
@@ -344,6 +346,42 @@ export async function installRepairOrderPartLineHandler(
 
   const partLine =
     await installRepairOrderPartLine(
+      organizationId,
+      repairOrderId,
+      partLineId,
+      input,
+    );
+
+  ok(
+    response,
+    partLine,
+  );
+}
+
+//************************************************************** */
+
+export async function markRepairOrderPartToBeOrderedHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+    partLineId,
+  } =
+    requireValidatedParams<RepairOrderPartParamsInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<MarkRepairOrderPartToBeOrderedInput>(
+      request,
+    );
+
+  const partLine =
+    await markRepairOrderPartToBeOrdered(
       organizationId,
       repairOrderId,
       partLineId,

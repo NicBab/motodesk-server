@@ -266,6 +266,24 @@ export const installRepairOrderPartSchema =
       .optional(),
   });
 
+  //************************************************************** */
+
+export const markRepairOrderPartToBeOrderedSchema =
+  z.object({
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export type MarkRepairOrderPartToBeOrderedInput =
+  z.infer<
+    typeof markRepairOrderPartToBeOrderedSchema
+  >;
+
 //************************************************************** */
 
 export type CreateRepairOrderPartLineInput =
@@ -273,37 +291,53 @@ export type CreateRepairOrderPartLineInput =
     typeof createRepairOrderPartLineSchema
   >;
 
+//************************************************************** */
+
 export type UpdateRepairOrderPartLineInput =
   z.infer<
     typeof updateRepairOrderPartLineSchema
   >;
+
+//************************************************************** */
 
 export type RepairOrderPartLineIdInput =
   z.infer<
     typeof repairOrderPartLineIdSchema
   >;
 
+//************************************************************** */
+
 export type RepairOrderPartParamsInput =
   z.infer<
     typeof repairOrderPartParamsSchema
   >;
+
+//************************************************************** */
 
 export type AllocateRepairOrderPartInput =
   z.infer<
     typeof allocateRepairOrderPartSchema
   >;
 
+//************************************************************** */
+
 export type DeallocateRepairOrderPartInput =
   z.infer<
     typeof deallocateRepairOrderPartSchema
   >;
+
+//************************************************************** */
 
 export type IssueRepairOrderPartInput =
   z.infer<
     typeof issueRepairOrderPartSchema
   >;
 
+//************************************************************** */
+
 export type InstallRepairOrderPartInput =
   z.infer<
     typeof installRepairOrderPartSchema
   >;
+
+//************************************************************** */
