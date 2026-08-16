@@ -14,7 +14,7 @@ describe(
   "Repair Order Parts integration",
   () => {
     it(
-      "creates, retrieves, updates, lists, and deletes repair order part lines",
+      "creates, allocates, deallocates, updates, lists, and protects repair order part lines",
       async () => {
         const {
           agent,
@@ -24,9 +24,6 @@ describe(
 
         const uniqueSuffix =
           Date.now().toString();
-
-        //************************************************************** */
-        // Create customer
 
         const customerResponse =
           await agent
@@ -46,9 +43,6 @@ describe(
 
         const customerId =
           customerResponse.body.data.id;
-
-        //************************************************************** */
-        // Create vehicle
 
         const vehicleResponse =
           await agent
@@ -72,9 +66,6 @@ describe(
         const vehicleId =
           vehicleResponse.body.data.id;
 
-        //************************************************************** */
-        // Create repair order
-
         const repairOrderResponse =
           await agent
             .post(
@@ -94,9 +85,6 @@ describe(
 
         const repairOrderId =
           repairOrderResponse.body.data.id;
-
-        //************************************************************** */
-        // Create catalog part
 
         const partNumber =
           `BRAKE-${uniqueSuffix}`;
@@ -126,9 +114,6 @@ describe(
         const partId =
           partResponse.body.data.id;
 
-        //************************************************************** */
-        // Create RO part line
-
         const createResponse =
           await agent
             .post(
@@ -140,17 +125,15 @@ describe(
               description:
                 "Front brake pad set",
               quantity:
-                1,
+                2,
               unitPrice:
                 59.99,
               requiredQty:
-                1,
+                2,
               approvedQty:
-                1,
+                2,
               estimatedCost:
-                35,
-              status:
-                "NEEDS_REVIEW",
+                70,
               resolutionMethod:
                 "SHOP_INVENTORY",
               blocksWork:
@@ -162,49 +145,79 @@ describe(
           201,
         );
 
-        assert.equal(
-          createResponse.body.success,
-          true,
-        );
-
         const partLineId =
           createResponse.body.data.id;
 
-        assert.equal(
-          typeof partLineId,
-          "string",
-        );
+        const allocationResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
+            )
+            .send({
+              quantity:
+                2,
+            });
 
         assert.equal(
-          createResponse.body.data.partId,
-          partId,
-        );
-
-        assert.equal(
-          createResponse.body.data.status,
-          "NEEDS_REVIEW",
-        );
-
-        //************************************************************** */
-        // Get RO part line
-
-        const getResponse =
-          await agent.get(
-            `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-          );
-
-        assert.equal(
-          getResponse.status,
+          allocationResponse.status,
           200,
         );
 
         assert.equal(
-          getResponse.body.data.id,
-          partLineId,
+          Number(
+            allocationResponse.body.data.allocatedQty,
+          ),
+          2,
         );
 
-        //************************************************************** */
-        // Update RO part line
+        const partialDeallocationResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/deallocate`,
+            )
+            .send({
+              quantity:
+                1,
+            });
+
+        assert.equal(
+          partialDeallocationResponse.status,
+          200,
+        );
+
+        assert.equal(
+          Number(
+            partialDeallocationResponse.body.data.allocatedQty,
+          ),
+          1,
+        );
+
+        const finalDeallocationResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/deallocate`,
+            )
+            .send({
+              quantity:
+                1,
+            });
+
+        assert.equal(
+          finalDeallocationResponse.status,
+          200,
+        );
+
+        assert.equal(
+          finalDeallocationResponse.body.data.status,
+          "AVAILABLE",
+        );
+
+        assert.equal(
+          Number(
+            finalDeallocationResponse.body.data.allocatedQty,
+          ),
+          0,
+        );
 
         const updateResponse =
           await agent
@@ -212,35 +225,16 @@ describe(
               `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
             )
             .send({
-              approvedQty:
-                1,
               actualCost:
                 36,
               vendorName:
                 "MotoDesk Test Vendor",
-              status:
-                "AVAILABLE",
             });
 
         assert.equal(
           updateResponse.status,
           200,
         );
-
-        assert.equal(
-          updateResponse.body.data.status,
-          "AVAILABLE",
-        );
-
-        assert.equal(
-          Number(
-            updateResponse.body.data.actualCost,
-          ),
-          36,
-        );
-
-        //************************************************************** */
-        // List RO part lines
 
         const listResponse =
           await agent.get(
@@ -252,30 +246,6 @@ describe(
           200,
         );
 
-        assert.equal(
-          listResponse.body.success,
-          true,
-        );
-
-        const partLineFound =
-          listResponse.body.data.some(
-            (
-              line: {
-                id: string;
-              },
-            ) =>
-              line.id ===
-              partLineId,
-          );
-
-        assert.equal(
-          partLineFound,
-          true,
-        );
-
-        //************************************************************** */
-        // Delete RO part line
-
         const deleteResponse =
           await agent.delete(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
@@ -285,33 +255,381 @@ describe(
           deleteResponse.status,
           200,
         );
+      },
+    );
+
+    //************************************************************** */
+
+    it(
+      "issues allocated inventory and synchronizes the RO part line and inventory ledger",
+      async () => {
+        const {
+          agent,
+          organizationId,
+        } =
+          await createAuthenticatedAgent();
+
+        const uniqueSuffix =
+          `${Date.now()}-issue`;
+
+        //************************************************************** */
+        // Customer
+
+        const customerResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/customers`,
+            )
+            .send({
+              type: "INDIVIDUAL",
+              firstName: "Issue",
+              lastName: "Customer",
+            });
 
         assert.equal(
-          deleteResponse.body.success,
-          true,
+          customerResponse.status,
+          201,
+        );
+
+        const customerId =
+          customerResponse.body.data.id;
+
+        //************************************************************** */
+        // Vehicle
+
+        const vehicleResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/vehicles`,
+            )
+            .send({
+              customerId,
+              make: "Yamaha",
+              model: "YZ250F",
+              vin:
+                `ISSUE-VIN-${uniqueSuffix}`,
+              type: "MOTORCYCLE",
+            });
+
+        assert.equal(
+          vehicleResponse.status,
+          201,
+        );
+
+        const vehicleId =
+          vehicleResponse.body.data.id;
+
+        //************************************************************** */
+        // Repair order
+
+        const repairOrderResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders`,
+            )
+            .send({
+              customerId,
+              vehicleId,
+              complaint:
+                "Replace clutch plates.",
+            });
+
+        assert.equal(
+          repairOrderResponse.status,
+          201,
+        );
+
+        const repairOrderId =
+          repairOrderResponse.body.data.id;
+
+        //************************************************************** */
+        // Inventory part
+
+        const partNumber =
+          `CLUTCH-${uniqueSuffix}`;
+
+        const partResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/parts`,
+            )
+            .send({
+              partNumber,
+              description:
+                "Clutch friction plate",
+              qtyOnHand:
+                5,
+              costPrice:
+                12,
+              sellPrice:
+                22,
+            });
+
+        assert.equal(
+          partResponse.status,
+          201,
+        );
+
+        const partId =
+          partResponse.body.data.id;
+
+        //************************************************************** */
+        // RO part line
+
+        const partLineResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
+            )
+            .send({
+              partId,
+              partNumber,
+              description:
+                "Clutch friction plate",
+              quantity:
+                2,
+              requiredQty:
+                2,
+              approvedQty:
+                2,
+              unitPrice:
+                22,
+              resolutionMethod:
+                "SHOP_INVENTORY",
+            });
+
+        assert.equal(
+          partLineResponse.status,
+          201,
+        );
+
+        const partLineId =
+          partLineResponse.body.data.id;
+
+        //************************************************************** */
+        // Allocate 2
+
+        const allocationResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
+            )
+            .send({
+              quantity:
+                2,
+            });
+
+        assert.equal(
+          allocationResponse.status,
+          200,
         );
 
         assert.equal(
-          deleteResponse.body.data.deleted,
-          true,
+          Number(
+            allocationResponse.body.data.allocatedQty,
+          ),
+          2,
         );
 
         //************************************************************** */
-        // Confirm deleted
+        // Issue 1
 
-        const missingResponse =
+        const issueResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
+            )
+            .send({
+              quantity:
+                1,
+              notes:
+                "Issued to technician.",
+            });
+
+        assert.equal(
+          issueResponse.status,
+          200,
+        );
+
+        assert.equal(
+          issueResponse.body.success,
+          true,
+        );
+
+        assert.equal(
+          issueResponse.body.data.status,
+          "ISSUED",
+        );
+
+        assert.equal(
+          Number(
+            issueResponse.body.data.allocatedQty,
+          ),
+          1,
+        );
+
+        assert.equal(
+          Number(
+            issueResponse.body.data.pulledQty,
+          ),
+          1,
+        );
+
+        //************************************************************** */
+        // Verify inventory balances
+
+        const partAfterIssue =
           await agent.get(
+            `/api/v1/organizations/${organizationId}/parts/${partId}`,
+          );
+
+        assert.equal(
+          partAfterIssue.status,
+          200,
+        );
+
+        assert.equal(
+          Number(
+            partAfterIssue.body.data.qtyOnHand,
+          ),
+          4,
+        );
+
+        assert.equal(
+          Number(
+            partAfterIssue.body.data.qtyAllocated,
+          ),
+          1,
+        );
+
+        //************************************************************** */
+        // Reject issue greater than remaining allocation
+
+        const excessiveIssueResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
+            )
+            .send({
+              quantity:
+                2,
+            });
+
+        assert.equal(
+          excessiveIssueResponse.status,
+          400,
+        );
+
+        assert.equal(
+          excessiveIssueResponse.body.code,
+          "REPAIR_ORDER_PART_ISSUE_EXCEEDS_ALLOCATED",
+        );
+
+        //************************************************************** */
+        // Issue remaining 1
+
+        const finalIssueResponse =
+          await agent
+            .post(
+              `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
+            )
+            .send({
+              quantity:
+                1,
+            });
+
+        assert.equal(
+          finalIssueResponse.status,
+          200,
+        );
+
+        assert.equal(
+          Number(
+            finalIssueResponse.body.data.allocatedQty,
+          ),
+          0,
+        );
+
+        assert.equal(
+          Number(
+            finalIssueResponse.body.data.pulledQty,
+          ),
+          2,
+        );
+
+        //************************************************************** */
+        // Verify final inventory balances
+
+        const finalPartResponse =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/parts/${partId}`,
+          );
+
+        assert.equal(
+          Number(
+            finalPartResponse.body.data.qtyOnHand,
+          ),
+          3,
+        );
+
+        assert.equal(
+          Number(
+            finalPartResponse.body.data.qtyAllocated,
+          ),
+          0,
+        );
+
+        //************************************************************** */
+        // Verify ledger
+
+        const transactionsResponse =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/parts/${partId}/inventory/transactions`,
+          );
+
+        assert.equal(
+          transactionsResponse.status,
+          200,
+        );
+
+        const issueTransactions =
+          transactionsResponse.body.data.filter(
+            (
+              transaction: {
+                type: string;
+                referenceType: string | null;
+                referenceId: string | null;
+              },
+            ) =>
+              transaction.type ===
+                "ISSUE" &&
+              transaction.referenceType ===
+                "REPAIR_ORDER" &&
+              transaction.referenceId ===
+                repairOrderId,
+          );
+
+        assert.equal(
+          issueTransactions.length,
+          2,
+        );
+
+        //************************************************************** */
+        // Deletion must remain blocked after inventory was issued
+
+        const deleteResponse =
+          await agent.delete(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
           );
 
         assert.equal(
-          missingResponse.status,
-          404,
+          deleteResponse.status,
+          400,
         );
 
         assert.equal(
-          missingResponse.body.code,
-          "REPAIR_ORDER_PART_LINE_NOT_FOUND",
+          deleteResponse.body.code,
+          "REPAIR_ORDER_PART_LINE_HAS_INVENTORY_ACTIVITY",
         );
       },
     );

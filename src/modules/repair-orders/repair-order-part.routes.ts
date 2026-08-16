@@ -7,11 +7,6 @@ import {
   validateParams,
 } from "../../platform/validation/index.js";
 
-import {
-  createRepairOrderPartLineSchema,
-  repairOrderPartParamsSchema,
-  updateRepairOrderPartLineSchema,
-} from "./repair-order-part.schemas.js";
 
 import {
   repairOrderIdSchema,
@@ -23,7 +18,21 @@ import {
   getRepairOrderPartLineHandler,
   listRepairOrderPartLinesHandler,
   updateRepairOrderPartLineHandler,
+  allocateRepairOrderPartLineHandler,
+  deallocateRepairOrderPartLineHandler,
+  issueRepairOrderPartLineHandler,
+  installRepairOrderPartLineHandler
 } from "./repair-order-part.controller.js";
+
+import {
+  allocateRepairOrderPartSchema,
+  createRepairOrderPartLineSchema,
+  repairOrderPartParamsSchema,
+  updateRepairOrderPartLineSchema,
+  deallocateRepairOrderPartSchema,
+  issueRepairOrderPartSchema,
+  installRepairOrderPartSchema
+} from "./repair-order-part.schemas.js";
 
 //************************************************************** */
 
@@ -53,6 +62,58 @@ router.get(
     repairOrderIdSchema,
   ),
   listRepairOrderPartLinesHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/allocate",
+  validateParams(
+    repairOrderPartParamsSchema,
+  ),
+  validateBody(
+    allocateRepairOrderPartSchema,
+  ),
+  allocateRepairOrderPartLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/deallocate",
+  validateParams(
+    repairOrderPartParamsSchema,
+  ),
+  validateBody(
+    deallocateRepairOrderPartSchema,
+  ),
+  deallocateRepairOrderPartLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/issue",
+  validateParams(
+    repairOrderPartParamsSchema,
+  ),
+  validateBody(
+    issueRepairOrderPartSchema,
+  ),
+  issueRepairOrderPartLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/install",
+  validateParams(
+    repairOrderPartParamsSchema,
+  ),
+  validateBody(
+    installRepairOrderPartSchema,
+  ),
+  installRepairOrderPartLineHandler,
 );
 
 //************************************************************** */

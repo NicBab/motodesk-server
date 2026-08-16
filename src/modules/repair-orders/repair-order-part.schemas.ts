@@ -144,9 +144,24 @@ export const createRepairOrderPartLineSchema =
   repairOrderPartLineSchema;
 
 //************************************************************** */
+// Generic edits.
+//
+// Inventory-controlled fields are intentionally excluded.
+// Those fields must be changed through dedicated workflow
+// operations so the Part inventory ledger cannot be bypassed.
 
 export const updateRepairOrderPartLineSchema =
-  repairOrderPartLineSchema.partial();
+  repairOrderPartLineSchema
+    .omit({
+      partId: true,
+      status: true,
+      allocatedQty: true,
+      orderedQty: true,
+      receivedQty: true,
+      pulledQty: true,
+      installedQty: true,
+    })
+    .partial();
 
 //************************************************************** */
 
@@ -183,6 +198,75 @@ export const repairOrderPartParamsSchema =
   });
 
 //************************************************************** */
+// Inventory workflow actions
+
+export const allocateRepairOrderPartSchema =
+  z.object({
+    quantity: z
+      .number()
+      .positive(
+        "Allocation quantity must be greater than zero.",
+      ),
+
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export const deallocateRepairOrderPartSchema =
+  z.object({
+    quantity: z
+      .number()
+      .positive(
+        "Deallocation quantity must be greater than zero.",
+      ),
+
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export const issueRepairOrderPartSchema =
+  z.object({
+    quantity: z
+      .number()
+      .positive(
+        "Issue quantity must be greater than zero.",
+      ),
+
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export const installRepairOrderPartSchema =
+  z.object({
+    quantity: z
+      .number()
+      .positive(
+        "Installed quantity must be greater than zero.",
+      ),
+
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
 
 export type CreateRepairOrderPartLineInput =
   z.infer<
@@ -202,4 +286,24 @@ export type RepairOrderPartLineIdInput =
 export type RepairOrderPartParamsInput =
   z.infer<
     typeof repairOrderPartParamsSchema
+  >;
+
+export type AllocateRepairOrderPartInput =
+  z.infer<
+    typeof allocateRepairOrderPartSchema
+  >;
+
+export type DeallocateRepairOrderPartInput =
+  z.infer<
+    typeof deallocateRepairOrderPartSchema
+  >;
+
+export type IssueRepairOrderPartInput =
+  z.infer<
+    typeof issueRepairOrderPartSchema
+  >;
+
+export type InstallRepairOrderPartInput =
+  z.infer<
+    typeof installRepairOrderPartSchema
   >;

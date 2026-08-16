@@ -21,22 +21,37 @@ import {
 } from "../../platform/http/api-response.js";
 
 import {
+  allocateRepairOrderPartLine,
   createRepairOrderPartLine,
   deleteRepairOrderPartLine,
   getRepairOrderPartLineById,
   listRepairOrderPartLines,
   updateRepairOrderPartLine,
+  deallocateRepairOrderPartLine,
+  issueRepairOrderPartLine,
+  installRepairOrderPartLine
 } from "./repair-order-part.service.js";
 
 import type {
   CreateRepairOrderPartLineInput,
   RepairOrderPartParamsInput,
   UpdateRepairOrderPartLineInput,
+  DeallocateRepairOrderPartInput
 } from "./repair-order-part.schemas.js";
 
 import type {
   RepairOrderIdInput,
 } from "./repair-order.schemas.js";
+
+import type {
+  AllocateRepairOrderPartInput,
+  IssueRepairOrderPartInput,
+  InstallRepairOrderPartInput
+} from "./repair-order-part.schemas.js";
+
+import {
+  getRequestContext,
+} from "../../platform/request/request.context.js";
 
 //************************************************************** */
 
@@ -179,6 +194,156 @@ export async function updateRepairOrderPartLineHandler(
 
   const partLine =
     await updateRepairOrderPartLine(
+      organizationId,
+      repairOrderId,
+      partLineId,
+      input,
+    );
+
+  ok(
+    response,
+    partLine,
+  );
+}
+
+//************************************************************** */
+
+export async function allocateRepairOrderPartLineHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+    partLineId,
+  } =
+    requireValidatedParams<RepairOrderPartParamsInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<AllocateRepairOrderPartInput>(
+      request,
+    );
+
+  const partLine =
+    await allocateRepairOrderPartLine(
+      organizationId,
+      repairOrderId,
+      partLineId,
+      getRequestContext().membership?.id ??
+        null,
+      input,
+    );
+
+  ok(
+    response,
+    partLine,
+  );
+}
+
+//************************************************************** */
+
+export async function deallocateRepairOrderPartLineHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+    partLineId,
+  } =
+    requireValidatedParams<RepairOrderPartParamsInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<DeallocateRepairOrderPartInput>(
+      request,
+    );
+
+  const partLine =
+    await deallocateRepairOrderPartLine(
+      organizationId,
+      repairOrderId,
+      partLineId,
+      getRequestContext().membership?.id ??
+        null,
+      input,
+    );
+
+  ok(
+    response,
+    partLine,
+  );
+}
+
+//************************************************************** */
+
+export async function issueRepairOrderPartLineHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+    partLineId,
+  } =
+    requireValidatedParams<RepairOrderPartParamsInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<IssueRepairOrderPartInput>(
+      request,
+    );
+
+  const partLine =
+    await issueRepairOrderPartLine(
+      organizationId,
+      repairOrderId,
+      partLineId,
+      getRequestContext().membership?.id ??
+        null,
+      input,
+    );
+
+  ok(
+    response,
+    partLine,
+  );
+}
+
+//************************************************************** */
+
+export async function installRepairOrderPartLineHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+    partLineId,
+  } =
+    requireValidatedParams<RepairOrderPartParamsInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<InstallRepairOrderPartInput>(
+      request,
+    );
+
+  const partLine =
+    await installRepairOrderPartLine(
       organizationId,
       repairOrderId,
       partLineId,
