@@ -36,6 +36,8 @@ import {
 
 import repairOrderLaborRouter from "./repair-order-labor.routes.js";
 
+import repairOrderPartRouter from "./repair-order-part.routes.js";
+
 //************************************************************** */
 
 const router = Router({
@@ -107,6 +109,16 @@ router.use(
   initializeRequestContext,
   requireOrganizationAccess,
   repairOrderLaborRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:repairOrderId/part-lines",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  repairOrderPartRouter,
 );
 
 //************************************************************** */

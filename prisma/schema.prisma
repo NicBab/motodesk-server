@@ -136,6 +136,36 @@ enum RepairOrderPickupStatus {
   REVERSED
 }
 
+enum RepairOrderPartStatus {
+  NEEDS_REVIEW
+  AVAILABLE
+  ALLOCATED
+  TO_BE_ORDERED
+  ORDERED
+  PARTIALLY_RECEIVED
+  BACKORDERED
+  RECEIVED
+  PULLED
+  STAGED
+  ISSUED
+  INSTALLED
+  WAIVED
+  CANCELLED
+}
+
+enum RepairOrderPartResolutionMethod {
+  SHOP_INVENTORY
+  ORIGINAL_PO
+  ALTERNATE_VENDOR
+  LOCAL_DEALER
+  MANUAL_PURCHASE
+  APPROVED_SUBSTITUTE
+  CUSTOMER_SUPPLIED
+  INVENTORY_TRANSFER
+  NOT_REQUIRED
+  MANAGER_OVERRIDE
+}
+
 //************************************************************** */
 
 enum PartInventoryTransactionType {
@@ -443,6 +473,8 @@ model RepairOrder {
 
   laborLines RepairOrderLaborLine[]
 
+  partLines RepairOrderPartLine[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -519,6 +551,49 @@ model RepairOrderLaborLine {
   @@index([repairOrderId, completed])
 }
 
+model RepairOrderPartLine {
+  id            String @id @default(cuid())
+  repairOrderId String
+  partId        String?
+
+  partNumber  String
+  description String
+
+  quantity Decimal @default(1) @db.Decimal(12, 3)
+  unitPrice Decimal @default(0) @db.Decimal(12, 2)
+
+  requiredQty  Decimal @default(1) @db.Decimal(12, 3)
+  approvedQty  Decimal @default(0) @db.Decimal(12, 3)
+  allocatedQty Decimal @default(0) @db.Decimal(12, 3)
+  orderedQty   Decimal @default(0) @db.Decimal(12, 3)
+  receivedQty  Decimal @default(0) @db.Decimal(12, 3)
+  pulledQty    Decimal @default(0) @db.Decimal(12, 3)
+  installedQty Decimal @default(0) @db.Decimal(12, 3)
+
+  estimatedCost Decimal @default(0) @db.Decimal(12, 2)
+  actualCost    Decimal @default(0) @db.Decimal(12, 2)
+
+  vendorName String?
+
+  status RepairOrderPartStatus @default(NEEDS_REVIEW)
+
+  resolutionMethod RepairOrderPartResolutionMethod?
+
+  blocksWork Boolean @default(true)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([repairOrderId])
+  @@index([partId])
+  @@index([repairOrderId, status])
+  @@index([repairOrderId, blocksWork])
+}
+
 model Part {
   id             String @id @default(cuid())
   organizationId String
@@ -548,6 +623,7 @@ model Part {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   inventoryTransactions PartInventoryTransaction[]
+  repairOrderPartLines RepairOrderPartLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
