@@ -1,6 +1,4 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreatePartInput,
@@ -15,99 +13,74 @@ export async function createPartRecord(
   input: CreatePartInput,
   createdByMembershipId: string | null,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const part =
-        await transaction.part.create({
-          data: {
-            organizationId,
+  return prisma.$transaction(async (transaction) => {
+    const part = await transaction.part.create({
+      data: {
+        organizationId,
 
-            partNumber:
-              input.partNumber,
+        partNumber: input.partNumber,
 
-            oemPartNumber:
-              input.oemPartNumber ??
-              null,
+        oemPartNumber: input.oemPartNumber ?? null,
 
-            alternatePartNumbers:
-              input.alternatePartNumbers,
+        alternatePartNumbers: input.alternatePartNumbers,
 
-            description:
-              input.description,
+        description: input.description,
 
-            brand:
-              input.brand ??
-              null,
+        brand: input.brand ?? null,
 
-            category:
-              input.category ??
-              null,
+        category: input.category ?? null,
 
-            qtyOnHand:
-              input.qtyOnHand,
+        qtyOnHand: input.qtyOnHand,
 
-            qtyAllocated:
-              input.qtyAllocated,
+        qtyAllocated: input.qtyAllocated,
 
-            qtyOnOrder:
-              input.qtyOnOrder,
+        qtyOnOrder: input.qtyOnOrder,
 
-            reorderPoint:
-              input.reorderPoint,
+        reorderPoint: input.reorderPoint,
 
-            costPrice:
-              input.costPrice,
+        costPrice: input.costPrice,
 
-            sellPrice:
-              input.sellPrice,
+        sellPrice: input.sellPrice,
 
-            location:
-              input.location ??
-              null,
-          },
-        });
+        location: input.location ?? null,
+      },
+    });
 
-      if (input.qtyOnHand > 0) {
-        await transaction.partInventoryTransaction.create({
-          data: {
-            partId:
-              part.id,
+    if (input.qtyOnHand > 0) {
+      await transaction.partInventoryTransaction.create({
+        data: {
+          partId: part.id,
 
-            type:
-              "INITIAL",
+          type: "INITIAL",
 
-            quantity:
-              input.qtyOnHand,
+          quantity: input.qtyOnHand,
 
-            quantityBefore:
-              0,
+          onHandBefore: 0,
+          onHandAfter: input.qtyOnHand,
 
-            quantityAfter:
-              input.qtyOnHand,
+          allocatedBefore: 0,
+          allocatedAfter: input.qtyAllocated,
 
-            createdByMembershipId,
+          onOrderBefore: 0,
+          onOrderAfter: input.qtyOnOrder,
 
-            notes:
-              "Initial inventory quantity.",
-          },
-        });
-      }
+          createdByMembershipId,
 
-      return part;
-    },
-  );
+          notes: "Initial inventory quantity.",
+        },
+      });
+    }
+
+    return part;
+  });
 }
 
 //************************************************************** */
 
-export async function findPartById(
-  organizationId: string,
-  partId: string,
-) {
+export async function findPartById(organizationId: string, partId: string) {
   return prisma.part.findFirst({
     where: {
-      id:
-        partId,
+      id: partId,
       organizationId,
     },
   });
@@ -139,30 +112,26 @@ export async function findPartsByOrganization(
 
       ...(query.brand !== undefined
         ? {
-            brand:
-              query.brand,
+            brand: query.brand,
           }
         : {}),
 
       ...(query.category !== undefined
         ? {
-            category:
-              query.category,
+            category: query.category,
           }
         : {}),
 
       ...(query.isActive !== undefined
         ? {
-            isActive:
-              query.isActive,
+            isActive: query.isActive,
           }
         : {}),
 
       ...(query.lowStock === true
         ? {
             qtyOnHand: {
-              lte:
-                prisma.part.fields.reorderPoint,
+              lte: prisma.part.fields.reorderPoint,
             },
           }
         : {}),
@@ -172,53 +141,42 @@ export async function findPartsByOrganization(
             OR: [
               {
                 partNumber: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
               {
                 oemPartNumber: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
               {
                 alternatePartNumbers: {
-                  has:
-                    query.search,
+                  has: query.search,
                 },
               },
 
               {
                 description: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
               {
                 brand: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
               {
                 category: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
             ],
@@ -228,8 +186,7 @@ export async function findPartsByOrganization(
 
     orderBy: [
       {
-        partNumber:
-          "asc",
+        partNumber: "asc",
       },
     ],
   });
@@ -244,79 +201,68 @@ export async function updatePartRecord(
 ) {
   return prisma.part.updateMany({
     where: {
-      id:
-        partId,
+      id: partId,
       organizationId,
     },
 
     data: {
       ...(input.partNumber !== undefined
         ? {
-            partNumber:
-              input.partNumber,
+            partNumber: input.partNumber,
           }
         : {}),
 
       ...(input.oemPartNumber !== undefined
         ? {
-            oemPartNumber:
-              input.oemPartNumber,
+            oemPartNumber: input.oemPartNumber,
           }
         : {}),
 
       ...(input.alternatePartNumbers !== undefined
         ? {
-            alternatePartNumbers:
-              input.alternatePartNumbers,
+            alternatePartNumbers: input.alternatePartNumbers,
           }
         : {}),
 
       ...(input.description !== undefined
         ? {
-            description:
-              input.description,
+            description: input.description,
           }
         : {}),
 
       ...(input.brand !== undefined
         ? {
-            brand:
-              input.brand,
+            brand: input.brand,
           }
         : {}),
 
       ...(input.category !== undefined
         ? {
-            category:
-              input.category,
+            category: input.category,
           }
         : {}),
 
       ...(input.reorderPoint !== undefined
         ? {
-            reorderPoint:
-              input.reorderPoint,
+            reorderPoint: input.reorderPoint,
           }
         : {}),
 
       ...(input.costPrice !== undefined
         ? {
-            costPrice:
-              input.costPrice,
+            costPrice: input.costPrice,
           }
         : {}),
 
       ...(input.sellPrice !== undefined
         ? {
-            sellPrice:
-              input.sellPrice,
+            sellPrice: input.sellPrice,
           }
         : {}),
 
       ...(input.location !== undefined
         ? {
-            location:
-              input.location,
+            location: input.location,
           }
         : {}),
     },
@@ -331,16 +277,13 @@ export async function archivePartRecord(
 ) {
   return prisma.part.updateMany({
     where: {
-      id:
-        partId,
+      id: partId,
       organizationId,
-      isActive:
-        true,
+      isActive: true,
     },
 
     data: {
-      isActive:
-        false,
+      isActive: false,
     },
   });
 }

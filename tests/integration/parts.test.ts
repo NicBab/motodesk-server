@@ -128,14 +128,14 @@ describe(
 
         assert.equal(
           Number(
-            inventoryTransactions[0]?.quantityBefore,
+            inventoryTransactions[0]?.onHandBefore,
           ),
           0,
         );
 
         assert.equal(
           Number(
-            inventoryTransactions[0]?.quantityAfter,
+            inventoryTransactions[0]?.onHandAfter,
           ),
           5,
         );

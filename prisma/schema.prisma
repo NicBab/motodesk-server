@@ -568,8 +568,14 @@ model PartInventoryTransaction {
 
   quantity Decimal @db.Decimal(12, 3)
 
-  quantityBefore Decimal @db.Decimal(12, 3)
-  quantityAfter  Decimal @db.Decimal(12, 3)
+  onHandBefore Decimal @db.Decimal(12, 3)
+  onHandAfter  Decimal @db.Decimal(12, 3)
+
+  allocatedBefore Decimal @db.Decimal(12, 3)
+  allocatedAfter  Decimal @db.Decimal(12, 3)
+
+  onOrderBefore Decimal @db.Decimal(12, 3)
+  onOrderAfter  Decimal @db.Decimal(12, 3)
 
   referenceType String?
   referenceId   String?

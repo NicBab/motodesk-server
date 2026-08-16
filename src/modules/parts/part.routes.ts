@@ -33,6 +33,8 @@ import {
   updatePartSchema,
 } from "./part.schemas.js";
 
+import partInventoryRouter from "./part-inventory.routes.js";
+
 //************************************************************** */
 
 const router = Router({
@@ -59,6 +61,16 @@ router.get(
   requireOrganizationAccess,
   validateQuery(listPartsQuerySchema),
   listPartsHandler,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:partId/inventory",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  partInventoryRouter,
 );
 
 //************************************************************** */

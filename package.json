@@ -23,7 +23,8 @@
     "test:vehicles": "tsx --test tests/integration/vehicles.test.ts",
     "test:repair-orders": "tsx --test tests/integration/repair-orders.test.ts",
     "test:repair-order-labor": "tsx --test tests/integration/repair-order-labor.test.ts",
-    "test:parts": "tsx --test tests/integration/parts.test.ts"
+    "test:parts": "tsx --test tests/integration/parts.test.ts",
+    "test:part-inventory": "tsx --test tests/integration/part-inventory.test.ts"
   },
   "keywords": [],
   "author": "",
