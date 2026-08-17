@@ -195,6 +195,30 @@ export const failRepairOrderQualityCheckSchema = z.object({
 
 //************************************************************** */
 
+export const cashierRepairOrderSchema = z.object({
+  notes: z.string().trim().max(2000).optional(),
+});
+
+//************************************************************** */
+
+export const pickupRepairOrderSchema = z.object({
+  notes: z.string().trim().max(2000).optional(),
+});
+
+//************************************************************** */
+
+export const closeRepairOrderSchema = z.object({
+  notes: z.string().trim().max(2000).optional(),
+});
+
+//************************************************************** */
+
+export type CashierRepairOrderInput = z.infer<typeof cashierRepairOrderSchema>;
+
+export type PickupRepairOrderInput = z.infer<typeof pickupRepairOrderSchema>;
+
+export type CloseRepairOrderInput = z.infer<typeof closeRepairOrderSchema>;
+
 export type BeginRepairOrderQualityCheckInput = z.infer<
   typeof beginRepairOrderQualityCheckSchema
 >;

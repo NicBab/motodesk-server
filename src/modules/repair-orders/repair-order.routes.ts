@@ -21,6 +21,9 @@ import {
   beginRepairOrderQualityCheckSchema,
   failRepairOrderQualityCheckSchema,
   passRepairOrderQualityCheckSchema,
+  cashierRepairOrderSchema,
+  closeRepairOrderSchema,
+  pickupRepairOrderSchema,
 } from "./repair-order.schemas.js";
 
 import {
@@ -32,6 +35,9 @@ import {
   beginRepairOrderQualityCheckHandler,
   failRepairOrderQualityCheckHandler,
   passRepairOrderQualityCheckHandler,
+  cashierRepairOrderHandler,
+  closeRepairOrderHandler,
+  pickupRepairOrderHandler,
 } from "./repair-order.controller.js";
 
 import repairOrderLaborRouter from "./repair-order-labor.routes.js";
@@ -123,6 +129,42 @@ router.post(
   validateParams(repairOrderIdSchema),
   validateBody(failRepairOrderQualityCheckSchema),
   failRepairOrderQualityCheckHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/cashier",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(cashierRepairOrderSchema),
+  cashierRepairOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/pickup",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(pickupRepairOrderSchema),
+  pickupRepairOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/close",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(closeRepairOrderSchema),
+  closeRepairOrderHandler,
 );
 
 //************************************************************** */

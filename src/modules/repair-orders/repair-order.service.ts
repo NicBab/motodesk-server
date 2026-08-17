@@ -23,6 +23,9 @@ import type {
   BeginRepairOrderQualityCheckInput,
   FailRepairOrderQualityCheckInput,
   PassRepairOrderQualityCheckInput,
+  CashierRepairOrderInput,
+  CloseRepairOrderInput,
+  PickupRepairOrderInput,
 } from "./repair-order.schemas.js";
 
 import { findCustomerById } from "../customers/customer.repository.js";
@@ -483,4 +486,142 @@ export async function failRepairOrderQualityCheck(
 
     automatic: false,
   });
+}
+
+//************************************************************** */
+
+export async function cashierRepairOrder(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: CashierRepairOrderInput,
+) {
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
+
+  if (
+    repairOrder.status !==
+    "READY_FOR_PICKUP"
+  ) {
+    throw new AppError(
+      400,
+      "Repair order can only be cashiered when it is ready for pickup.",
+      {
+        code:
+          "REPAIR_ORDER_CASHIER_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    {
+      status:
+        "CASHIERED",
+
+      notes:
+        input.notes ??
+        "Repair order cashiered.",
+
+      automatic:
+        false,
+    },
+  );
+}
+
+//************************************************************** */
+
+export async function pickupRepairOrder(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: PickupRepairOrderInput,
+) {
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
+
+  if (
+    repairOrder.status !==
+    "CASHIERED"
+  ) {
+    throw new AppError(
+      400,
+      "Repair order can only be picked up after it has been cashiered.",
+      {
+        code:
+          "REPAIR_ORDER_PICKUP_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    {
+      status:
+        "PICKED_UP",
+
+      notes:
+        input.notes ??
+        "Unit picked up by customer.",
+
+      automatic:
+        false,
+    },
+  );
+}
+
+//************************************************************** */
+
+export async function closeRepairOrder(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: CloseRepairOrderInput,
+) {
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
+
+  if (
+    repairOrder.status !==
+    "PICKED_UP"
+  ) {
+    throw new AppError(
+      400,
+      "Repair order can only be closed after the unit has been picked up.",
+      {
+        code:
+          "REPAIR_ORDER_CLOSE_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    {
+      status:
+        "CLOSED",
+
+      notes:
+        input.notes ??
+        "Repair order closed.",
+
+      automatic:
+        false,
+    },
+  );
 }

@@ -23,6 +23,9 @@ import {
   beginRepairOrderQualityCheck,
   failRepairOrderQualityCheck,
   passRepairOrderQualityCheck,
+  cashierRepairOrder,
+  closeRepairOrder,
+  pickupRepairOrder,
 } from "./repair-order.service.js";
 
 import type {
@@ -34,6 +37,9 @@ import type {
   BeginRepairOrderQualityCheckInput,
   FailRepairOrderQualityCheckInput,
   PassRepairOrderQualityCheckInput,
+  CashierRepairOrderInput,
+  CloseRepairOrderInput,
+  PickupRepairOrderInput,
 } from "./repair-order.schemas.js";
 
 //************************************************************** */
@@ -221,6 +227,78 @@ export async function failRepairOrderQualityCheckHandler(
   const membershipId = getRequestContext().membership?.id ?? null;
 
   const repairOrder = await failRepairOrderQualityCheck(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function cashierRepairOrderHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<CashierRepairOrderInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await cashierRepairOrder(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function pickupRepairOrderHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<PickupRepairOrderInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await pickupRepairOrder(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function closeRepairOrderHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<CloseRepairOrderInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await closeRepairOrder(
     organizationId,
     repairOrderId,
     membershipId,
