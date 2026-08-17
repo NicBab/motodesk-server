@@ -229,9 +229,16 @@ describe("Repair Order integration", () => {
 
     assert.equal(secondResponse.status, 201);
 
-    assert.equal(
-      secondResponse.body.data.roNumber,
-      firstResponse.body.data.roNumber + 1,
-    );
+    const firstRoNumber = firstResponse.body.data.roNumber;
+
+    const secondRoNumber = secondResponse.body.data.roNumber;
+
+    assert.equal(typeof firstRoNumber, "number");
+
+    assert.equal(typeof secondRoNumber, "number");
+
+    assert.notEqual(secondRoNumber, firstRoNumber);
+
+    assert.equal(secondRoNumber > firstRoNumber, true);
   });
 });

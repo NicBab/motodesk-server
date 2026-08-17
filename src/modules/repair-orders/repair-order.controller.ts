@@ -1,16 +1,10 @@
-import type {
-  Response,
-} from "express";
+import type { Response } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
 
-import type {
-  AuthenticatedRequest,
-} from "../auth/index.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 
-import {
-  getRequestContext,
-} from "../../platform/request/request.context.js";
+import { getRequestContext } from "../../platform/request/request.context.js";
 
 import {
   requireValidatedBody,
@@ -18,10 +12,7 @@ import {
   requireValidatedQuery,
 } from "../../platform/validation/validated-request.js";
 
-import {
-  created,
-  ok,
-} from "../../platform/http/api-response.js";
+import { created, ok } from "../../platform/http/api-response.js";
 
 import {
   createRepairOrder,
@@ -29,6 +20,9 @@ import {
   listRepairOrders,
   updateRepairOrder,
   updateRepairOrderStatus,
+  beginRepairOrderQualityCheck,
+  failRepairOrderQualityCheck,
+  passRepairOrderQualityCheck,
 } from "./repair-order.service.js";
 
 import type {
@@ -37,28 +31,23 @@ import type {
   RepairOrderIdInput,
   UpdateRepairOrderInput,
   UpdateRepairOrderStatusInput,
+  BeginRepairOrderQualityCheckInput,
+  FailRepairOrderQualityCheckInput,
+  PassRepairOrderQualityCheckInput,
 } from "./repair-order.schemas.js";
 
 //************************************************************** */
 
-function requireOrganizationId(
-  request: AuthenticatedRequest,
-): string {
-  const organizationId =
-    request.params.organizationId;
+function requireOrganizationId(request: AuthenticatedRequest): string {
+  const organizationId = request.params.organizationId;
 
   if (
     typeof organizationId !== "string" ||
     organizationId.trim().length === 0
   ) {
-    throw new AppError(
-      400,
-      "A valid organization ID is required.",
-      {
-        code:
-          "ORGANIZATION_ID_REQUIRED",
-      },
-    );
+    throw new AppError(400, "A valid organization ID is required.", {
+      code: "ORGANIZATION_ID_REQUIRED",
+    });
   }
 
   return organizationId;
@@ -67,13 +56,9 @@ function requireOrganizationId(
 //************************************************************** */
 
 function getMembershipId(): string | null {
-  const context =
-    getRequestContext();
+  const context = getRequestContext();
 
-  return (
-    context.membership?.id ??
-    null
-  );
+  return context.membership?.id ?? null;
 }
 
 //************************************************************** */
@@ -82,28 +67,19 @@ export async function createRepairOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(request);
+  const organizationId = requireOrganizationId(request);
 
-  const membershipId =
-    getMembershipId();
+  const membershipId = getMembershipId();
 
-  const input =
-    requireValidatedBody<CreateRepairOrderInput>(
-      request,
-    );
+  const input = requireValidatedBody<CreateRepairOrderInput>(request);
 
-  const repairOrder =
-    await createRepairOrder(
-      organizationId,
-      membershipId,
-      input,
-    );
-
-  created(
-    response,
-    repairOrder,
+  const repairOrder = await createRepairOrder(
+    organizationId,
+    membershipId,
+    input,
   );
+
+  created(response, repairOrder);
 }
 
 //************************************************************** */
@@ -112,24 +88,13 @@ export async function listRepairOrdersHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(request);
+  const organizationId = requireOrganizationId(request);
 
-  const query =
-    requireValidatedQuery<ListRepairOrdersQueryInput>(
-      request,
-    );
+  const query = requireValidatedQuery<ListRepairOrdersQueryInput>(request);
 
-  const repairOrders =
-    await listRepairOrders(
-      organizationId,
-      query,
-    );
+  const repairOrders = await listRepairOrders(organizationId, query);
 
-  ok(
-    response,
-    repairOrders,
-  );
+  ok(response, repairOrders);
 }
 
 //************************************************************** */
@@ -138,26 +103,13 @@ export async function getRepairOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(request);
+  const organizationId = requireOrganizationId(request);
 
-  const {
-    repairOrderId,
-  } =
-    requireValidatedParams<RepairOrderIdInput>(
-      request,
-    );
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
 
-  const repairOrder =
-    await getRepairOrderById(
-      organizationId,
-      repairOrderId,
-    );
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
 
-  ok(
-    response,
-    repairOrder,
-  );
+  ok(response, repairOrder);
 }
 
 //************************************************************** */
@@ -166,32 +118,19 @@ export async function updateRepairOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(request);
+  const organizationId = requireOrganizationId(request);
 
-  const {
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<UpdateRepairOrderInput>(request);
+
+  const repairOrder = await updateRepairOrder(
+    organizationId,
     repairOrderId,
-  } =
-    requireValidatedParams<RepairOrderIdInput>(
-      request,
-    );
-
-  const input =
-    requireValidatedBody<UpdateRepairOrderInput>(
-      request,
-    );
-
-  const repairOrder =
-    await updateRepairOrder(
-      organizationId,
-      repairOrderId,
-      input,
-    );
-
-  ok(
-    response,
-    repairOrder,
+    input,
   );
+
+  ok(response, repairOrder);
 }
 
 //************************************************************** */
@@ -200,34 +139,93 @@ export async function updateRepairOrderStatusHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(request);
+  const organizationId = requireOrganizationId(request);
 
-  const membershipId =
-    getMembershipId();
+  const membershipId = getMembershipId();
 
-  const {
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<UpdateRepairOrderStatusInput>(request);
+
+  const repairOrder = await updateRepairOrderStatus(
+    organizationId,
     repairOrderId,
-  } =
-    requireValidatedParams<RepairOrderIdInput>(
-      request,
-    );
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function beginRepairOrderQualityCheckHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
 
   const input =
-    requireValidatedBody<UpdateRepairOrderStatusInput>(
-      request,
-    );
+    requireValidatedBody<BeginRepairOrderQualityCheckInput>(request);
 
-  const repairOrder =
-    await updateRepairOrderStatus(
-      organizationId,
-      repairOrderId,
-      membershipId,
-      input,
-    );
+  const membershipId = getRequestContext().membership?.id ?? null;
 
-  ok(
-    response,
-    repairOrder,
+  const repairOrder = await beginRepairOrderQualityCheck(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
   );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function passRepairOrderQualityCheckHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<PassRepairOrderQualityCheckInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await passRepairOrderQualityCheck(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function failRepairOrderQualityCheckHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<FailRepairOrderQualityCheckInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await failRepairOrderQualityCheck(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
 }

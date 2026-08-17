@@ -1,16 +1,10 @@
 import { Router } from "express";
 
-import {
-  authenticateRequest,
-} from "../auth/index.js";
+import { authenticateRequest } from "../auth/index.js";
 
-import {
-  requireOrganizationAccess,
-} from "../organizations/index.js";
+import { requireOrganizationAccess } from "../organizations/index.js";
 
-import {
-  initializeRequestContext,
-} from "../../platform/request/request.middleware.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
   validateBody,
@@ -24,6 +18,9 @@ import {
   repairOrderIdSchema,
   updateRepairOrderSchema,
   updateRepairOrderStatusSchema,
+  beginRepairOrderQualityCheckSchema,
+  failRepairOrderQualityCheckSchema,
+  passRepairOrderQualityCheckSchema,
 } from "./repair-order.schemas.js";
 
 import {
@@ -32,6 +29,9 @@ import {
   listRepairOrdersHandler,
   updateRepairOrderHandler,
   updateRepairOrderStatusHandler,
+  beginRepairOrderQualityCheckHandler,
+  failRepairOrderQualityCheckHandler,
+  passRepairOrderQualityCheckHandler,
 } from "./repair-order.controller.js";
 
 import repairOrderLaborRouter from "./repair-order-labor.routes.js";
@@ -87,6 +87,42 @@ router.patch(
   validateParams(repairOrderIdSchema),
   validateBody(updateRepairOrderSchema),
   updateRepairOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/quality-check/begin",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(beginRepairOrderQualityCheckSchema),
+  beginRepairOrderQualityCheckHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/quality-check/pass",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(passRepairOrderQualityCheckSchema),
+  passRepairOrderQualityCheckHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/quality-check/fail",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(failRepairOrderQualityCheckSchema),
+  failRepairOrderQualityCheckHandler,
 );
 
 //************************************************************** */

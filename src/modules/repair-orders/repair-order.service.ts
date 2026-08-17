@@ -5,6 +5,8 @@ import {
 
 import { AppError } from "../../platform/errors/app-error.js";
 
+import { findMembershipById } from "../memberships/membership.repository.js";
+
 import {
   createRepairOrderRecord,
   findRepairOrderById,
@@ -18,13 +20,25 @@ import type {
   ListRepairOrdersQueryInput,
   UpdateRepairOrderInput,
   UpdateRepairOrderStatusInput,
+  BeginRepairOrderQualityCheckInput,
+  FailRepairOrderQualityCheckInput,
+  PassRepairOrderQualityCheckInput,
 } from "./repair-order.schemas.js";
 
 import { findCustomerById } from "../customers/customer.repository.js";
 
 import { findVehicleById } from "../vehicles/vehicle.repository.js";
 
-import { findMembershipById } from "../memberships/membership.repository.js";
+//************************************************************** */
+
+const READY_PART_STATUSES = new Set([
+  "RECEIVED",
+  "PULLED",
+  "STAGED",
+  "ISSUED",
+  "INSTALLED",
+  "WAIVED",
+]);
 
 //************************************************************** */
 
@@ -343,17 +357,6 @@ export async function updateRepairOrderStatus(
 
 //************************************************************** */
 
-const READY_PART_STATUSES = new Set([
-  "RECEIVED",
-  "PULLED",
-  "STAGED",
-  "ISSUED",
-  "INSTALLED",
-  "WAIVED",
-]);
-
-//************************************************************** */
-
 export async function evaluateRepairOrderReadiness(
   organizationId: string,
   repairOrderId: string,
@@ -393,4 +396,91 @@ export async function evaluateRepairOrderReadiness(
   );
 
   return getRepairOrderById(organizationId, repairOrderId);
+}
+
+//************************************************************** */
+
+export async function beginRepairOrderQualityCheck(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: BeginRepairOrderQualityCheckInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "WORK_COMPLETE") {
+    throw new AppError(
+      400,
+      "Quality check can only begin after work is complete.",
+      {
+        code: "REPAIR_ORDER_QC_BEGIN_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "QUALITY_CHECK",
+
+    notes: input.notes ?? "Quality check started.",
+
+    automatic: false,
+  });
+}
+
+//************************************************************** */
+
+export async function passRepairOrderQualityCheck(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: PassRepairOrderQualityCheckInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "QUALITY_CHECK") {
+    throw new AppError(
+      400,
+      "Quality check can only be passed while the repair order is in quality check.",
+      {
+        code: "REPAIR_ORDER_QC_PASS_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "READY_FOR_PICKUP",
+
+    notes: input.notes ?? "Quality check passed.",
+
+    automatic: false,
+  });
+}
+
+//************************************************************** */
+
+export async function failRepairOrderQualityCheck(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: FailRepairOrderQualityCheckInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "QUALITY_CHECK") {
+    throw new AppError(
+      400,
+      "Quality check can only be failed while the repair order is in quality check.",
+      {
+        code: "REPAIR_ORDER_QC_FAIL_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "IN_PROGRESS",
+
+    notes: input.notes,
+
+    automatic: false,
+  });
 }
