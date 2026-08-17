@@ -615,3 +615,21 @@ export async function deleteRepairOrderPartLineRecord(
     },
   });
 }
+
+//************************************************************** */
+
+export async function findRepairOrderPartLineByIdOnly(
+  organizationId: string,
+  partLineId: string,
+) {
+  return prisma.repairOrderPartLine.findFirst({
+    where: {
+      id:
+        partLineId,
+
+      repairOrder: {
+        organizationId,
+      },
+    },
+  });
+}
