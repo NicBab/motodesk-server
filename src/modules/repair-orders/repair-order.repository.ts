@@ -1,6 +1,4 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreateRepairOrderInput,
@@ -16,162 +14,109 @@ export async function createRepairOrderRecord(
   input: CreateRepairOrderInput,
   changedByMembershipId: string | null,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const sequence =
-        await transaction.repairOrderSequence.upsert({
-          where: {
-            organizationId,
-          },
+  return prisma.$transaction(async (transaction) => {
+    const sequence = await transaction.repairOrderSequence.upsert({
+      where: {
+        organizationId,
+      },
 
-          update: {
-            nextNumber: {
-              increment: 1,
-            },
-          },
+      update: {
+        nextNumber: {
+          increment: 1,
+        },
+      },
 
+      create: {
+        organizationId,
+        nextNumber: 1002,
+      },
+    });
+
+    const roNumber = sequence.nextNumber - 1;
+
+    return transaction.repairOrder.create({
+      data: {
+        organizationId,
+        customerId: input.customerId,
+        vehicleId: input.vehicleId,
+
+        roNumber,
+
+        status: input.status,
+
+        priority: input.priority,
+
+        serviceAdvisorMembershipId: input.serviceAdvisorMembershipId ?? null,
+
+        primaryTechnicianMembershipId:
+          input.primaryTechnicianMembershipId ?? null,
+
+        promisedDate: input.promisedDate ?? null,
+
+        scheduledDate: input.scheduledDate ?? null,
+
+        complaint: input.complaint ?? null,
+
+        notes: input.notes ?? null,
+
+        taxRate: input.taxRate ?? null,
+
+        shopSuppliesRate: input.shopSuppliesRate,
+
+        discount: input.discount,
+
+        deposit: input.deposit,
+
+        approvalMethod: input.approvalMethod ?? null,
+
+        approvalDate: input.approvalDate ?? null,
+
+        approvedBy: input.approvedBy ?? null,
+
+        approvedAmount: input.approvedAmount ?? null,
+
+        approvalNotes: input.approvalNotes ?? null,
+
+        cashierStatus: input.cashierStatus,
+
+        cashieredDate: input.cashieredDate ?? null,
+
+        paymentReference: input.paymentReference ?? null,
+
+        paymentRemote: input.paymentRemote,
+
+        remainingBalance: input.remainingBalance,
+
+        pickupStatus: input.pickupStatus,
+
+        pickupDate: input.pickupDate ?? null,
+
+        pickupRecipient: input.pickupRecipient ?? null,
+
+        pickupNotes: input.pickupNotes ?? null,
+
+        statusHistory: {
           create: {
-            organizationId,
-            nextNumber: 1002,
-          },
-        });
-
-      const roNumber =
-        sequence.nextNumber - 1;
-
-      return transaction.repairOrder.create({
-        data: {
-          organizationId,
-          customerId:
-            input.customerId,
-          vehicleId:
-            input.vehicleId,
-
-          roNumber,
-
-          status:
-            input.status,
-
-          priority:
-            input.priority,
-
-          serviceAdvisorMembershipId:
-            input.serviceAdvisorMembershipId ??
-            null,
-
-          primaryTechnicianMembershipId:
-            input.primaryTechnicianMembershipId ??
-            null,
-
-          promisedDate:
-            input.promisedDate ??
-            null,
-
-          scheduledDate:
-            input.scheduledDate ??
-            null,
-
-          complaint:
-            input.complaint ??
-            null,
-
-          notes:
-            input.notes ??
-            null,
-
-          taxRate:
-            input.taxRate ??
-            null,
-
-          shopSuppliesRate:
-            input.shopSuppliesRate,
-
-          discount:
-            input.discount,
-
-          deposit:
-            input.deposit,
-
-          approvalMethod:
-            input.approvalMethod ??
-            null,
-
-          approvalDate:
-            input.approvalDate ??
-            null,
-
-          approvedBy:
-            input.approvedBy ??
-            null,
-
-          approvedAmount:
-            input.approvedAmount ??
-            null,
-
-          approvalNotes:
-            input.approvalNotes ??
-            null,
-
-          cashierStatus:
-            input.cashierStatus,
-
-          cashieredDate:
-            input.cashieredDate ??
-            null,
-
-          paymentReference:
-            input.paymentReference ??
-            null,
-
-          paymentRemote:
-            input.paymentRemote,
-
-          remainingBalance:
-            input.remainingBalance,
-
-          pickupStatus:
-            input.pickupStatus,
-
-          pickupDate:
-            input.pickupDate ??
-            null,
-
-          pickupRecipient:
-            input.pickupRecipient ??
-            null,
-
-          pickupNotes:
-            input.pickupNotes ??
-            null,
-
-          statusHistory: {
-            create: {
-              status:
-                input.status,
-              previousStatus:
-                null,
-              changedByMembershipId,
-              automatic:
-                false,
-              notes:
-                "Repair order created.",
-            },
+            status: input.status,
+            previousStatus: null,
+            changedByMembershipId,
+            automatic: false,
+            notes: "Repair order created.",
           },
         },
+      },
 
-        include: {
-          customer: true,
-          vehicle: true,
-          statusHistory: {
-            orderBy: {
-              changedAt:
-                "asc",
-            },
+      include: {
+        customer: true,
+        vehicle: true,
+        statusHistory: {
+          orderBy: {
+            changedAt: "asc",
           },
         },
-      });
-    },
-  );
+      },
+    });
+  });
 }
 
 //************************************************************** */
@@ -182,8 +127,7 @@ export async function findRepairOrderById(
 ) {
   return prisma.repairOrder.findFirst({
     where: {
-      id:
-        repairOrderId,
+      id: repairOrderId,
       organizationId,
     },
 
@@ -203,6 +147,30 @@ export async function findRepairOrderById(
         },
       },
 
+      laborLines: {
+        include: {
+          technician: {
+            include: {
+              user: true,
+            },
+          },
+        },
+
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+
+      partLines: {
+        include: {
+          part: true,
+        },
+
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+
       statusHistory: {
         include: {
           changedByMembership: {
@@ -213,8 +181,7 @@ export async function findRepairOrderById(
         },
 
         orderBy: {
-          changedAt:
-            "asc",
+          changedAt: "asc",
         },
       },
     },
@@ -233,50 +200,43 @@ export async function findRepairOrdersByOrganization(
 
       ...(query.customerId !== undefined
         ? {
-            customerId:
-              query.customerId,
+            customerId: query.customerId,
           }
         : {}),
 
       ...(query.vehicleId !== undefined
         ? {
-            vehicleId:
-              query.vehicleId,
+            vehicleId: query.vehicleId,
           }
         : {}),
 
       ...(query.status !== undefined
         ? {
-            status:
-              query.status,
+            status: query.status,
           }
         : {}),
 
       ...(query.priority !== undefined
         ? {
-            priority:
-              query.priority,
+            priority: query.priority,
           }
         : {}),
 
       ...(query.serviceAdvisorMembershipId !== undefined
         ? {
-            serviceAdvisorMembershipId:
-              query.serviceAdvisorMembershipId,
+            serviceAdvisorMembershipId: query.serviceAdvisorMembershipId,
           }
         : {}),
 
       ...(query.primaryTechnicianMembershipId !== undefined
         ? {
-            primaryTechnicianMembershipId:
-              query.primaryTechnicianMembershipId,
+            primaryTechnicianMembershipId: query.primaryTechnicianMembershipId,
           }
         : {}),
 
       ...(query.isActive !== undefined
         ? {
-            isActive:
-              query.isActive,
+            isActive: query.isActive,
           }
         : {}),
 
@@ -285,19 +245,15 @@ export async function findRepairOrdersByOrganization(
             OR: [
               {
                 complaint: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
               {
                 notes: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
 
@@ -306,28 +262,22 @@ export async function findRepairOrdersByOrganization(
                   OR: [
                     {
                       firstName: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
 
                     {
                       lastName: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
 
                     {
                       companyName: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
                   ],
@@ -339,28 +289,22 @@ export async function findRepairOrdersByOrganization(
                   OR: [
                     {
                       make: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
 
                     {
                       model: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
 
                     {
                       vin: {
-                        contains:
-                          query.search,
-                        mode:
-                          "insensitive",
+                        contains: query.search,
+                        mode: "insensitive",
                       },
                     },
                   ],
@@ -378,13 +322,11 @@ export async function findRepairOrdersByOrganization(
 
     orderBy: [
       {
-        priority:
-          "desc",
+        priority: "desc",
       },
 
       {
-        createdAt:
-          "desc",
+        createdAt: "desc",
       },
     ],
   });
@@ -399,184 +341,158 @@ export async function updateRepairOrderRecord(
 ) {
   return prisma.repairOrder.updateMany({
     where: {
-      id:
-        repairOrderId,
+      id: repairOrderId,
       organizationId,
     },
 
     data: {
       ...(input.priority !== undefined
         ? {
-            priority:
-              input.priority,
+            priority: input.priority,
           }
         : {}),
 
       ...(input.serviceAdvisorMembershipId !== undefined
         ? {
-            serviceAdvisorMembershipId:
-              input.serviceAdvisorMembershipId,
+            serviceAdvisorMembershipId: input.serviceAdvisorMembershipId,
           }
         : {}),
 
       ...(input.primaryTechnicianMembershipId !== undefined
         ? {
-            primaryTechnicianMembershipId:
-              input.primaryTechnicianMembershipId,
+            primaryTechnicianMembershipId: input.primaryTechnicianMembershipId,
           }
         : {}),
 
       ...(input.promisedDate !== undefined
         ? {
-            promisedDate:
-              input.promisedDate,
+            promisedDate: input.promisedDate,
           }
         : {}),
 
       ...(input.scheduledDate !== undefined
         ? {
-            scheduledDate:
-              input.scheduledDate,
+            scheduledDate: input.scheduledDate,
           }
         : {}),
 
       ...(input.complaint !== undefined
         ? {
-            complaint:
-              input.complaint,
+            complaint: input.complaint,
           }
         : {}),
 
       ...(input.notes !== undefined
         ? {
-            notes:
-              input.notes,
+            notes: input.notes,
           }
         : {}),
 
       ...(input.taxRate !== undefined
         ? {
-            taxRate:
-              input.taxRate,
+            taxRate: input.taxRate,
           }
         : {}),
 
       ...(input.shopSuppliesRate !== undefined
         ? {
-            shopSuppliesRate:
-              input.shopSuppliesRate,
+            shopSuppliesRate: input.shopSuppliesRate,
           }
         : {}),
 
       ...(input.discount !== undefined
         ? {
-            discount:
-              input.discount,
+            discount: input.discount,
           }
         : {}),
 
       ...(input.deposit !== undefined
         ? {
-            deposit:
-              input.deposit,
+            deposit: input.deposit,
           }
         : {}),
 
       ...(input.approvalMethod !== undefined
         ? {
-            approvalMethod:
-              input.approvalMethod,
+            approvalMethod: input.approvalMethod,
           }
         : {}),
 
       ...(input.approvalDate !== undefined
         ? {
-            approvalDate:
-              input.approvalDate,
+            approvalDate: input.approvalDate,
           }
         : {}),
 
       ...(input.approvedBy !== undefined
         ? {
-            approvedBy:
-              input.approvedBy,
+            approvedBy: input.approvedBy,
           }
         : {}),
 
       ...(input.approvedAmount !== undefined
         ? {
-            approvedAmount:
-              input.approvedAmount,
+            approvedAmount: input.approvedAmount,
           }
         : {}),
 
       ...(input.approvalNotes !== undefined
         ? {
-            approvalNotes:
-              input.approvalNotes,
+            approvalNotes: input.approvalNotes,
           }
         : {}),
 
       ...(input.cashierStatus !== undefined
         ? {
-            cashierStatus:
-              input.cashierStatus,
+            cashierStatus: input.cashierStatus,
           }
         : {}),
 
       ...(input.cashieredDate !== undefined
         ? {
-            cashieredDate:
-              input.cashieredDate,
+            cashieredDate: input.cashieredDate,
           }
         : {}),
 
       ...(input.paymentReference !== undefined
         ? {
-            paymentReference:
-              input.paymentReference,
+            paymentReference: input.paymentReference,
           }
         : {}),
 
       ...(input.paymentRemote !== undefined
         ? {
-            paymentRemote:
-              input.paymentRemote,
+            paymentRemote: input.paymentRemote,
           }
         : {}),
 
       ...(input.remainingBalance !== undefined
         ? {
-            remainingBalance:
-              input.remainingBalance,
+            remainingBalance: input.remainingBalance,
           }
         : {}),
 
       ...(input.pickupStatus !== undefined
         ? {
-            pickupStatus:
-              input.pickupStatus,
+            pickupStatus: input.pickupStatus,
           }
         : {}),
 
       ...(input.pickupDate !== undefined
         ? {
-            pickupDate:
-              input.pickupDate,
+            pickupDate: input.pickupDate,
           }
         : {}),
 
       ...(input.pickupRecipient !== undefined
         ? {
-            pickupRecipient:
-              input.pickupRecipient,
+            pickupRecipient: input.pickupRecipient,
           }
         : {}),
 
       ...(input.pickupNotes !== undefined
         ? {
-            pickupNotes:
-              input.pickupNotes,
+            pickupNotes: input.pickupNotes,
           }
         : {}),
     },
@@ -592,35 +508,27 @@ export async function updateRepairOrderStatusRecord(
   input: UpdateRepairOrderStatusInput,
   changedByMembershipId: string | null,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      await transaction.repairOrder.updateMany({
-        where: {
-          id:
-            repairOrderId,
-          organizationId,
-        },
+  return prisma.$transaction(async (transaction) => {
+    await transaction.repairOrder.updateMany({
+      where: {
+        id: repairOrderId,
+        organizationId,
+      },
 
-        data: {
-          status:
-            input.status,
-        },
-      });
+      data: {
+        status: input.status,
+      },
+    });
 
-      await transaction.repairOrderStatusHistory.create({
-        data: {
-          repairOrderId,
-          status:
-            input.status,
-          previousStatus:
-            previousStatus as never,
-          changedByMembershipId,
-          notes:
-            input.notes ?? null,
-          automatic:
-            input.automatic,
-        },
-      });
-    },
-  );
+    await transaction.repairOrderStatusHistory.create({
+      data: {
+        repairOrderId,
+        status: input.status,
+        previousStatus: previousStatus as never,
+        changedByMembershipId,
+        notes: input.notes ?? null,
+        automatic: input.automatic,
+      },
+    });
+  });
 }

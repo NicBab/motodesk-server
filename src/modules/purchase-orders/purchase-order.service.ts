@@ -26,6 +26,8 @@ import type {
   CancelPurchaseOrderInput,
 } from "./purchase-order.schemas.js";
 
+import { evaluateRepairOrderReadiness } from "../repair-orders/repair-order.service.js";
+
 //************************************************************** */
 
 async function requireActiveVendor(organizationId: string, vendorId: string) {
@@ -284,6 +286,18 @@ export async function receivePurchaseOrderLine(
     throw new AppError(400, "Purchase order receipt could not be completed.", {
       code: "PURCHASE_ORDER_RECEIPT_FAILED",
     });
+  }
+
+  const linkedRepairOrderIds = new Set<string>();
+
+  for (const line of purchaseOrder.lines) {
+    if (line.repairOrderPartLine?.repairOrderId) {
+      linkedRepairOrderIds.add(line.repairOrderPartLine.repairOrderId);
+    }
+  }
+
+  for (const repairOrderId of linkedRepairOrderIds) {
+    await evaluateRepairOrderReadiness(organizationId, repairOrderId);
   }
 
   return result.purchaseOrder;

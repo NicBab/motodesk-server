@@ -361,3 +361,80 @@ export async function updateRepairOrderStatus(
     repairOrderId,
   );
 }
+
+//************************************************************** */
+
+const READY_PART_STATUSES = new Set([
+  "RECEIVED",
+  "PULLED",
+  "STAGED",
+  "ISSUED",
+  "INSTALLED",
+  "WAIVED",
+]);
+
+//************************************************************** */
+
+export async function evaluateRepairOrderReadiness(
+  organizationId: string,
+  repairOrderId: string,
+) {
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
+
+  if (
+    repairOrder.status !==
+    "WAITING_ON_PARTS"
+  ) {
+    return repairOrder;
+  }
+
+  const blockingLines =
+    repairOrder.partLines.filter(
+      (line) =>
+        line.blocksWork,
+    );
+
+  if (
+    blockingLines.length === 0
+  ) {
+    return repairOrder;
+  }
+
+  const allBlockingLinesReady =
+    blockingLines.every(
+      (line) =>
+        READY_PART_STATUSES.has(
+          line.status,
+        ),
+    );
+
+  if (!allBlockingLinesReady) {
+    return repairOrder;
+  }
+
+  await updateRepairOrderStatusRecord(
+    organizationId,
+    repairOrderId,
+    repairOrder.status,
+    {
+      status:
+        "READY_TO_WORK",
+
+      notes:
+        "All blocking repair order parts are available.",
+
+      automatic:
+        true,
+    },
+    null,
+  );
+
+  return getRepairOrderById(
+    organizationId,
+    repairOrderId,
+  );
+}

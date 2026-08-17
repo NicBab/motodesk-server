@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:restart": "docker compose down && docker compose up -d",
@@ -18,16 +19,24 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+
     "test": "tsx --test",
     "test:customers": "tsx --test tests/integration/customers.test.ts",
     "test:vehicles": "tsx --test tests/integration/vehicles.test.ts",
+    "test:vendors": "tsx --test tests/integration/vendors.test.ts",
+
     "test:repair-orders": "tsx --test tests/integration/repair-orders.test.ts",
     "test:repair-order-labor": "tsx --test tests/integration/repair-order-labor.test.ts",
+    "test:repair-order-parts": "tsx --test tests/integration/repair-order-parts.test.ts",
+
     "test:parts": "tsx --test tests/integration/parts.test.ts",
     "test:part-inventory": "tsx --test tests/integration/part-inventory.test.ts",
-    "test:repair-order-parts": "tsx --test tests/integration/repair-order-parts.test.ts",
-    "test:vendors": "tsx --test tests/integration/vendors.test.ts",
-    "test:purchase-orders": "tsx --test tests/integration/purchase-orders.test.ts"
+
+    "test:purchase-orders": "tsx --test tests/integration/purchase-orders/*.test.ts",
+    "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",
+    "test:purchase-order-ordering": "tsx --test tests/integration/purchase-orders/purchase-order-ordering.test.ts",
+    "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
+    "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts"
   },
   "keywords": [],
   "author": "",
