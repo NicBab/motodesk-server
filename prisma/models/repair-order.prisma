@@ -207,6 +207,9 @@ model RepairOrderLaborLine {
   hours Decimal @default(0) @db.Decimal(8, 2)
   rate  Decimal @default(0) @db.Decimal(12, 2)
 
+  startedAt   DateTime?
+  completedAt DateTime?
+
   completed Boolean @default(false)
 
   repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
@@ -219,6 +222,8 @@ model RepairOrderLaborLine {
   @@index([repairOrderId])
   @@index([technicianMembershipId])
   @@index([repairOrderId, completed])
+  @@index([repairOrderId, startedAt])
+  @@index([repairOrderId, completedAt])
 }
 
 //************************************************************** */

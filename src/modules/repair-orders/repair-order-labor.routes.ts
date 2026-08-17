@@ -9,11 +9,11 @@ import {
   createRepairOrderLaborLineSchema,
   repairOrderLaborParamsSchema,
   updateRepairOrderLaborLineSchema,
+  startRepairOrderLaborLineSchema,
+  completeRepairOrderLaborLineSchema,
 } from "./repair-order-labor.schemas.js";
 
-import {
-  repairOrderIdSchema,
-} from "./repair-order.schemas.js";
+import { repairOrderIdSchema } from "./repair-order.schemas.js";
 
 import {
   createRepairOrderLaborLineHandler,
@@ -21,9 +21,9 @@ import {
   getRepairOrderLaborLineHandler,
   listRepairOrderLaborLinesHandler,
   updateRepairOrderLaborLineHandler,
+  startRepairOrderLaborLineHandler,
+  completeRepairOrderLaborLineHandler,
 } from "./repair-order-labor.controller.js";
-
-
 
 //************************************************************** */
 
@@ -35,12 +35,8 @@ const router = Router({
 
 router.post(
   "/",
-  validateParams(
-    repairOrderIdSchema,
-  ),
-  validateBody(
-    createRepairOrderLaborLineSchema,
-  ),
+  validateParams(repairOrderIdSchema),
+  validateBody(createRepairOrderLaborLineSchema),
   createRepairOrderLaborLineHandler,
 );
 
@@ -48,19 +44,33 @@ router.post(
 
 router.get(
   "/",
-  validateParams(
-    repairOrderIdSchema,
-  ),
+  validateParams(repairOrderIdSchema),
   listRepairOrderLaborLinesHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:laborLineId/start",
+  validateParams(repairOrderLaborParamsSchema),
+  validateBody(startRepairOrderLaborLineSchema),
+  startRepairOrderLaborLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:laborLineId/complete",
+  validateParams(repairOrderLaborParamsSchema),
+  validateBody(completeRepairOrderLaborLineSchema),
+  completeRepairOrderLaborLineHandler,
 );
 
 //************************************************************** */
 
 router.get(
   "/:laborLineId",
-  validateParams(
-    repairOrderLaborParamsSchema,
-  ),
+  validateParams(repairOrderLaborParamsSchema),
   getRepairOrderLaborLineHandler,
 );
 
@@ -68,23 +78,16 @@ router.get(
 
 router.patch(
   "/:laborLineId",
-  validateParams(
-    repairOrderLaborParamsSchema,
-  ),
-  validateBody(
-    updateRepairOrderLaborLineSchema,
-  ),
+  validateParams(repairOrderLaborParamsSchema),
+  validateBody(updateRepairOrderLaborLineSchema),
   updateRepairOrderLaborLineHandler,
 );
 
 //************************************************************** */
 
-
 router.delete(
   "/:laborLineId",
-  validateParams(
-    repairOrderLaborParamsSchema,
-  ),
+  validateParams(repairOrderLaborParamsSchema),
   deleteRepairOrderLaborLineHandler,
 );
 

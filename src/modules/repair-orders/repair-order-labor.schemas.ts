@@ -79,6 +79,38 @@ export const repairOrderLaborParamsSchema =
 
 //************************************************************** */
 
+export const startRepairOrderLaborLineSchema =
+  z.object({
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export const completeRepairOrderLaborLineSchema =
+  z.object({
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export type StartRepairOrderLaborLineInput =
+  z.infer<
+    typeof startRepairOrderLaborLineSchema
+  >;
+
+export type CompleteRepairOrderLaborLineInput =
+  z.infer<
+    typeof completeRepairOrderLaborLineSchema
+  >;
+
 export type RepairOrderLaborParamsInput =
   z.infer<
     typeof repairOrderLaborParamsSchema
