@@ -1,12 +1,9 @@
-import {
-  AppError,
-} from "../../platform/errors/app-error.js";
+import { AppError } from "../../platform/errors/app-error.js";
+
+import { findPartById } from "../parts/part.repository.js";
 
 import {
-  findPartById,
-} from "../parts/part.repository.js";
-
-import {
+  evaluateRepairOrderReadiness,
   getRepairOrderById,
 } from "./repair-order.service.js";
 
@@ -22,7 +19,7 @@ import {
   installRepairOrderPartLineRecord,
   markRepairOrderPartToBeOrderedRecord,
   pullRepairOrderPartRecord,
-  stageRepairOrderPartRecord
+  stageRepairOrderPartRecord,
 } from "./repair-order-part.repository.js";
 
 import type {
@@ -34,7 +31,7 @@ import type {
   InstallRepairOrderPartInput,
   MarkRepairOrderPartToBeOrderedInput,
   PullRepairOrderPartInput,
-  StageRepairOrderPartInput
+  StageRepairOrderPartInput,
 } from "./repair-order-part.schemas.js";
 
 //************************************************************** */
@@ -43,32 +40,22 @@ async function assertPartValid(
   organizationId: string,
   partId: string,
 ): Promise<void> {
-  const part =
-    await findPartById(
-      organizationId,
-      partId,
-    );
+  const part = await findPartById(organizationId, partId);
 
   if (!part) {
     throw new AppError(
       400,
       "The selected part does not belong to this organization.",
       {
-        code:
-          "REPAIR_ORDER_PART_INVALID",
+        code: "REPAIR_ORDER_PART_INVALID",
       },
     );
   }
 
   if (!part.isActive) {
-    throw new AppError(
-      400,
-      "The selected part is archived.",
-      {
-        code:
-          "REPAIR_ORDER_PART_ARCHIVED",
-      },
-    );
+    throw new AppError(400, "The selected part is archived.", {
+      code: "REPAIR_ORDER_PART_ARCHIVED",
+    });
   }
 }
 
@@ -79,22 +66,13 @@ export async function createRepairOrderPartLine(
   repairOrderId: string,
   input: CreateRepairOrderPartLineInput,
 ) {
-  await getRepairOrderById(
-    organizationId,
-    repairOrderId,
-  );
+  await getRepairOrderById(organizationId, repairOrderId);
 
   if (input.partId) {
-    await assertPartValid(
-      organizationId,
-      input.partId,
-    );
+    await assertPartValid(organizationId, input.partId);
   }
 
-  return createRepairOrderPartLineRecord(
-    repairOrderId,
-    input,
-  );
+  return createRepairOrderPartLineRecord(repairOrderId, input);
 }
 
 //************************************************************** */
@@ -103,14 +81,9 @@ export async function listRepairOrderPartLines(
   organizationId: string,
   repairOrderId: string,
 ) {
-  await getRepairOrderById(
-    organizationId,
-    repairOrderId,
-  );
+  await getRepairOrderById(organizationId, repairOrderId);
 
-  return findRepairOrderPartLines(
-    repairOrderId,
-  );
+  return findRepairOrderPartLines(repairOrderId);
 }
 
 //************************************************************** */
@@ -120,26 +93,14 @@ export async function getRepairOrderPartLineById(
   repairOrderId: string,
   partLineId: string,
 ) {
-  await getRepairOrderById(
-    organizationId,
-    repairOrderId,
-  );
+  await getRepairOrderById(organizationId, repairOrderId);
 
-  const partLine =
-    await findRepairOrderPartLineById(
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await findRepairOrderPartLineById(repairOrderId, partLineId);
 
   if (!partLine) {
-    throw new AppError(
-      404,
-      "Repair order part line not found.",
-      {
-        code:
-          "REPAIR_ORDER_PART_LINE_NOT_FOUND",
-      },
-    );
+    throw new AppError(404, "Repair order part line not found.", {
+      code: "REPAIR_ORDER_PART_LINE_NOT_FOUND",
+    });
   }
 
   return partLine;
@@ -153,23 +114,11 @@ export async function updateRepairOrderPartLine(
   partLineId: string,
   input: UpdateRepairOrderPartLineInput,
 ) {
-  await getRepairOrderPartLineById(
-    organizationId,
-    repairOrderId,
-    partLineId,
-  );
+  await getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 
-  await updateRepairOrderPartLineRecord(
-    repairOrderId,
-    partLineId,
-    input,
-  );
+  await updateRepairOrderPartLineRecord(repairOrderId, partLineId, input);
 
-  return getRepairOrderPartLineById(
-    organizationId,
-    repairOrderId,
-    partLineId,
-  );
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -181,124 +130,83 @@ export async function allocateRepairOrderPartLine(
   membershipId: string | null,
   input: AllocateRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
   if (!partLine.partId) {
     throw new AppError(
       400,
       "This repair order part line is not linked to an inventory part.",
       {
-        code:
-          "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
+        code: "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
       },
     );
   }
 
-  const requiredQty =
-    Number(
-      partLine.requiredQty.toString(),
-    );
+  const requiredQty = Number(partLine.requiredQty.toString());
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
+  const allocatedQty = Number(partLine.allocatedQty.toString());
 
-  const remainingQty =
-    requiredQty -
-    allocatedQty;
+  const remainingQty = requiredQty - allocatedQty;
 
-  if (
-    input.quantity >
-    remainingQty
-  ) {
+  if (input.quantity > remainingQty) {
     throw new AppError(
       400,
       "Allocation quantity exceeds the remaining required quantity.",
       {
-        code:
-          "REPAIR_ORDER_PART_ALLOCATION_EXCEEDS_REQUIRED",
+        code: "REPAIR_ORDER_PART_ALLOCATION_EXCEEDS_REQUIRED",
       },
     );
   }
 
-  const part =
-    await findPartById(
-      organizationId,
-      partLine.partId,
-    );
+  const part = await findPartById(organizationId, partLine.partId);
 
   if (!part) {
     throw new AppError(
       400,
       "The linked inventory part is no longer available.",
       {
-        code:
-          "REPAIR_ORDER_PART_INVALID",
+        code: "REPAIR_ORDER_PART_INVALID",
       },
     );
   }
 
-  const onHand =
-    Number(
-      part.qtyOnHand.toString(),
-    );
+  const onHand = Number(part.qtyOnHand.toString());
 
-  const allocated =
-    Number(
-      part.qtyAllocated.toString(),
-    );
+  const allocated = Number(part.qtyAllocated.toString());
 
-  const available =
-    onHand -
-    allocated;
+  const available = onHand - allocated;
 
-  if (
-    input.quantity >
-    available
-  ) {
+  if (input.quantity > available) {
     throw new AppError(
       400,
       "Insufficient available inventory for this repair order.",
       {
-        code:
-          "INSUFFICIENT_AVAILABLE_INVENTORY",
+        code: "INSUFFICIENT_AVAILABLE_INVENTORY",
       },
     );
   }
 
-  const result =
-    await allocateRepairOrderPartLineRecord(
-      repairOrderId,
-      partLineId,
-      partLine.partId,
-      input.quantity,
-      allocatedQty,
-      membershipId,
-      input.notes,
-    );
-
-  if (!result) {
-    throw new AppError(
-      400,
-      "Inventory allocation failed.",
-      {
-        code:
-          "REPAIR_ORDER_PART_ALLOCATION_FAILED",
-      },
-    );
-  }
-
-  return getRepairOrderPartLineById(
-    organizationId,
+  const result = await allocateRepairOrderPartLineRecord(
     repairOrderId,
     partLineId,
+    partLine.partId,
+    input.quantity,
+    allocatedQty,
+    membershipId,
+    input.notes,
   );
+
+  if (!result) {
+    throw new AppError(400, "Inventory allocation failed.", {
+      code: "REPAIR_ORDER_PART_ALLOCATION_FAILED",
+    });
+  }
+
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -310,81 +218,61 @@ export async function deallocateRepairOrderPartLine(
   membershipId: string | null,
   input: DeallocateRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
   if (!partLine.partId) {
     throw new AppError(
       400,
       "This repair order part line is not linked to an inventory part.",
       {
-        code:
-          "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
+        code: "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
       },
     );
   }
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
+  const allocatedQty = Number(partLine.allocatedQty.toString());
 
   if (allocatedQty <= 0) {
     throw new AppError(
       400,
       "This repair order part line has no allocated inventory to release.",
       {
-        code:
-          "REPAIR_ORDER_PART_NOT_ALLOCATED",
+        code: "REPAIR_ORDER_PART_NOT_ALLOCATED",
       },
     );
   }
 
-  if (
-    input.quantity >
-    allocatedQty
-  ) {
+  if (input.quantity > allocatedQty) {
     throw new AppError(
       400,
       "Deallocation quantity exceeds the quantity currently allocated.",
       {
-        code:
-          "REPAIR_ORDER_PART_DEALLOCATION_EXCEEDS_ALLOCATED",
+        code: "REPAIR_ORDER_PART_DEALLOCATION_EXCEEDS_ALLOCATED",
       },
     );
   }
 
-  const result =
-    await deallocateRepairOrderPartLineRecord(
-      repairOrderId,
-      partLineId,
-      partLine.partId,
-      input.quantity,
-      allocatedQty,
-      membershipId,
-      input.notes,
-    );
-
-  if (!result) {
-    throw new AppError(
-      400,
-      "Inventory deallocation failed.",
-      {
-        code:
-          "REPAIR_ORDER_PART_DEALLOCATION_FAILED",
-      },
-    );
-  }
-
-  return getRepairOrderPartLineById(
-    organizationId,
+  const result = await deallocateRepairOrderPartLineRecord(
     repairOrderId,
     partLineId,
+    partLine.partId,
+    input.quantity,
+    allocatedQty,
+    membershipId,
+    input.notes,
   );
+
+  if (!result) {
+    throw new AppError(400, "Inventory deallocation failed.", {
+      code: "REPAIR_ORDER_PART_DEALLOCATION_FAILED",
+    });
+  }
+
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -396,87 +284,64 @@ export async function issueRepairOrderPartLine(
   membershipId: string | null,
   input: IssueRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
   if (!partLine.partId) {
     throw new AppError(
       400,
       "This repair order part line is not linked to an inventory part.",
       {
-        code:
-          "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
+        code: "REPAIR_ORDER_PART_LINE_NOT_INVENTORY_BACKED",
       },
     );
   }
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
+  const allocatedQty = Number(partLine.allocatedQty.toString());
 
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
+  const pulledQty = Number(partLine.pulledQty.toString());
 
   if (allocatedQty <= 0) {
     throw new AppError(
       400,
       "This repair order part line has no allocated inventory to issue.",
       {
-        code:
-          "REPAIR_ORDER_PART_NOT_ALLOCATED",
+        code: "REPAIR_ORDER_PART_NOT_ALLOCATED",
       },
     );
   }
 
-  if (
-    input.quantity >
-    allocatedQty
-  ) {
+  if (input.quantity > allocatedQty) {
     throw new AppError(
       400,
       "Issue quantity exceeds the quantity allocated to this repair order part line.",
       {
-        code:
-          "REPAIR_ORDER_PART_ISSUE_EXCEEDS_ALLOCATED",
+        code: "REPAIR_ORDER_PART_ISSUE_EXCEEDS_ALLOCATED",
       },
     );
   }
 
-  const result =
-    await issueRepairOrderPartLineRecord(
-      repairOrderId,
-      partLineId,
-      partLine.partId,
-      input.quantity,
-      allocatedQty,
-      pulledQty,
-      membershipId,
-      input.notes,
-    );
-
-  if (!result) {
-    throw new AppError(
-      400,
-      "Inventory issue failed.",
-      {
-        code:
-          "REPAIR_ORDER_PART_ISSUE_FAILED",
-      },
-    );
-  }
-
-  return getRepairOrderPartLineById(
-    organizationId,
+  const result = await issueRepairOrderPartLineRecord(
     repairOrderId,
     partLineId,
+    partLine.partId,
+    input.quantity,
+    allocatedQty,
+    pulledQty,
+    membershipId,
+    input.notes,
   );
+
+  if (!result) {
+    throw new AppError(400, "Inventory issue failed.", {
+      code: "REPAIR_ORDER_PART_ISSUE_FAILED",
+    });
+  }
+
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -487,53 +352,36 @@ export async function installRepairOrderPartLine(
   partLineId: string,
   input: InstallRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
+  const pulledQty = Number(partLine.pulledQty.toString());
 
-  const installedQty =
-    Number(
-      partLine.installedQty.toString(),
-    );
+  const installedQty = Number(partLine.installedQty.toString());
 
-  const requiredQty =
-    Number(
-      partLine.requiredQty.toString(),
-    );
+  const requiredQty = Number(partLine.requiredQty.toString());
 
-  const availableToInstall =
-    pulledQty -
-    installedQty;
+  const availableToInstall = pulledQty - installedQty;
 
   if (availableToInstall <= 0) {
     throw new AppError(
       400,
       "This repair order part line has no issued inventory available to install.",
       {
-        code:
-          "REPAIR_ORDER_PART_NOT_AVAILABLE_TO_INSTALL",
+        code: "REPAIR_ORDER_PART_NOT_AVAILABLE_TO_INSTALL",
       },
     );
   }
 
-  if (
-    input.quantity >
-    availableToInstall
-  ) {
+  if (input.quantity > availableToInstall) {
     throw new AppError(
       400,
       "Install quantity exceeds the issued quantity available for installation.",
       {
-        code:
-          "REPAIR_ORDER_PART_INSTALL_EXCEEDS_ISSUED",
+        code: "REPAIR_ORDER_PART_INSTALL_EXCEEDS_ISSUED",
       },
     );
   }
@@ -546,11 +394,7 @@ export async function installRepairOrderPartLine(
     requiredQty,
   );
 
-  return getRepairOrderPartLineById(
-    organizationId,
-    repairOrderId,
-    partLineId,
-  );
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -561,53 +405,31 @@ export async function markRepairOrderPartToBeOrdered(
   partLineId: string,
   input: MarkRepairOrderPartToBeOrderedInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
-
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
-
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
-
-  const installedQty =
-    Number(
-      partLine.installedQty.toString(),
-    );
-
-  if (
-    allocatedQty > 0 ||
-    pulledQty > 0 ||
-    installedQty > 0
-  ) {
-    throw new AppError(
-      400,
-      "Cannot mark a part line for ordering while inventory is already allocated, issued, or installed.",
-      {
-        code:
-          "REPAIR_ORDER_PART_HAS_ACTIVE_INVENTORY",
-      },
-    );
-  }
-
-  await markRepairOrderPartToBeOrderedRecord(
-    repairOrderId,
-    partLineId,
-  );
-
-  return getRepairOrderPartLineById(
+  const partLine = await getRepairOrderPartLineById(
     organizationId,
     repairOrderId,
     partLineId,
   );
+
+  const allocatedQty = Number(partLine.allocatedQty.toString());
+
+  const pulledQty = Number(partLine.pulledQty.toString());
+
+  const installedQty = Number(partLine.installedQty.toString());
+
+  if (allocatedQty > 0 || pulledQty > 0 || installedQty > 0) {
+    throw new AppError(
+      400,
+      "Cannot mark a part line for ordering while inventory is already allocated, issued, or installed.",
+      {
+        code: "REPAIR_ORDER_PART_HAS_ACTIVE_INVENTORY",
+      },
+    );
+  }
+
+  await markRepairOrderPartToBeOrderedRecord(repairOrderId, partLineId);
+
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 export async function pullRepairOrderPart(
@@ -617,48 +439,34 @@ export async function pullRepairOrderPart(
   membershipId: string | null,
   input: PullRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
   if (!partLine.partId) {
     throw new AppError(
       400,
       "A catalog part is required before inventory can be pulled.",
       {
-        code:
-          "REPAIR_ORDER_PART_CATALOG_PART_REQUIRED",
+        code: "REPAIR_ORDER_PART_CATALOG_PART_REQUIRED",
       },
     );
   }
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
+  const allocatedQty = Number(partLine.allocatedQty.toString());
 
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
+  const pulledQty = Number(partLine.pulledQty.toString());
 
-  const remainingAllocatedQty =
-    allocatedQty -
-    pulledQty;
+  const remainingAllocatedQty = allocatedQty - pulledQty;
 
-  if (
-    input.quantity >
-    remainingAllocatedQty
-  ) {
+  if (input.quantity > remainingAllocatedQty) {
     throw new AppError(
       400,
       "Pulled quantity exceeds the remaining allocated quantity.",
       {
-        code:
-          "REPAIR_ORDER_PART_PULL_EXCEEDS_ALLOCATION",
+        code: "REPAIR_ORDER_PART_PULL_EXCEEDS_ALLOCATION",
       },
     );
   }
@@ -672,11 +480,7 @@ export async function pullRepairOrderPart(
     input.notes,
   );
 
-  return getRepairOrderPartLineById(
-    organizationId,
-    repairOrderId,
-    partLineId,
-  );
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -688,48 +492,36 @@ export async function stageRepairOrderPart(
   membershipId: string | null,
   input: StageRepairOrderPartInput,
 ) {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
-
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
-
-  if (
-    allocatedQty <= 0 ||
-    pulledQty <
-      allocatedQty
-  ) {
-    throw new AppError(
-      400,
-      "All allocated quantity must be pulled before the part can be staged.",
-      {
-        code:
-          "REPAIR_ORDER_PART_STAGE_NOT_READY",
-      },
-    );
+  if (partLine.status === "STAGED") {
+    throw new AppError(400, "Part is already staged.", {
+      code: "REPAIR_ORDER_PART_ALREADY_STAGED",
+    });
   }
 
-  if (
-    partLine.status ===
-    "STAGED"
-  ) {
+  const allocatedQty = Number(partLine.allocatedQty.toString());
+
+  const pulledQty = Number(partLine.pulledQty.toString());
+
+  const orderedQty = Number(partLine.orderedQty.toString());
+
+  const receivedQty = Number(partLine.receivedQty.toString());
+
+  const stockReady = allocatedQty > 0 && pulledQty >= allocatedQty;
+
+  const orderedReady = orderedQty > 0 && receivedQty >= orderedQty;
+
+  if (!stockReady && !orderedReady) {
     throw new AppError(
       400,
-      "Part is already staged.",
+      "The required part quantity must be fully pulled from stock or fully received before it can be staged.",
       {
-        code:
-          "REPAIR_ORDER_PART_ALREADY_STAGED",
+        code: "REPAIR_ORDER_PART_STAGE_NOT_READY",
       },
     );
   }
@@ -742,11 +534,12 @@ export async function stageRepairOrderPart(
     input.notes,
   );
 
-  return getRepairOrderPartLineById(
-    organizationId,
-    repairOrderId,
-    partLineId,
-  );
+  await evaluateRepairOrderReadiness(
+  organizationId,
+  repairOrderId,
+);
+
+  return getRepairOrderPartLineById(organizationId, repairOrderId, partLineId);
 }
 
 //************************************************************** */
@@ -756,48 +549,29 @@ export async function deleteRepairOrderPartLine(
   repairOrderId: string,
   partLineId: string,
 ): Promise<void> {
-  const partLine =
-    await getRepairOrderPartLineById(
-      organizationId,
-      repairOrderId,
-      partLineId,
-    );
+  const partLine = await getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
 
-  const allocatedQty =
-    Number(
-      partLine.allocatedQty.toString(),
-    );
+  const allocatedQty = Number(partLine.allocatedQty.toString());
 
-  const pulledQty =
-    Number(
-      partLine.pulledQty.toString(),
-    );
+  const pulledQty = Number(partLine.pulledQty.toString());
 
-  const installedQty =
-    Number(
-      partLine.installedQty.toString(),
-    );
+  const installedQty = Number(partLine.installedQty.toString());
 
-  if (
-    allocatedQty > 0 ||
-    pulledQty > 0 ||
-    installedQty > 0
-  ) {
+  if (allocatedQty > 0 || pulledQty > 0 || installedQty > 0) {
     throw new AppError(
       400,
       "Cannot delete a part line with active inventory activity.",
       {
-        code:
-          "REPAIR_ORDER_PART_LINE_HAS_INVENTORY_ACTIVITY",
+        code: "REPAIR_ORDER_PART_LINE_HAS_INVENTORY_ACTIVITY",
       },
     );
   }
 
-  await deleteRepairOrderPartLineRecord(
-    repairOrderId,
-    partLineId,
-  );
+  await deleteRepairOrderPartLineRecord(repairOrderId, partLineId);
 }
 
 //************************************************************** */
-

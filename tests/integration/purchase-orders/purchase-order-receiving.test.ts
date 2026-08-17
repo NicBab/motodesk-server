@@ -28,24 +28,81 @@ describe("Purchase Order receiving integration", () => {
     }
 
     //************************************************************** */
-    // Move RO to WAITING_ON_PARTS
+// Request customer approval
 
-    const waitingResponse = await agent
-      .post(
-        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
-      .send({
-        status: "WAITING_ON_PARTS",
+const requestApprovalResponse =
+  await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
+    )
+    .send({
+      notes:
+        "Estimate ready for customer approval.",
+    });
 
-        notes: "Waiting for ordered parts.",
+assert.equal(
+  requestApprovalResponse.status,
+  200,
+);
 
-        automatic: false,
-      });
+assert.equal(
+  requestApprovalResponse.body.data.status,
+  "AWAITING_CUSTOMER_APPROVAL",
+);
 
-    assert.equal(waitingResponse.status, 200);
+//************************************************************** */
+// Customer approves.
+// Approval automatically moves RO to PARTS_REVIEW.
 
-    assert.equal(waitingResponse.body.data.status, "WAITING_ON_PARTS");
+const approvalResponse =
+  await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
+    )
+    .send({
+      approvalMethod:
+        "PHONE",
 
+      approvedBy:
+        "PO Fixture Customer",
+
+      notes:
+        "Customer approved repair.",
+    });
+
+assert.equal(
+  approvalResponse.status,
+  200,
+);
+
+assert.equal(
+  approvalResponse.body.data.status,
+  "PARTS_REVIEW",
+);
+
+//************************************************************** */
+// Parts Manager completes review.
+// Fixture already marked the blocking part TO_BE_ORDERED.
+
+const partsReviewResponse =
+  await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/parts-review/complete`,
+    )
+    .send({
+      notes:
+        "Required part must be ordered.",
+    });
+
+assert.equal(
+  partsReviewResponse.status,
+  200,
+);
+
+assert.equal(
+  partsReviewResponse.body.data.status,
+  "WAITING_ON_PARTS",
+);
     //************************************************************** */
     // Order PO
 
@@ -179,13 +236,75 @@ describe("Purchase Order receiving integration", () => {
     assert.equal(Number(roPartLineAfterFinal.body.data.receivedQty), 2);
 
     //************************************************************** */
-    // RO automatically becomes READY_TO_WORK
+    
 
     const roAfterFinal = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
     );
 
-    assert.equal(roAfterFinal.body.data.status, "READY_TO_WORK");
+   assert.equal(
+  roAfterFinal.body.data.status,
+  "WAITING_ON_PARTS",
+);
+
+const stageResponse =
+  await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${repairOrderPartLineId}/stage`,
+    )
+    .send({
+      notes:
+        "Received part checked in and staged for technician.",
+    });
+
+assert.equal(
+  stageResponse.status,
+  200,
+);
+
+assert.equal(
+  stageResponse.body.data.status,
+  "STAGED",
+);
+
+
+
+const roAfterStage =
+  await agent.get(
+    `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+  );
+
+assert.equal(
+  roAfterStage.status,
+  200,
+);
+
+assert.equal(
+  roAfterStage.body.data.status,
+  "READY_TO_WORK",
+);
+
+const readyHistory =
+  roAfterStage.body.data.statusHistory.find(
+    (
+      history: {
+        status: string;
+        previousStatus: string | null;
+        automatic: boolean;
+      },
+    ) =>
+      history.status ===
+        "READY_TO_WORK" &&
+      history.previousStatus ===
+        "WAITING_ON_PARTS" &&
+      history.automatic ===
+        true,
+  );
+
+assert.notEqual(
+  readyHistory,
+  undefined,
+);
 
     //************************************************************** */
     // Verify receipt ledger

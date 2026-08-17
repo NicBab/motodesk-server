@@ -365,13 +365,68 @@ describe("Repair Order readiness integration", () => {
 
     assert.equal(readyRepairOrderResponse.status, 200);
 
-    assert.equal(readyRepairOrderResponse.body.data.status, "READY_TO_WORK");
+    assert.equal(readyRepairOrderResponse.body.data.status, "WAITING_ON_PARTS");
+
+    //************************************************************** */
+    // Stage first received blocking part
+
+    const firstStageResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/stage`,
+      )
+      .send({
+        notes: "First received part staged for technician.",
+      });
+
+    assert.equal(firstStageResponse.status, 200);
+
+    assert.equal(firstStageResponse.body.data.status, "STAGED");
+
+    //************************************************************** */
+    // RO must still wait because second blocking part is not staged
+
+    const afterFirstStageResponse = await agent.get(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    );
+
+    assert.equal(afterFirstStageResponse.status, 200);
+
+    assert.equal(afterFirstStageResponse.body.data.status, "WAITING_ON_PARTS");
+
+    //************************************************************** */
+    // Stage second received blocking part
+
+    const secondStageResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/stage`,
+      )
+      .send({
+        notes: "Second received part staged for technician.",
+      });
+
+    assert.equal(secondStageResponse.status, 200);
+
+    assert.equal(secondStageResponse.body.data.status, "STAGED");
+
+    //************************************************************** */
+    // RO automatically releases after all blocking parts are staged
+
+    const finalReadyRepairOrderResponse = await agent.get(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    );
+
+    assert.equal(finalReadyRepairOrderResponse.status, 200);
+
+    assert.equal(
+      finalReadyRepairOrderResponse.body.data.status,
+      "READY_TO_WORK",
+    );
 
     //************************************************************** */
     // Verify automatic status-history event
 
     const automaticReadyHistory =
-      readyRepairOrderResponse.body.data.statusHistory.find(
+      finalReadyRepairOrderResponse.body.data.statusHistory.find(
         (history: {
           status: string;
           previousStatus: string | null;

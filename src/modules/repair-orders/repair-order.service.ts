@@ -40,7 +40,6 @@ import { findVehicleById } from "../vehicles/vehicle.repository.js";
 //************************************************************** */
 
 const READY_PART_STATUSES = new Set([
-  "RECEIVED",
   "PULLED",
   "STAGED",
   "ISSUED",
@@ -721,7 +720,6 @@ export async function completeRepairOrderPartsReview(
   const readyStatuses = new Set([
     "PULLED",
     "STAGED",
-    "RECEIVED",
     "ISSUED",
     "INSTALLED",
     "WAIVED",
