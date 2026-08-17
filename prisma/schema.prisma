@@ -219,6 +219,7 @@ model Organization {
   vehicles            Vehicle[]
   repairOrders        RepairOrder[]
   parts               Part[]
+  vendors             Vendor[]
   repairOrderSequence RepairOrderSequence?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -552,14 +553,14 @@ model RepairOrderLaborLine {
 }
 
 model RepairOrderPartLine {
-  id            String @id @default(cuid())
+  id            String  @id @default(cuid())
   repairOrderId String
   partId        String?
 
   partNumber  String
   description String
 
-  quantity Decimal @default(1) @db.Decimal(12, 3)
+  quantity  Decimal @default(1) @db.Decimal(12, 3)
   unitPrice Decimal @default(0) @db.Decimal(12, 2)
 
   requiredQty  Decimal @default(1) @db.Decimal(12, 3)
@@ -623,7 +624,7 @@ model Part {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   inventoryTransactions PartInventoryTransaction[]
-  repairOrderPartLines RepairOrderPartLine[]
+  repairOrderPartLines  RepairOrderPartLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -670,4 +671,43 @@ model PartInventoryTransaction {
   @@index([partId, createdAt])
   @@index([createdByMembershipId])
   @@index([referenceType, referenceId])
+}
+
+model Vendor {
+  id             String @id @default(cuid())
+  organizationId String
+
+  name String
+
+  accountNumber String?
+
+  email String?
+  phone String?
+
+  website String?
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
+
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, accountNumber])
 }
