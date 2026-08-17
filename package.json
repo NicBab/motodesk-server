@@ -36,12 +36,14 @@
     "test:repair-order-labor": "tsx --test tests/integration/repair-orders/repair-order-labor.test.ts",
     "test:repair-order-parts": "tsx --test tests/integration/repair-orders/repair-order-parts.test.ts",
     "test:repair-order-readiness": "tsx --test tests/integration/repair-orders/repair-order-readiness.test.ts",
+    "test:repair-order-parts-review":"tsx --test tests/integration/repair-orders/repair-order-parts-review.test.ts",
 
     "test:purchase-orders": "tsx --test tests/integration/purchase-orders/*.test.ts",
     "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",
     "test:purchase-order-ordering": "tsx --test tests/integration/purchase-orders/purchase-order-ordering.test.ts",
     "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
-    "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts"
+    "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts",
+    
   },
   "keywords": [],
   "author": "",

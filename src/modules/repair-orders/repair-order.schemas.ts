@@ -213,6 +213,51 @@ export const closeRepairOrderSchema = z.object({
 
 //************************************************************** */
 
+export const requestRepairOrderApprovalSchema = z.object({
+  notes: z.string().trim().max(2000).optional(),
+});
+
+//************************************************************** */
+
+export const approveRepairOrderSchema = z.object({
+  approvalMethod: repairOrderApprovalMethodSchema,
+
+  approvedBy: z.string().trim().min(1, "Approved by is required.").max(200),
+
+  approvedAmount: z.number().nonnegative().optional(),
+
+  notes: z.string().trim().max(5000).optional(),
+});
+
+//************************************************************** */
+
+export const declineRepairOrderApprovalSchema = z.object({
+  notes: z.string().trim().min(1, "Decline notes are required.").max(5000),
+});
+
+//************************************************************** */
+
+export const completeRepairOrderPartsReviewSchema = z.object({
+  notes: z.string().trim().max(2000).optional(),
+});
+
+//************************************************************** */
+
+export type CompleteRepairOrderPartsReviewInput =
+  z.infer<
+    typeof completeRepairOrderPartsReviewSchema
+  >;
+
+export type RequestRepairOrderApprovalInput = z.infer<
+  typeof requestRepairOrderApprovalSchema
+>;
+
+export type ApproveRepairOrderInput = z.infer<typeof approveRepairOrderSchema>;
+
+export type DeclineRepairOrderApprovalInput = z.infer<
+  typeof declineRepairOrderApprovalSchema
+>;
+
 export type CashierRepairOrderInput = z.infer<typeof cashierRepairOrderSchema>;
 
 export type PickupRepairOrderInput = z.infer<typeof pickupRepairOrderSchema>;

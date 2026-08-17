@@ -7,6 +7,11 @@ import type {
   UpdateRepairOrderStatusInput,
 } from "./repair-order.schemas.js";
 
+import type {
+  RepairOrderApprovalMethod,
+  RepairOrderStatus,
+} from "../../generated/prisma/client.js";
+
 //************************************************************** */
 
 export async function createRepairOrderRecord(
@@ -531,4 +536,188 @@ export async function updateRepairOrderStatusRecord(
       },
     });
   });
+}
+
+//************************************************************** */
+
+export async function approveRepairOrderRecord(
+  organizationId: string,
+  repairOrderId: string,
+  previousStatus: RepairOrderStatus,
+  approvalMethod: RepairOrderApprovalMethod,
+  approvedBy: string,
+  approvedAmount: number | undefined,
+  approvalNotes: string | undefined,
+  changedByMembershipId: string | null,
+) {
+  return prisma.$transaction(
+    async (transaction) => {
+      const approvalDate =
+        new Date();
+
+      const updateResult =
+        await transaction.repairOrder.updateMany({
+          where: {
+            id:
+              repairOrderId,
+
+            organizationId,
+
+            status:
+              previousStatus,
+          },
+
+          data: {
+            approvalMethod,
+
+            approvalDate,
+
+            approvedBy,
+
+            ...(approvedAmount !== undefined
+              ? {
+                  approvedAmount,
+                }
+              : {}),
+
+            ...(approvalNotes !== undefined
+              ? {
+                  approvalNotes,
+                }
+              : {}),
+
+            status:
+              "PARTS_REVIEW",
+          },
+        });
+
+      if (
+        updateResult.count !==
+        1
+      ) {
+        return null;
+      }
+
+      //************************************************************** */
+      // Customer approval history
+
+      await transaction.repairOrderStatusHistory.create({
+        data: {
+          repairOrderId,
+
+          previousStatus,
+
+          status:
+            "APPROVED",
+
+          changedByMembershipId,
+
+          notes:
+            approvalNotes ??
+            `Approved by ${approvedBy}.`,
+
+          automatic:
+            false,
+        },
+      });
+
+      //************************************************************** */
+      // Automatic handoff to Parts Department
+
+      await transaction.repairOrderStatusHistory.create({
+        data: {
+          repairOrderId,
+
+          previousStatus:
+            "APPROVED",
+
+          status:
+            "PARTS_REVIEW",
+
+          changedByMembershipId,
+
+          notes:
+            "Repair order automatically moved to PARTS_REVIEW after customer approval.",
+
+          automatic:
+            true,
+        },
+      });
+
+      return transaction.repairOrder.findFirst({
+        where: {
+          id:
+            repairOrderId,
+
+          organizationId,
+        },
+
+        include: {
+          customer:
+            true,
+
+          vehicle:
+            true,
+
+          serviceAdvisor: {
+            include: {
+              user:
+                true,
+            },
+          },
+
+          primaryTechnician: {
+            include: {
+              user:
+                true,
+            },
+          },
+
+          laborLines: {
+            include: {
+              technician: {
+                include: {
+                  user:
+                    true,
+                },
+              },
+            },
+
+            orderBy: {
+              createdAt:
+                "asc",
+            },
+          },
+
+          partLines: {
+            include: {
+              part:
+                true,
+            },
+
+            orderBy: {
+              createdAt:
+                "asc",
+            },
+          },
+
+          statusHistory: {
+            include: {
+              changedByMembership: {
+                include: {
+                  user:
+                    true,
+                },
+              },
+            },
+
+            orderBy: {
+              changedAt:
+                "asc",
+            },
+          },
+        },
+      });
+    },
+  );
 }

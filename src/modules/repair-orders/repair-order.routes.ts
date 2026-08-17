@@ -24,6 +24,10 @@ import {
   cashierRepairOrderSchema,
   closeRepairOrderSchema,
   pickupRepairOrderSchema,
+  approveRepairOrderSchema,
+  declineRepairOrderApprovalSchema,
+  requestRepairOrderApprovalSchema,
+  completeRepairOrderPartsReviewSchema
 } from "./repair-order.schemas.js";
 
 import {
@@ -38,6 +42,10 @@ import {
   cashierRepairOrderHandler,
   closeRepairOrderHandler,
   pickupRepairOrderHandler,
+  approveRepairOrderHandler,
+  declineRepairOrderApprovalHandler,
+  requestRepairOrderApprovalHandler,
+  completeRepairOrderPartsReviewHandler
 } from "./repair-order.controller.js";
 
 import repairOrderLaborRouter from "./repair-order-labor.routes.js";
@@ -165,6 +173,54 @@ router.post(
   validateParams(repairOrderIdSchema),
   validateBody(closeRepairOrderSchema),
   closeRepairOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/approval/request",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(requestRepairOrderApprovalSchema),
+  requestRepairOrderApprovalHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/approval/approve",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(approveRepairOrderSchema),
+  approveRepairOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/approval/decline",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(declineRepairOrderApprovalSchema),
+  declineRepairOrderApprovalHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:repairOrderId/parts-review/complete",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(repairOrderIdSchema),
+  validateBody(completeRepairOrderPartsReviewSchema),
+  completeRepairOrderPartsReviewHandler,
 );
 
 //************************************************************** */

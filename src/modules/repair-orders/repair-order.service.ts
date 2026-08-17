@@ -13,6 +13,7 @@ import {
   findRepairOrdersByOrganization,
   updateRepairOrderRecord,
   updateRepairOrderStatusRecord,
+  approveRepairOrderRecord,
 } from "./repair-order.repository.js";
 
 import type {
@@ -26,6 +27,10 @@ import type {
   CashierRepairOrderInput,
   CloseRepairOrderInput,
   PickupRepairOrderInput,
+  ApproveRepairOrderInput,
+  DeclineRepairOrderApprovalInput,
+  RequestRepairOrderApprovalInput,
+  CompleteRepairOrderPartsReviewInput
 } from "./repair-order.schemas.js";
 
 import { findCustomerById } from "../customers/customer.repository.js";
@@ -496,42 +501,25 @@ export async function cashierRepairOrder(
   membershipId: string | null,
   input: CashierRepairOrderInput,
 ) {
-  const repairOrder =
-    await getRepairOrderById(
-      organizationId,
-      repairOrderId,
-    );
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
 
-  if (
-    repairOrder.status !==
-    "READY_FOR_PICKUP"
-  ) {
+  if (repairOrder.status !== "READY_FOR_PICKUP") {
     throw new AppError(
       400,
       "Repair order can only be cashiered when it is ready for pickup.",
       {
-        code:
-          "REPAIR_ORDER_CASHIER_INVALID_STATUS",
+        code: "REPAIR_ORDER_CASHIER_INVALID_STATUS",
       },
     );
   }
 
-  return updateRepairOrderStatus(
-    organizationId,
-    repairOrderId,
-    membershipId,
-    {
-      status:
-        "CASHIERED",
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "CASHIERED",
 
-      notes:
-        input.notes ??
-        "Repair order cashiered.",
+    notes: input.notes ?? "Repair order cashiered.",
 
-      automatic:
-        false,
-    },
-  );
+    automatic: false,
+  });
 }
 
 //************************************************************** */
@@ -542,42 +530,25 @@ export async function pickupRepairOrder(
   membershipId: string | null,
   input: PickupRepairOrderInput,
 ) {
-  const repairOrder =
-    await getRepairOrderById(
-      organizationId,
-      repairOrderId,
-    );
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
 
-  if (
-    repairOrder.status !==
-    "CASHIERED"
-  ) {
+  if (repairOrder.status !== "CASHIERED") {
     throw new AppError(
       400,
       "Repair order can only be picked up after it has been cashiered.",
       {
-        code:
-          "REPAIR_ORDER_PICKUP_INVALID_STATUS",
+        code: "REPAIR_ORDER_PICKUP_INVALID_STATUS",
       },
     );
   }
 
-  return updateRepairOrderStatus(
-    organizationId,
-    repairOrderId,
-    membershipId,
-    {
-      status:
-        "PICKED_UP",
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "PICKED_UP",
 
-      notes:
-        input.notes ??
-        "Unit picked up by customer.",
+    notes: input.notes ?? "Unit picked up by customer.",
 
-      automatic:
-        false,
-    },
-  );
+    automatic: false,
+  });
 }
 
 //************************************************************** */
@@ -588,6 +559,138 @@ export async function closeRepairOrder(
   membershipId: string | null,
   input: CloseRepairOrderInput,
 ) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "PICKED_UP") {
+    throw new AppError(
+      400,
+      "Repair order can only be closed after the unit has been picked up.",
+      {
+        code: "REPAIR_ORDER_CLOSE_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "CLOSED",
+
+    notes: input.notes ?? "Repair order closed.",
+
+    automatic: false,
+  });
+}
+
+//************************************************************** */
+
+export async function requestRepairOrderApproval(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: RequestRepairOrderApprovalInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "ESTIMATE") {
+    throw new AppError(
+      400,
+      "Customer approval can only be requested from an estimate.",
+      {
+        code: "REPAIR_ORDER_APPROVAL_REQUEST_INVALID_STATUS",
+      },
+    );
+  }
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "AWAITING_CUSTOMER_APPROVAL",
+
+    notes: input.notes ?? "Customer approval requested.",
+
+    automatic: false,
+  });
+}
+
+//************************************************************** */
+
+
+export async function approveRepairOrder(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: ApproveRepairOrderInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "AWAITING_CUSTOMER_APPROVAL") {
+    throw new AppError(
+      400,
+      "Repair order can only be approved while awaiting customer approval.",
+      {
+        code: "REPAIR_ORDER_APPROVAL_INVALID_STATUS",
+      },
+    );
+  }
+
+  const approvedRepairOrder = await approveRepairOrderRecord(
+    organizationId,
+    repairOrderId,
+    repairOrder.status,
+    input.approvalMethod,
+    input.approvedBy,
+    input.approvedAmount,
+    input.notes,
+    membershipId,
+  );
+
+  if (!approvedRepairOrder) {
+    throw new AppError(400, "Repair order approval could not be completed.", {
+      code: "REPAIR_ORDER_APPROVAL_FAILED",
+    });
+  }
+
+  return approvedRepairOrder;
+}
+
+//************************************************************** */
+
+export async function declineRepairOrderApproval(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: DeclineRepairOrderApprovalInput,
+) {
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+  if (repairOrder.status !== "AWAITING_CUSTOMER_APPROVAL") {
+    throw new AppError(
+      400,
+      "Repair order can only be declined while awaiting customer approval.",
+      {
+        code: "REPAIR_ORDER_APPROVAL_DECLINE_INVALID_STATUS",
+      },
+    );
+  }
+
+  await updateRepairOrderRecord(organizationId, repairOrderId, {
+    approvalNotes: input.notes,
+  });
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: "CANCELLED",
+
+    notes: input.notes,
+
+    automatic: false,
+  });
+}
+
+//************************************************************** */
+
+export async function completeRepairOrderPartsReview(
+  organizationId: string,
+  repairOrderId: string,
+  membershipId: string | null,
+  input: CompleteRepairOrderPartsReviewInput,
+) {
   const repairOrder =
     await getRepairOrderById(
       organizationId,
@@ -596,17 +699,65 @@ export async function closeRepairOrder(
 
   if (
     repairOrder.status !==
-    "PICKED_UP"
+    "PARTS_REVIEW"
   ) {
     throw new AppError(
       400,
-      "Repair order can only be closed after the unit has been picked up.",
+      "Parts review can only be completed while the repair order is in PARTS_REVIEW.",
       {
         code:
-          "REPAIR_ORDER_CLOSE_INVALID_STATUS",
+          "REPAIR_ORDER_PARTS_REVIEW_INVALID_STATUS",
       },
     );
   }
+
+  const blockingLines =
+    repairOrder.partLines.filter(
+      (line) =>
+        line.blocksWork,
+    );
+
+  const unresolvedLines =
+    blockingLines.filter(
+      (line) =>
+        line.status ===
+        "NEEDS_REVIEW",
+    );
+
+  if (
+    unresolvedLines.length >
+    0
+  ) {
+    throw new AppError(
+      400,
+      "Every blocking part must be resolved before completing parts review.",
+      {
+        code:
+          "REPAIR_ORDER_PARTS_REVIEW_INCOMPLETE",
+      },
+    );
+  }
+
+  const waitingStatuses =
+    new Set([
+      "TO_BE_ORDERED",
+      "ORDERED",
+      "PARTIALLY_RECEIVED",
+      "BACKORDERED",
+    ]);
+
+  const waitingOnParts =
+    blockingLines.some(
+      (line) =>
+        waitingStatuses.has(
+          line.status,
+        ),
+    );
+
+  const nextStatus =
+    waitingOnParts
+      ? "WAITING_ON_PARTS"
+      : "READY_TO_WORK";
 
   return updateRepairOrderStatus(
     organizationId,
@@ -614,11 +765,15 @@ export async function closeRepairOrder(
     membershipId,
     {
       status:
-        "CLOSED",
+        nextStatus,
 
       notes:
         input.notes ??
-        "Repair order closed.",
+        (
+          waitingOnParts
+            ? "Parts review completed. Repair order is waiting on outstanding parts."
+            : "Parts review completed. All blocking parts are available."
+        ),
 
       automatic:
         false,

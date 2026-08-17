@@ -26,6 +26,10 @@ import {
   cashierRepairOrder,
   closeRepairOrder,
   pickupRepairOrder,
+  approveRepairOrder,
+  declineRepairOrderApproval,
+  requestRepairOrderApproval,
+  completeRepairOrderPartsReview,
 } from "./repair-order.service.js";
 
 import type {
@@ -40,6 +44,10 @@ import type {
   CashierRepairOrderInput,
   CloseRepairOrderInput,
   PickupRepairOrderInput,
+  ApproveRepairOrderInput,
+  DeclineRepairOrderApprovalInput,
+  RequestRepairOrderApprovalInput,
+  CompleteRepairOrderPartsReviewInput,
 } from "./repair-order.schemas.js";
 
 //************************************************************** */
@@ -299,6 +307,103 @@ export async function closeRepairOrderHandler(
   const membershipId = getRequestContext().membership?.id ?? null;
 
   const repairOrder = await closeRepairOrder(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function requestRepairOrderApprovalHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<RequestRepairOrderApprovalInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await requestRepairOrderApproval(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function approveRepairOrderHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<ApproveRepairOrderInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await approveRepairOrder(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function declineRepairOrderApprovalHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input = requireValidatedBody<DeclineRepairOrderApprovalInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await declineRepairOrderApproval(
+    organizationId,
+    repairOrderId,
+    membershipId,
+    input,
+  );
+
+  ok(response, repairOrder);
+}
+
+//************************************************************** */
+
+export async function completeRepairOrderPartsReviewHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { repairOrderId } = requireValidatedParams<RepairOrderIdInput>(request);
+
+  const input =
+    requireValidatedBody<CompleteRepairOrderPartsReviewInput>(request);
+
+  const membershipId = getRequestContext().membership?.id ?? null;
+
+  const repairOrder = await completeRepairOrderPartsReview(
     organizationId,
     repairOrderId,
     membershipId,
