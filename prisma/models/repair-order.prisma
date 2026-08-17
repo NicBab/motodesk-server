@@ -1,0 +1,269 @@
+//************************************************************** */
+
+enum RepairOrderStatus {
+  ESTIMATE
+  AWAITING_CUSTOMER_APPROVAL
+  APPROVED
+  PARTS_REVIEW
+  WAITING_ON_PARTS
+  READY_TO_WORK
+  SCHEDULED
+  IN_PROGRESS
+  PAUSED
+  WAITING_ON_ADDITIONAL_APPROVAL
+  WAITING_ON_ADDITIONAL_PARTS
+  WORK_COMPLETE
+  QUALITY_CHECK
+  READY_FOR_PICKUP
+  CASHIERED
+  COMPLETED
+  PICKED_UP
+  CLOSED
+  CANCELLED
+}
+
+enum RepairOrderPriority {
+  STANDARD
+  RUSH
+  EMERGENCY
+  HOLD
+}
+
+enum RepairOrderApprovalMethod {
+  PHONE
+  SMS
+  EMAIL
+  CUSTOMER_PORTAL
+  IN_PERSON
+}
+
+enum RepairOrderCashierStatus {
+  NOT_CASHIERED
+  IN_PROGRESS
+  COMPLETED
+  VOIDED
+  REVERSED
+}
+
+enum RepairOrderPickupStatus {
+  NOT_READY
+  READY
+  COMPLETED
+  REVERSED
+}
+
+enum RepairOrderPartStatus {
+  NEEDS_REVIEW
+  AVAILABLE
+  ALLOCATED
+  TO_BE_ORDERED
+  ORDERED
+  PARTIALLY_RECEIVED
+  BACKORDERED
+  RECEIVED
+  PULLED
+  STAGED
+  ISSUED
+  INSTALLED
+  WAIVED
+  CANCELLED
+}
+
+enum RepairOrderPartResolutionMethod {
+  SHOP_INVENTORY
+  ORIGINAL_PO
+  ALTERNATE_VENDOR
+  LOCAL_DEALER
+  MANUAL_PURCHASE
+  APPROVED_SUBSTITUTE
+  CUSTOMER_SUPPLIED
+  INVENTORY_TRANSFER
+  NOT_REQUIRED
+  MANAGER_OVERRIDE
+}
+
+//************************************************************** */
+
+model RepairOrder {
+  id             String @id @default(cuid())
+  organizationId String
+  customerId     String
+  vehicleId      String
+
+  roNumber Int
+
+  status   RepairOrderStatus   @default(ESTIMATE)
+  priority RepairOrderPriority @default(STANDARD)
+
+  serviceAdvisorMembershipId    String?
+  primaryTechnicianMembershipId String?
+
+  promisedDate  DateTime?
+  scheduledDate DateTime?
+
+  complaint String?
+  notes     String?
+
+  taxRate          Decimal? @db.Decimal(7, 4)
+  shopSuppliesRate Decimal  @default(6) @db.Decimal(7, 4)
+
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  deposit  Decimal @default(0) @db.Decimal(12, 2)
+
+  approvalMethod RepairOrderApprovalMethod?
+  approvalDate   DateTime?
+  approvedBy     String?
+  approvedAmount Decimal?                   @db.Decimal(12, 2)
+  approvalNotes  String?
+
+  cashierStatus    RepairOrderCashierStatus @default(NOT_CASHIERED)
+  cashieredDate    DateTime?
+  paymentReference String?
+  paymentRemote    Boolean                  @default(false)
+  remainingBalance Decimal                  @default(0) @db.Decimal(12, 2)
+
+  pickupStatus    RepairOrderPickupStatus @default(NOT_READY)
+  pickupDate      DateTime?
+  pickupRecipient String?
+  pickupNotes     String?
+
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+
+  serviceAdvisor Membership? @relation("RepairOrderServiceAdvisor", fields: [serviceAdvisorMembershipId], references: [id], onDelete: SetNull)
+
+  primaryTechnician Membership? @relation("RepairOrderPrimaryTechnician", fields: [primaryTechnicianMembershipId], references: [id], onDelete: SetNull)
+
+  statusHistory RepairOrderStatusHistory[]
+
+  laborLines RepairOrderLaborLine[]
+
+  partLines RepairOrderPartLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, roNumber])
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@index([organizationId, vehicleId])
+  @@index([organizationId, status])
+  @@index([organizationId, priority])
+  @@index([organizationId, scheduledDate])
+  @@index([organizationId, serviceAdvisorMembershipId])
+  @@index([organizationId, primaryTechnicianMembershipId])
+}
+
+//************************************************************** */
+
+model RepairOrderStatusHistory {
+  id            String @id @default(cuid())
+  repairOrderId String
+
+  status         RepairOrderStatus
+  previousStatus RepairOrderStatus?
+
+  changedByMembershipId String?
+
+  notes     String?
+  automatic Boolean @default(false)
+
+  changedAt DateTime @default(now())
+
+  repairOrder         RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+  changedByMembership Membership? @relation("RepairOrderStatusChangedBy", fields: [changedByMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([repairOrderId])
+  @@index([repairOrderId, changedAt])
+  @@index([changedByMembershipId])
+}
+
+//************************************************************** */
+
+model RepairOrderSequence {
+  organizationId String @id
+  nextNumber     Int    @default(1001)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+//************************************************************** */
+
+model RepairOrderLaborLine {
+  id            String @id @default(cuid())
+  repairOrderId String
+
+  technicianMembershipId String?
+
+  description String
+
+  hours Decimal @default(0) @db.Decimal(8, 2)
+  rate  Decimal @default(0) @db.Decimal(12, 2)
+
+  completed Boolean @default(false)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  technician Membership? @relation("RepairOrderLaborTechnician", fields: [technicianMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([repairOrderId])
+  @@index([technicianMembershipId])
+  @@index([repairOrderId, completed])
+}
+
+//************************************************************** */
+
+model RepairOrderPartLine {
+  id            String  @id @default(cuid())
+  repairOrderId String
+  partId        String?
+
+  partNumber  String
+  description String
+
+  quantity  Decimal @default(1) @db.Decimal(12, 3)
+  unitPrice Decimal @default(0) @db.Decimal(12, 2)
+
+  requiredQty  Decimal @default(1) @db.Decimal(12, 3)
+  approvedQty  Decimal @default(0) @db.Decimal(12, 3)
+  allocatedQty Decimal @default(0) @db.Decimal(12, 3)
+  orderedQty   Decimal @default(0) @db.Decimal(12, 3)
+  receivedQty  Decimal @default(0) @db.Decimal(12, 3)
+  pulledQty    Decimal @default(0) @db.Decimal(12, 3)
+  installedQty Decimal @default(0) @db.Decimal(12, 3)
+
+  estimatedCost Decimal @default(0) @db.Decimal(12, 2)
+  actualCost    Decimal @default(0) @db.Decimal(12, 2)
+
+  vendorName String?
+
+  status RepairOrderPartStatus @default(NEEDS_REVIEW)
+
+  resolutionMethod RepairOrderPartResolutionMethod?
+
+  blocksWork Boolean @default(true)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  purchaseOrderLines PurchaseOrderLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([repairOrderId])
+  @@index([partId])
+  @@index([repairOrderId, status])
+  @@index([repairOrderId, blocksWork])
+}

@@ -1,0 +1,95 @@
+//************************************************************** */
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+  CLOSED
+}
+
+//************************************************************** */
+
+model PurchaseOrder {
+  id             String @id @default(cuid())
+  organizationId String
+  vendorId       String
+
+  poNumber Int
+
+  status PurchaseOrderStatus @default(DRAFT)
+
+  orderedAt  DateTime?
+  expectedAt DateTime?
+  receivedAt DateTime?
+
+  vendorReference String?
+
+  shippingCost Decimal @default(0) @db.Decimal(12, 2)
+  taxAmount    Decimal @default(0) @db.Decimal(12, 2)
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  lines PurchaseOrderLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, poNumber])
+  @@index([organizationId])
+  @@index([organizationId, vendorId])
+  @@index([organizationId, status])
+  @@index([organizationId, orderedAt])
+}
+
+//************************************************************** */
+
+model PurchaseOrderLine {
+  id              String @id @default(cuid())
+  purchaseOrderId String
+  partId          String
+
+  repairOrderPartLineId String?
+
+  partNumber  String
+  description String
+
+  orderedQty  Decimal @db.Decimal(12, 3)
+  receivedQty Decimal @default(0) @db.Decimal(12, 3)
+
+  unitCost Decimal @default(0) @db.Decimal(12, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  part Part @relation(fields: [partId], references: [id], onDelete: Restrict)
+
+  repairOrderPartLine RepairOrderPartLine? @relation(fields: [repairOrderPartLineId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([partId])
+  @@index([repairOrderPartLineId])
+}
+
+//************************************************************** */
+
+model PurchaseOrderSequence {
+  organizationId String @id
+  nextNumber     Int    @default(1001)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+//************************************************************** */
