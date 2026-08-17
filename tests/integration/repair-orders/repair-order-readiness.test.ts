@@ -66,7 +66,45 @@ describe("Repair Order readiness integration", () => {
     const repairOrderId = repairOrderResponse.body.data.id;
 
     //************************************************************** */
-    // Move RO to WAITING_ON_PARTS
+    // Approve Repair Order
+
+    const approvedResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
+      )
+      .send({
+        status: "APPROVED",
+
+        notes: "Repair order approved for readiness test.",
+
+        automatic: false,
+      });
+
+    assert.equal(approvedResponse.status, 200);
+
+    assert.equal(approvedResponse.body.data.status, "APPROVED");
+
+    //************************************************************** */
+    // Move to PARTS_REVIEW
+
+    const partsReviewResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
+      )
+      .send({
+        status: "PARTS_REVIEW",
+
+        notes: "Reviewing required parts.",
+
+        automatic: false,
+      });
+
+    assert.equal(partsReviewResponse.status, 200);
+
+    assert.equal(partsReviewResponse.body.data.status, "PARTS_REVIEW");
+
+    //************************************************************** */
+    // Move to WAITING_ON_PARTS
 
     const waitingResponse = await agent
       .post(
