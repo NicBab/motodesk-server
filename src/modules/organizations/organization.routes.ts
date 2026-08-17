@@ -10,6 +10,7 @@ import { initializeRequestContext } from "../../platform/request/request.middlew
 import { validateParams } from "../../platform/validation/validate-params.js";
 import repairOrderRouter from "../repair-orders/repair-order.routes.js";
 import vehicleRouter from "../vehicles/vehicle.routes.js";
+import vendorRouter from "../vendors/vendor.routes.js";
 
 import partRouter from "../parts/part.routes.js";
 
@@ -80,6 +81,13 @@ router.use(
 router.use(
   "/:organizationId/parts",
   partRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/vendors",
+  vendorRouter,
 );
 
 //************************************************************** */

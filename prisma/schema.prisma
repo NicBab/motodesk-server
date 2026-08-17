@@ -552,6 +552,8 @@ model RepairOrderLaborLine {
   @@index([repairOrderId, completed])
 }
 
+//************************************************************** */
+
 model RepairOrderPartLine {
   id            String  @id @default(cuid())
   repairOrderId String
@@ -595,6 +597,8 @@ model RepairOrderPartLine {
   @@index([repairOrderId, blocksWork])
 }
 
+//************************************************************** */
+
 model Part {
   id             String @id @default(cuid())
   organizationId String
@@ -637,6 +641,8 @@ model Part {
   @@index([organizationId, isActive])
 }
 
+//************************************************************** */
+
 model PartInventoryTransaction {
   id     String @id @default(cuid())
   partId String
@@ -673,6 +679,7 @@ model PartInventoryTransaction {
   @@index([referenceType, referenceId])
 }
 
+//************************************************************** */
 model Vendor {
   id             String @id @default(cuid())
   organizationId String
@@ -711,3 +718,5 @@ model Vendor {
   @@index([organizationId, isActive])
   @@index([organizationId, accountNumber])
 }
+
+//************************************************************** */
