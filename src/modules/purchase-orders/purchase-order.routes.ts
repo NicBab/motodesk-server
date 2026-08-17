@@ -1,18 +1,10 @@
-import {
-  Router,
-} from "express";
+import { Router } from "express";
 
-import {
-  authenticateRequest,
-} from "../auth/index.js";
+import { authenticateRequest } from "../auth/index.js";
 
-import {
-  requireOrganizationAccess,
-} from "../organizations/index.js";
+import { requireOrganizationAccess } from "../organizations/index.js";
 
-import {
-  initializeRequestContext,
-} from "../../platform/request/request.middleware.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
   validateBody,
@@ -26,7 +18,8 @@ import {
   listPurchaseOrdersHandler,
   updatePurchaseOrderHandler,
   orderPurchaseOrderHandler,
-  receivePurchaseOrderLineHandler
+  receivePurchaseOrderLineHandler,
+  cancelPurchaseOrderHandler,
 } from "./purchase-order.controller.js";
 
 import {
@@ -34,15 +27,15 @@ import {
   listPurchaseOrdersQuerySchema,
   purchaseOrderIdSchema,
   updatePurchaseOrderSchema,
-  receivePurchaseOrderLineSchema
+  receivePurchaseOrderLineSchema,
+  cancelPurchaseOrderSchema,
 } from "./purchase-order.schemas.js";
 
 //************************************************************** */
 
-const router =
-  Router({
-    mergeParams: true,
-  });
+const router = Router({
+  mergeParams: true,
+});
 
 //************************************************************** */
 
@@ -51,9 +44,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateBody(
-    createPurchaseOrderSchema,
-  ),
+  validateBody(createPurchaseOrderSchema),
   createPurchaseOrderHandler,
 );
 
@@ -64,9 +55,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateQuery(
-    listPurchaseOrdersQuerySchema,
-  ),
+  validateQuery(listPurchaseOrdersQuerySchema),
   listPurchaseOrdersHandler,
 );
 
@@ -77,9 +66,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    purchaseOrderIdSchema,
-  ),
+  validateParams(purchaseOrderIdSchema),
   getPurchaseOrderHandler,
 );
 
@@ -90,12 +77,8 @@ router.patch(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    purchaseOrderIdSchema,
-  ),
-  validateBody(
-    updatePurchaseOrderSchema,
-  ),
+  validateParams(purchaseOrderIdSchema),
+  validateBody(updatePurchaseOrderSchema),
   updatePurchaseOrderHandler,
 );
 
@@ -106,9 +89,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    purchaseOrderIdSchema,
-  ),
+  validateParams(purchaseOrderIdSchema),
   orderPurchaseOrderHandler,
 );
 
@@ -119,13 +100,21 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    purchaseOrderIdSchema,
-  ),
-  validateBody(
-    receivePurchaseOrderLineSchema,
-  ),
+  validateParams(purchaseOrderIdSchema),
+  validateBody(receivePurchaseOrderLineSchema),
   receivePurchaseOrderLineHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:purchaseOrderId/cancel",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(purchaseOrderIdSchema),
+  validateBody(cancelPurchaseOrderSchema),
+  cancelPurchaseOrderHandler,
 );
 
 export default router;

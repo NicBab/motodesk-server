@@ -534,3 +534,257 @@ it("orders a purchase order and synchronizes on-order inventory and linked repai
 
   assert.equal(receiptTransactions.length, 2);
 });
+
+it("cancels the outstanding remainder of a partially received purchase order", async () => {
+  const { agent, organizationId } = await createAuthenticatedAgent();
+
+  const uniqueSuffix = `${Date.now()}-cancel`;
+
+  //************************************************************** */
+  // Customer
+
+  const customerResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/customers`)
+    .send({
+      type: "INDIVIDUAL",
+      firstName: "Cancel",
+      lastName: "Customer",
+    });
+
+  assert.equal(customerResponse.status, 201);
+
+  const customerId = customerResponse.body.data.id;
+
+  //************************************************************** */
+  // Vehicle
+
+  const vehicleResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/vehicles`)
+    .send({
+      customerId,
+      make: "Yamaha",
+      model: "YZ450F",
+      vin: `PO-CANCEL-VIN-${uniqueSuffix}`,
+      type: "MOTORCYCLE",
+    });
+
+  assert.equal(vehicleResponse.status, 201);
+
+  const vehicleId = vehicleResponse.body.data.id;
+
+  //************************************************************** */
+  // Repair Order
+
+  const repairOrderResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+    .send({
+      customerId,
+      vehicleId,
+      complaint: "Replace transmission component.",
+    });
+
+  assert.equal(repairOrderResponse.status, 201);
+
+  const repairOrderId = repairOrderResponse.body.data.id;
+
+  //************************************************************** */
+  // Part
+
+  const partNumber = `PO-CANCEL-PART-${uniqueSuffix}`;
+
+  const partResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/parts`)
+    .send({
+      partNumber,
+      description: "Cancellation test part",
+      qtyOnHand: 0,
+      costPrice: 20,
+      sellPrice: 40,
+    });
+
+  assert.equal(partResponse.status, 201);
+
+  const partId = partResponse.body.data.id;
+
+  //************************************************************** */
+  // RO part line
+
+  const roPartLineResponse = await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
+    )
+    .send({
+      partId,
+      partNumber,
+      description: "Cancellation test part",
+      quantity: 5,
+      requiredQty: 5,
+      approvedQty: 5,
+      unitPrice: 40,
+      resolutionMethod: "ORIGINAL_PO",
+    });
+
+  assert.equal(roPartLineResponse.status, 201);
+
+  const repairOrderPartLineId = roPartLineResponse.body.data.id;
+
+  //************************************************************** */
+  // Mark TO_BE_ORDERED
+
+  const toBeOrderedResponse = await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${repairOrderPartLineId}/to-be-ordered`,
+    )
+    .send({});
+
+  assert.equal(toBeOrderedResponse.status, 200);
+
+  //************************************************************** */
+  // Vendor
+
+  const vendorResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/vendors`)
+    .send({
+      name: `Cancel Vendor ${uniqueSuffix}`,
+    });
+
+  assert.equal(vendorResponse.status, 201);
+
+  const vendorId = vendorResponse.body.data.id;
+
+  //************************************************************** */
+  // Draft PO
+
+  const poResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/purchase-orders`)
+    .send({
+      vendorId,
+      lines: [
+        {
+          partId,
+          repairOrderPartLineId,
+          orderedQty: 5,
+          unitCost: 20,
+        },
+      ],
+    });
+
+  assert.equal(poResponse.status, 201);
+
+  const purchaseOrderId = poResponse.body.data.id;
+
+  const purchaseOrderLineId = poResponse.body.data.lines[0].id;
+
+  //************************************************************** */
+  // Order PO
+
+  const orderResponse = await agent.post(
+    `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/order`,
+  );
+
+  assert.equal(orderResponse.status, 200);
+
+  //************************************************************** */
+  // Receive 2 of 5
+
+  const receiveResponse = await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/receive`,
+    )
+    .send({
+      purchaseOrderLineId,
+      quantity: 2,
+    });
+
+  assert.equal(receiveResponse.status, 200);
+
+  assert.equal(receiveResponse.body.data.status, "PARTIALLY_RECEIVED");
+
+  //************************************************************** */
+  // Verify pre-cancel balances
+
+  const partBeforeCancel = await agent.get(
+    `/api/v1/organizations/${organizationId}/parts/${partId}`,
+  );
+
+  assert.equal(Number(partBeforeCancel.body.data.qtyOnHand), 2);
+
+  assert.equal(Number(partBeforeCancel.body.data.qtyOnOrder), 3);
+
+  //************************************************************** */
+  // Cancel remaining 3
+
+  const cancelResponse = await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/cancel`,
+    )
+    .send({
+      notes: "Vendor cannot supply remaining quantity.",
+    });
+
+  assert.equal(cancelResponse.status, 200);
+
+  assert.equal(cancelResponse.body.data.status, "CANCELLED");
+
+  //************************************************************** */
+  // Received inventory stays; on-order remainder clears
+
+  const partAfterCancel = await agent.get(
+    `/api/v1/organizations/${organizationId}/parts/${partId}`,
+  );
+
+  assert.equal(Number(partAfterCancel.body.data.qtyOnHand), 2);
+
+  assert.equal(Number(partAfterCancel.body.data.qtyOnOrder), 0);
+
+  //************************************************************** */
+  // RO line keeps received quantity but returns to unresolved state
+
+  const roPartLineAfterCancel = await agent.get(
+    `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${repairOrderPartLineId}`,
+  );
+
+  assert.equal(Number(roPartLineAfterCancel.body.data.receivedQty), 2);
+
+  assert.equal(Number(roPartLineAfterCancel.body.data.orderedQty), 2);
+
+  assert.equal(roPartLineAfterCancel.body.data.status, "BACKORDERED");
+
+  //************************************************************** */
+  // Verify cancellation ledger
+
+  const transactionsResponse = await agent.get(
+    `/api/v1/organizations/${organizationId}/parts/${partId}/inventory/transactions`,
+  );
+
+  const cancellationTransaction = transactionsResponse.body.data.find(
+    (transaction: {
+      type: string;
+      referenceType: string | null;
+      referenceId: string | null;
+    }) =>
+      transaction.type === "PURCHASE_CANCELLED" &&
+      transaction.referenceType === "PURCHASE_ORDER" &&
+      transaction.referenceId === purchaseOrderId,
+  );
+
+  assert.notEqual(cancellationTransaction, undefined);
+
+  assert.equal(Number(cancellationTransaction.quantity), 3);
+
+  //************************************************************** */
+  // Reject second cancellation
+
+  const secondCancelResponse = await agent
+    .post(
+      `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/cancel`,
+    )
+    .send({});
+
+  assert.equal(secondCancelResponse.status, 400);
+
+  assert.equal(
+    secondCancelResponse.body.code,
+    "PURCHASE_ORDER_NOT_CANCELLABLE",
+  );
+});
