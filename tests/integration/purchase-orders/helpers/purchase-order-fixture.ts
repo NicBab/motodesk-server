@@ -1,13 +1,8 @@
-import {
-  createAuthenticatedAgent,
-} from "../../helpers/authenticated-agent.js";
+import { createAuthenticatedAgent } from "../../helpers/authenticated-agent.js";
 
-type AuthenticatedAgentResult =
-  Awaited<
-    ReturnType<
-      typeof createAuthenticatedAgent
-    >
-  >;
+type AuthenticatedAgentResult = Awaited<
+  ReturnType<typeof createAuthenticatedAgent>
+>;
 
 //************************************************************** */
 
@@ -22,7 +17,7 @@ export interface PurchaseOrderFixtureOptions {
 //************************************************************** */
 
 export interface PurchaseOrderFixture {
-  agent: AuthenticatedAgentResult["agent"]
+  agent: AuthenticatedAgentResult["agent"];
 
   organizationId: string;
 
@@ -45,264 +40,178 @@ export interface PurchaseOrderFixture {
 export async function createPurchaseOrderFixture(
   options: PurchaseOrderFixtureOptions = {},
 ): Promise<PurchaseOrderFixture> {
-  const {
-    agent,
-    organizationId,
-  } =
-    await createAuthenticatedAgent();
+  const { agent, organizationId } = await createAuthenticatedAgent();
 
-  const uniqueSuffix =
-    Date.now().toString();
+  const uniqueSuffix = Date.now().toString();
 
-  const orderedQty =
-    options.orderedQty ??
-    2;
+  const orderedQty = options.orderedQty ?? 2;
 
-  const qtyOnHand =
-    options.qtyOnHand ??
-    0;
+  const qtyOnHand = options.qtyOnHand ?? 0;
 
-  const withRepairOrderPartLine =
-    options.withRepairOrderPartLine ??
-    false;
+  const withRepairOrderPartLine = options.withRepairOrderPartLine ?? false;
 
-  const withRepairOrder =
-    options.withRepairOrder ??
-    withRepairOrderPartLine;
+  const withRepairOrder = options.withRepairOrder ?? withRepairOrderPartLine;
 
   //************************************************************** */
   // Vendor
 
-  const vendorResponse =
-    await agent
-      .post(
-        `/api/v1/organizations/${organizationId}/vendors`,
-      )
-      .send({
-        name:
-          `PO Fixture Vendor ${uniqueSuffix}`,
-      });
+  const vendorResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/vendors`)
+    .send({
+      name: `PO Fixture Vendor ${uniqueSuffix}`,
+    });
 
-  if (
-    vendorResponse.status !==
-    201
-  ) {
+  if (vendorResponse.status !== 201) {
     throw new Error(
       `Vendor fixture creation failed with status ${vendorResponse.status}.`,
     );
   }
 
-  const vendorId =
-    vendorResponse.body.data.id;
+  const vendorId = vendorResponse.body.data.id;
 
   //************************************************************** */
   // Part
 
-  const partNumber =
-    `PO-FIXTURE-${uniqueSuffix}`;
+  const partNumber = `PO-FIXTURE-${uniqueSuffix}`;
 
-  const partResponse =
-    await agent
-      .post(
-        `/api/v1/organizations/${organizationId}/parts`,
-      )
-      .send({
-        partNumber,
+  const partResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/parts`)
+    .send({
+      partNumber,
 
-        description:
-          "Purchase order fixture part",
+      description: "Purchase order fixture part",
 
-        qtyOnHand,
+      qtyOnHand,
 
-        costPrice:
-          10,
+      costPrice: 10,
 
-        sellPrice:
-          20,
-      });
+      sellPrice: 20,
+    });
 
-  if (
-    partResponse.status !==
-    201
-  ) {
+  if (partResponse.status !== 201) {
     throw new Error(
       `Part fixture creation failed with status ${partResponse.status}.`,
     );
   }
 
-  const partId =
-    partResponse.body.data.id;
+  const partId = partResponse.body.data.id;
 
   //************************************************************** */
   // Optional Repair Order foundation
 
-  let customerId:
-    | string
-    | undefined;
+  let customerId: string | undefined;
 
-  let vehicleId:
-    | string
-    | undefined;
+  let vehicleId: string | undefined;
 
-  let repairOrderId:
-    | string
-    | undefined;
+  let repairOrderId: string | undefined;
 
-  let repairOrderPartLineId:
-    | string
-    | undefined;
+  let repairOrderPartLineId: string | undefined;
 
   if (withRepairOrder) {
-    const customerResponse =
-      await agent
-        .post(
-          `/api/v1/organizations/${organizationId}/customers`,
-        )
-        .send({
-          type:
-            "INDIVIDUAL",
+    const customerResponse = await agent
+      .post(`/api/v1/organizations/${organizationId}/customers`)
+      .send({
+        type: "INDIVIDUAL",
 
-          firstName:
-            "PO",
+        firstName: "PO",
 
-          lastName:
-            "Fixture",
-        });
+        lastName: "Fixture",
+      });
 
-    if (
-      customerResponse.status !==
-      201
-    ) {
+    if (customerResponse.status !== 201) {
       throw new Error(
         `Customer fixture creation failed with status ${customerResponse.status}.`,
       );
     }
 
-    customerId =
-      customerResponse.body.data.id;
+    customerId = customerResponse.body.data.id;
 
-    const vehicleResponse =
-      await agent
-        .post(
-          `/api/v1/organizations/${organizationId}/vehicles`,
-        )
-        .send({
-          customerId,
+    const vehicleResponse = await agent
+      .post(`/api/v1/organizations/${organizationId}/vehicles`)
+      .send({
+        customerId,
 
-          make:
-            "Yamaha",
+        make: "Yamaha",
 
-          model:
-            "YZ250F",
+        model: "YZ250F",
 
-          vin:
-            `PO-FIXTURE-VIN-${uniqueSuffix}`,
+        vin: `PO-FIXTURE-VIN-${uniqueSuffix}`,
 
-          type:
-            "MOTORCYCLE",
-        });
+        type: "MOTORCYCLE",
+      });
 
-    if (
-      vehicleResponse.status !==
-      201
-    ) {
+    if (vehicleResponse.status !== 201) {
       throw new Error(
         `Vehicle fixture creation failed with status ${vehicleResponse.status}.`,
       );
     }
 
-    vehicleId =
-      vehicleResponse.body.data.id;
+    vehicleId = vehicleResponse.body.data.id;
 
-    const repairOrderResponse =
-      await agent
-        .post(
-          `/api/v1/organizations/${organizationId}/repair-orders`,
-        )
-        .send({
-          customerId,
-          vehicleId,
+    const repairOrderResponse = await agent
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .send({
+        customerId,
+        vehicleId,
 
-          complaint:
-            "Purchase order fixture repair.",
-        });
+        complaint: "Purchase order fixture repair.",
+      });
 
-    if (
-      repairOrderResponse.status !==
-      201
-    ) {
+    if (repairOrderResponse.status !== 201) {
       throw new Error(
         `Repair order fixture creation failed with status ${repairOrderResponse.status}.`,
       );
     }
 
-    repairOrderId =
-      repairOrderResponse.body.data.id;
+    repairOrderId = repairOrderResponse.body.data.id;
   }
 
   //************************************************************** */
   // Optional RO part line
 
-  if (
-    withRepairOrderPartLine
-  ) {
+  if (withRepairOrderPartLine) {
     if (!repairOrderId) {
       throw new Error(
         "Repair order fixture is required before creating a repair order part line.",
       );
     }
 
-    const repairOrderPartLineResponse =
-      await agent
-        .post(
-          `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-        )
-        .send({
-          partId,
-          partNumber,
+    const repairOrderPartLineResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
+      )
+      .send({
+        partId,
+        partNumber,
 
-          description:
-            "Purchase order fixture part",
+        description: "Purchase order fixture part",
 
-          quantity:
-            orderedQty,
+        quantity: orderedQty,
 
-          requiredQty:
-            orderedQty,
+        requiredQty: orderedQty,
 
-          approvedQty:
-            orderedQty,
+        approvedQty: orderedQty,
 
-          unitPrice:
-            20,
+        unitPrice: 20,
 
-          resolutionMethod:
-            "ORIGINAL_PO",
-        });
+        resolutionMethod: "ORIGINAL_PO",
+      });
 
-    if (
-      repairOrderPartLineResponse.status !==
-      201
-    ) {
+    if (repairOrderPartLineResponse.status !== 201) {
       throw new Error(
         `Repair order part line fixture creation failed with status ${repairOrderPartLineResponse.status}.`,
       );
     }
 
-    repairOrderPartLineId =
-      repairOrderPartLineResponse.body.data.id;
+    repairOrderPartLineId = repairOrderPartLineResponse.body.data.id;
 
-    const toBeOrderedResponse =
-      await agent
-        .post(
-          `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${repairOrderPartLineId}/to-be-ordered`,
-        )
-        .send({});
+    const toBeOrderedResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${repairOrderPartLineId}/to-be-ordered`,
+      )
+      .send({});
 
-    if (
-      toBeOrderedResponse.status !==
-      200
-    ) {
+    if (toBeOrderedResponse.status !== 200) {
       throw new Error(
         `Repair order part line TO_BE_ORDERED transition failed with status ${toBeOrderedResponse.status}.`,
       );
@@ -312,47 +221,37 @@ export async function createPurchaseOrderFixture(
   //************************************************************** */
   // Purchase Order
 
-  const purchaseOrderResponse =
-    await agent
-      .post(
-        `/api/v1/organizations/${organizationId}/purchase-orders`,
-      )
-      .send({
-        vendorId,
+  const purchaseOrderResponse = await agent
+    .post(`/api/v1/organizations/${organizationId}/purchase-orders`)
+    .send({
+      vendorId,
 
-        lines: [
-          {
-            partId,
+      lines: [
+        {
+          partId,
 
-            ...(repairOrderPartLineId !==
-            undefined
-              ? {
-                  repairOrderPartLineId,
-                }
-              : {}),
+          ...(repairOrderPartLineId !== undefined
+            ? {
+                repairOrderPartLineId,
+              }
+            : {}),
 
-            orderedQty,
+          orderedQty,
 
-            unitCost:
-              10,
-          },
-        ],
-      });
+          unitCost: 10,
+        },
+      ],
+    });
 
-  if (
-    purchaseOrderResponse.status !==
-    201
-  ) {
+  if (purchaseOrderResponse.status !== 201) {
     throw new Error(
       `Purchase order fixture creation failed with status ${purchaseOrderResponse.status}.`,
     );
   }
 
-  const purchaseOrderId =
-    purchaseOrderResponse.body.data.id;
+  const purchaseOrderId = purchaseOrderResponse.body.data.id;
 
-  const purchaseOrderLineId =
-    purchaseOrderResponse.body.data.lines[0].id;
+  const purchaseOrderLineId = purchaseOrderResponse.body.data.lines[0].id;
 
   //************************************************************** */
 
@@ -386,8 +285,7 @@ export async function createPurchaseOrderFixture(
         }
       : {}),
 
-    ...(repairOrderPartLineId !==
-    undefined
+    ...(repairOrderPartLineId !== undefined
       ? {
           repairOrderPartLineId,
         }

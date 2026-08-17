@@ -10,7 +10,6 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:restart": "docker compose down && docker compose up -d",
@@ -21,16 +20,22 @@
     "db:seed": "tsx prisma/seed.ts",
 
     "test": "tsx --test",
-    "test:customers": "tsx --test tests/integration/customers.test.ts",
-    "test:vehicles": "tsx --test tests/integration/vehicles.test.ts",
-    "test:vendors": "tsx --test tests/integration/vendors.test.ts",
+    "test:customers": "tsx --test tests/integration/customers/*.test.ts",
+    "test:vehicles": "tsx --test tests/integration/vehicles/*.test.ts",
+    "test:parts": "tsx --test tests/integration/parts/*.test.ts",
+    "test:vendors": "tsx --test tests/integration/vendors/*.test.ts",
 
-    "test:repair-orders": "tsx --test tests/integration/repair-orders.test.ts",
-    "test:repair-order-labor": "tsx --test tests/integration/repair-order-labor.test.ts",
-    "test:repair-order-parts": "tsx --test tests/integration/repair-order-parts.test.ts",
+    "test:customer-crud": "tsx --test tests/integration/customers/customer-crud.test.ts",
+    "test:vehicle-crud": "tsx --test tests/integration/vehicles/vehicle-crud.test.ts",
+    "test:part-crud": "tsx --test tests/integration/parts/part-crud.test.ts",
+    "test:part-inventory": "tsx --test tests/integration/parts/part-inventory.test.ts",
+    "test:vendor-crud": "tsx --test tests/integration/vendors/vendor-crud.test.ts",
 
-    "test:parts": "tsx --test tests/integration/parts.test.ts",
-    "test:part-inventory": "tsx --test tests/integration/part-inventory.test.ts",
+    "test:repair-orders": "tsx --test tests/integration/repair-orders/*.test.ts",
+    "test:repair-order-crud": "tsx --test tests/integration/repair-orders/repair-order-crud.test.ts",
+    "test:repair-order-labor": "tsx --test tests/integration/repair-orders/repair-order-labor.test.ts",
+    "test:repair-order-parts": "tsx --test tests/integration/repair-orders/repair-order-parts.test.ts",
+    "test:repair-order-readiness": "tsx --test tests/integration/repair-orders/repair-order-readiness.test.ts",
 
     "test:purchase-orders": "tsx --test tests/integration/purchase-orders/*.test.ts",
     "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",

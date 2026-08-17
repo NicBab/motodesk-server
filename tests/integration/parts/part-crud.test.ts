@@ -6,11 +6,11 @@ import {
 
 import {
   createAuthenticatedAgent,
-} from "./helpers/authenticated-agent.js";
+} from "../helpers/authenticated-agent.js";
 
 import {
   prisma,
-} from "../../src/config/prisma.js";
+} from "../../../src/config/prisma.js";
 
 //************************************************************** */
 

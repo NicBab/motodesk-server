@@ -6,7 +6,7 @@ import {
 
 import {
   createAuthenticatedAgent,
-} from "./helpers/authenticated-agent.js";
+} from "../helpers/authenticated-agent.js";
 
 //************************************************************** */
 
