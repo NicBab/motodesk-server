@@ -135,24 +135,3 @@ model Membership {
 }
 
 //************************************************************** */
-
-model Organization {
-  id    String  @id @default(cuid())
-  name  String
-  slug  String  @unique
-  email String?
-  phone String?
-
-  memberships           Membership[]
-  auditLogs             AuditLog[]
-  customers             Customer[]
-  vehicles              Vehicle[]
-  repairOrders          RepairOrder[]
-  parts                 Part[]
-  vendors               Vendor[]
-  purchaseOrders        PurchaseOrder[]
-  purchaseOrderSequence PurchaseOrderSequence?
-  repairOrderSequence   RepairOrderSequence?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-}
