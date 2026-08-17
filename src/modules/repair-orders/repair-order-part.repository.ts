@@ -1,23 +1,15 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreateRepairOrderPartLineInput,
   UpdateRepairOrderPartLineInput,
 } from "./repair-order-part.schemas.js";
 
-import type {
-  RepairOrderPartStatus,
-} from "../../generated/prisma/client.js";
+import type { RepairOrderPartStatus } from "../../generated/prisma/client.js";
 
-import {
-  PartInventoryTransactionType,
-} from "../../generated/prisma/client.js";
+import { PartInventoryTransactionType } from "../../generated/prisma/client.js";
 
-import {
-  applyInventoryMutationWithTransaction,
-} from "../parts/part-inventory.repository.js";
+import { applyInventoryMutationWithTransaction } from "../parts/part-inventory.repository.js";
 
 //************************************************************** */
 
@@ -29,62 +21,41 @@ export async function createRepairOrderPartLineRecord(
     data: {
       repairOrderId,
 
-      partId:
-        input.partId ??
-        null,
+      partId: input.partId ?? null,
 
-      partNumber:
-        input.partNumber,
+      partNumber: input.partNumber,
 
-      description:
-        input.description,
+      description: input.description,
 
-      quantity:
-        input.quantity,
+      quantity: input.quantity,
 
-      unitPrice:
-        input.unitPrice,
+      unitPrice: input.unitPrice,
 
-      requiredQty:
-        input.requiredQty,
+      requiredQty: input.requiredQty,
 
-      approvedQty:
-        input.approvedQty,
+      approvedQty: input.approvedQty,
 
-      allocatedQty:
-        input.allocatedQty,
+      allocatedQty: input.allocatedQty,
 
-      orderedQty:
-        input.orderedQty,
+      orderedQty: input.orderedQty,
 
-      receivedQty:
-        input.receivedQty,
+      receivedQty: input.receivedQty,
 
-      pulledQty:
-        input.pulledQty,
+      pulledQty: input.pulledQty,
 
-      installedQty:
-        input.installedQty,
+      installedQty: input.installedQty,
 
-      estimatedCost:
-        input.estimatedCost,
+      estimatedCost: input.estimatedCost,
 
-      actualCost:
-        input.actualCost,
+      actualCost: input.actualCost,
 
-      vendorName:
-        input.vendorName ??
-        null,
+      vendorName: input.vendorName ?? null,
 
-      status:
-        input.status,
+      status: input.status,
 
-      resolutionMethod:
-        input.resolutionMethod ??
-        null,
+      resolutionMethod: input.resolutionMethod ?? null,
 
-      blocksWork:
-        input.blocksWork,
+      blocksWork: input.blocksWork,
     },
 
     include: {
@@ -101,8 +72,7 @@ export async function findRepairOrderPartLineById(
 ) {
   return prisma.repairOrderPartLine.findFirst({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
       repairOrderId,
     },
 
@@ -114,9 +84,7 @@ export async function findRepairOrderPartLineById(
 
 //************************************************************** */
 
-export async function findRepairOrderPartLines(
-  repairOrderId: string,
-) {
+export async function findRepairOrderPartLines(repairOrderId: string) {
   return prisma.repairOrderPartLine.findMany({
     where: {
       repairOrderId,
@@ -127,8 +95,7 @@ export async function findRepairOrderPartLines(
     },
 
     orderBy: {
-      createdAt:
-        "asc",
+      createdAt: "asc",
     },
   });
 }
@@ -142,86 +109,74 @@ export async function updateRepairOrderPartLineRecord(
 ) {
   return prisma.repairOrderPartLine.updateMany({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
       repairOrderId,
     },
 
     data: {
       ...(input.partNumber !== undefined
         ? {
-            partNumber:
-              input.partNumber,
+            partNumber: input.partNumber,
           }
         : {}),
 
       ...(input.description !== undefined
         ? {
-            description:
-              input.description,
+            description: input.description,
           }
         : {}),
 
       ...(input.quantity !== undefined
         ? {
-            quantity:
-              input.quantity,
+            quantity: input.quantity,
           }
         : {}),
 
       ...(input.unitPrice !== undefined
         ? {
-            unitPrice:
-              input.unitPrice,
+            unitPrice: input.unitPrice,
           }
         : {}),
 
       ...(input.requiredQty !== undefined
         ? {
-            requiredQty:
-              input.requiredQty,
+            requiredQty: input.requiredQty,
           }
         : {}),
 
       ...(input.approvedQty !== undefined
         ? {
-            approvedQty:
-              input.approvedQty,
+            approvedQty: input.approvedQty,
           }
         : {}),
 
       ...(input.estimatedCost !== undefined
         ? {
-            estimatedCost:
-              input.estimatedCost,
+            estimatedCost: input.estimatedCost,
           }
         : {}),
 
       ...(input.actualCost !== undefined
         ? {
-            actualCost:
-              input.actualCost,
+            actualCost: input.actualCost,
           }
         : {}),
 
       ...(input.vendorName !== undefined
         ? {
-            vendorName:
-              input.vendorName,
+            vendorName: input.vendorName,
           }
         : {}),
 
       ...(input.resolutionMethod !== undefined
         ? {
-            resolutionMethod:
-              input.resolutionMethod,
+            resolutionMethod: input.resolutionMethod,
           }
         : {}),
 
       ...(input.blocksWork !== undefined
         ? {
-            blocksWork:
-              input.blocksWork,
+            blocksWork: input.blocksWork,
           }
         : {}),
     },
@@ -250,51 +205,44 @@ export async function updateRepairOrderPartLineWorkflowRecord(
 ) {
   return prisma.repairOrderPartLine.updateMany({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
       repairOrderId,
     },
 
     data: {
       ...(data.status !== undefined
         ? {
-            status:
-              data.status,
+            status: data.status,
           }
         : {}),
 
       ...(data.allocatedQty !== undefined
         ? {
-            allocatedQty:
-              data.allocatedQty,
+            allocatedQty: data.allocatedQty,
           }
         : {}),
 
       ...(data.orderedQty !== undefined
         ? {
-            orderedQty:
-              data.orderedQty,
+            orderedQty: data.orderedQty,
           }
         : {}),
 
       ...(data.receivedQty !== undefined
         ? {
-            receivedQty:
-              data.receivedQty,
+            receivedQty: data.receivedQty,
           }
         : {}),
 
       ...(data.pulledQty !== undefined
         ? {
-            pulledQty:
-              data.pulledQty,
+            pulledQty: data.pulledQty,
           }
         : {}),
 
       ...(data.installedQty !== undefined
         ? {
-            installedQty:
-              data.installedQty,
+            installedQty: data.installedQty,
           }
         : {}),
     },
@@ -312,71 +260,58 @@ export async function allocateRepairOrderPartLineRecord(
   createdByMembershipId: string | null,
   notes?: string,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const inventoryResult =
-        await applyInventoryMutationWithTransaction(
-          transaction,
-          {
-            partId,
+  return prisma.$transaction(async (transaction) => {
+    const inventoryResult = await applyInventoryMutationWithTransaction(
+      transaction,
+      {
+        partId,
 
-            type:
-              PartInventoryTransactionType.ALLOCATION,
+        type: PartInventoryTransactionType.ALLOCATION,
 
-            quantity,
+        quantity,
 
-            allocatedDelta:
-              quantity,
+        allocatedDelta: quantity,
 
-            referenceType:
-              "REPAIR_ORDER",
+        referenceType: "REPAIR_ORDER",
 
-            referenceId:
-              repairOrderId,
+        referenceId: repairOrderId,
 
-            ...(notes !== undefined
-              ? {
-                  notes,
-                }
-              : {}),
+        ...(notes !== undefined
+          ? {
+              notes,
+            }
+          : {}),
 
-            createdByMembershipId,
-          },
-        );
+        createdByMembershipId,
+      },
+    );
 
-      if (!inventoryResult) {
-        return null;
-      }
+    if (!inventoryResult) {
+      return null;
+    }
 
-      const allocatedQty =
-        currentAllocatedQty +
-        quantity;
+    const allocatedQty = currentAllocatedQty + quantity;
 
-      await transaction.repairOrderPartLine.update({
-        where: {
-          id:
-            partLineId,
-        },
+    await transaction.repairOrderPartLine.update({
+      where: {
+        id: partLineId,
+      },
 
-        data: {
-          allocatedQty,
-
-          status:
-            "ALLOCATED",
-        },
-      });
-
-      return {
-        part:
-          inventoryResult.part,
-
-        inventoryTransaction:
-          inventoryResult.transaction,
-
+      data: {
         allocatedQty,
-      };
-    },
-  );
+
+        status: "ALLOCATED",
+      },
+    });
+
+    return {
+      part: inventoryResult.part,
+
+      inventoryTransaction: inventoryResult.transaction,
+
+      allocatedQty,
+    };
+  });
 }
 
 //************************************************************** */
@@ -390,73 +325,58 @@ export async function deallocateRepairOrderPartLineRecord(
   createdByMembershipId: string | null,
   notes?: string,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const inventoryResult =
-        await applyInventoryMutationWithTransaction(
-          transaction,
-          {
-            partId,
+  return prisma.$transaction(async (transaction) => {
+    const inventoryResult = await applyInventoryMutationWithTransaction(
+      transaction,
+      {
+        partId,
 
-            type:
-              PartInventoryTransactionType.DEALLOCATION,
+        type: PartInventoryTransactionType.DEALLOCATION,
 
-            quantity,
+        quantity,
 
-            allocatedDelta:
-              -quantity,
+        allocatedDelta: -quantity,
 
-            referenceType:
-              "REPAIR_ORDER",
+        referenceType: "REPAIR_ORDER",
 
-            referenceId:
-              repairOrderId,
+        referenceId: repairOrderId,
 
-            ...(notes !== undefined
-              ? {
-                  notes,
-                }
-              : {}),
+        ...(notes !== undefined
+          ? {
+              notes,
+            }
+          : {}),
 
-            createdByMembershipId,
-          },
-        );
+        createdByMembershipId,
+      },
+    );
 
-      if (!inventoryResult) {
-        return null;
-      }
+    if (!inventoryResult) {
+      return null;
+    }
 
-      const allocatedQty =
-        currentAllocatedQty -
-        quantity;
+    const allocatedQty = currentAllocatedQty - quantity;
 
-      await transaction.repairOrderPartLine.update({
-        where: {
-          id:
-            partLineId,
-        },
+    await transaction.repairOrderPartLine.update({
+      where: {
+        id: partLineId,
+      },
 
-        data: {
-          allocatedQty,
-
-          status:
-            allocatedQty > 0
-              ? "ALLOCATED"
-              : "AVAILABLE",
-        },
-      });
-
-      return {
-        part:
-          inventoryResult.part,
-
-        inventoryTransaction:
-          inventoryResult.transaction,
-
+      data: {
         allocatedQty,
-      };
-    },
-  );
+
+        status: allocatedQty > 0 ? "ALLOCATED" : "AVAILABLE",
+      },
+    });
+
+    return {
+      part: inventoryResult.part,
+
+      inventoryTransaction: inventoryResult.transaction,
+
+      allocatedQty,
+    };
+  });
 }
 
 //************************************************************** */
@@ -471,79 +391,63 @@ export async function issueRepairOrderPartLineRecord(
   createdByMembershipId: string | null,
   notes?: string,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const inventoryResult =
-        await applyInventoryMutationWithTransaction(
-          transaction,
-          {
-            partId,
+  return prisma.$transaction(async (transaction) => {
+    const inventoryResult = await applyInventoryMutationWithTransaction(
+      transaction,
+      {
+        partId,
 
-            type:
-              PartInventoryTransactionType.ISSUE,
+        type: PartInventoryTransactionType.ISSUE,
 
-            quantity,
+        quantity,
 
-            onHandDelta:
-              -quantity,
+        onHandDelta: -quantity,
 
-            allocatedDelta:
-              -quantity,
+        allocatedDelta: -quantity,
 
-            referenceType:
-              "REPAIR_ORDER",
+        referenceType: "REPAIR_ORDER",
 
-            referenceId:
-              repairOrderId,
+        referenceId: repairOrderId,
 
-            ...(notes !== undefined
-              ? {
-                  notes,
-                }
-              : {}),
+        ...(notes !== undefined
+          ? {
+              notes,
+            }
+          : {}),
 
-            createdByMembershipId,
-          },
-        );
+        createdByMembershipId,
+      },
+    );
 
-      if (!inventoryResult) {
-        return null;
-      }
+    if (!inventoryResult) {
+      return null;
+    }
 
-      const allocatedQty =
-        currentAllocatedQty -
-        quantity;
+    const allocatedQty = currentAllocatedQty - quantity;
 
-      const pulledQty =
-        currentPulledQty +
-        quantity;
+    const pulledQty = currentPulledQty + quantity;
 
-      await transaction.repairOrderPartLine.update({
-        where: {
-          id:
-            partLineId,
-        },
+    await transaction.repairOrderPartLine.update({
+      where: {
+        id: partLineId,
+      },
 
-        data: {
-          allocatedQty,
-          pulledQty,
-          status:
-            "ISSUED",
-        },
-      });
-
-      return {
-        part:
-          inventoryResult.part,
-
-        inventoryTransaction:
-          inventoryResult.transaction,
-
+      data: {
         allocatedQty,
         pulledQty,
-      };
-    },
-  );
+        status: "ISSUED",
+      },
+    });
+
+    return {
+      part: inventoryResult.part,
+
+      inventoryTransaction: inventoryResult.transaction,
+
+      allocatedQty,
+      pulledQty,
+    };
+  });
 }
 
 //************************************************************** */
@@ -555,19 +459,13 @@ export async function installRepairOrderPartLineRecord(
   currentInstalledQty: number,
   requiredQty: number,
 ) {
-  const installedQty =
-    currentInstalledQty +
-    quantity;
+  const installedQty = currentInstalledQty + quantity;
 
-  const status =
-    installedQty >= requiredQty
-      ? "INSTALLED"
-      : "ISSUED";
+  const status = installedQty >= requiredQty ? "INSTALLED" : "ISSUED";
 
   await prisma.repairOrderPartLine.update({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
     },
 
     data: {
@@ -590,28 +488,11 @@ export async function markRepairOrderPartToBeOrderedRecord(
 ) {
   return prisma.repairOrderPartLine.update({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
     },
 
     data: {
-      status:
-        "TO_BE_ORDERED",
-    },
-  });
-}
-
-//************************************************************** */
-
-export async function deleteRepairOrderPartLineRecord(
-  repairOrderId: string,
-  partLineId: string,
-) {
-  return prisma.repairOrderPartLine.deleteMany({
-    where: {
-      id:
-        partLineId,
-      repairOrderId,
+      status: "TO_BE_ORDERED",
     },
   });
 }
@@ -624,12 +505,118 @@ export async function findRepairOrderPartLineByIdOnly(
 ) {
   return prisma.repairOrderPartLine.findFirst({
     where: {
-      id:
-        partLineId,
+      id: partLineId,
 
       repairOrder: {
         organizationId,
       },
+    },
+  });
+}
+
+export async function pullRepairOrderPartRecord(
+  organizationId: string,
+  repairOrderId: string,
+  partLineId: string,
+  quantity: number,
+  changedByMembershipId: string | null,
+  notes?: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const partLine = await transaction.repairOrderPartLine.findFirst({
+      where: {
+        id: partLineId,
+
+        repairOrderId,
+
+        repairOrder: {
+          organizationId,
+        },
+      },
+    });
+
+    if (!partLine) {
+      return null;
+    }
+
+    const currentPulledQty = Number(partLine.pulledQty.toString());
+
+    const newPulledQty = currentPulledQty + quantity;
+
+    const allocatedQty = Number(partLine.allocatedQty.toString());
+
+    const status = newPulledQty >= allocatedQty ? "PULLED" : partLine.status;
+
+    return transaction.repairOrderPartLine.update({
+      where: {
+        id: partLineId,
+      },
+
+      data: {
+        pulledQty: newPulledQty,
+
+        status,
+      },
+
+      include: {
+        part: true,
+      },
+    });
+  });
+}
+
+//************************************************************** */
+
+export async function stageRepairOrderPartRecord(
+  organizationId: string,
+  repairOrderId: string,
+  partLineId: string,
+  changedByMembershipId: string | null,
+  notes?: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const partLine = await transaction.repairOrderPartLine.findFirst({
+      where: {
+        id: partLineId,
+
+        repairOrderId,
+
+        repairOrder: {
+          organizationId,
+        },
+      },
+    });
+
+    if (!partLine) {
+      return null;
+    }
+
+    return transaction.repairOrderPartLine.update({
+      where: {
+        id: partLineId,
+      },
+
+      data: {
+        status: "STAGED",
+      },
+
+      include: {
+        part: true,
+      },
+    });
+  });
+}
+
+//************************************************************** */
+
+export async function deleteRepairOrderPartLineRecord(
+  repairOrderId: string,
+  partLineId: string,
+) {
+  return prisma.repairOrderPartLine.deleteMany({
+    where: {
+      id: partLineId,
+      repairOrderId,
     },
   });
 }

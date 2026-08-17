@@ -20,7 +20,9 @@ import {
   updateRepairOrderPartLineRecord,
   issueRepairOrderPartLineRecord,
   installRepairOrderPartLineRecord,
-  markRepairOrderPartToBeOrderedRecord
+  markRepairOrderPartToBeOrderedRecord,
+  pullRepairOrderPartRecord,
+  stageRepairOrderPartRecord
 } from "./repair-order-part.repository.js";
 
 import type {
@@ -30,7 +32,9 @@ import type {
   UpdateRepairOrderPartLineInput,
   IssueRepairOrderPartInput,
   InstallRepairOrderPartInput,
-  MarkRepairOrderPartToBeOrderedInput
+  MarkRepairOrderPartToBeOrderedInput,
+  PullRepairOrderPartInput,
+  StageRepairOrderPartInput
 } from "./repair-order-part.schemas.js";
 
 //************************************************************** */
@@ -606,6 +610,145 @@ export async function markRepairOrderPartToBeOrdered(
   );
 }
 
+export async function pullRepairOrderPart(
+  organizationId: string,
+  repairOrderId: string,
+  partLineId: string,
+  membershipId: string | null,
+  input: PullRepairOrderPartInput,
+) {
+  const partLine =
+    await getRepairOrderPartLineById(
+      organizationId,
+      repairOrderId,
+      partLineId,
+    );
+
+  if (!partLine.partId) {
+    throw new AppError(
+      400,
+      "A catalog part is required before inventory can be pulled.",
+      {
+        code:
+          "REPAIR_ORDER_PART_CATALOG_PART_REQUIRED",
+      },
+    );
+  }
+
+  const allocatedQty =
+    Number(
+      partLine.allocatedQty.toString(),
+    );
+
+  const pulledQty =
+    Number(
+      partLine.pulledQty.toString(),
+    );
+
+  const remainingAllocatedQty =
+    allocatedQty -
+    pulledQty;
+
+  if (
+    input.quantity >
+    remainingAllocatedQty
+  ) {
+    throw new AppError(
+      400,
+      "Pulled quantity exceeds the remaining allocated quantity.",
+      {
+        code:
+          "REPAIR_ORDER_PART_PULL_EXCEEDS_ALLOCATION",
+      },
+    );
+  }
+
+  await pullRepairOrderPartRecord(
+    organizationId,
+    repairOrderId,
+    partLineId,
+    input.quantity,
+    membershipId,
+    input.notes,
+  );
+
+  return getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
+}
+
+//************************************************************** */
+
+export async function stageRepairOrderPart(
+  organizationId: string,
+  repairOrderId: string,
+  partLineId: string,
+  membershipId: string | null,
+  input: StageRepairOrderPartInput,
+) {
+  const partLine =
+    await getRepairOrderPartLineById(
+      organizationId,
+      repairOrderId,
+      partLineId,
+    );
+
+  const allocatedQty =
+    Number(
+      partLine.allocatedQty.toString(),
+    );
+
+  const pulledQty =
+    Number(
+      partLine.pulledQty.toString(),
+    );
+
+  if (
+    allocatedQty <= 0 ||
+    pulledQty <
+      allocatedQty
+  ) {
+    throw new AppError(
+      400,
+      "All allocated quantity must be pulled before the part can be staged.",
+      {
+        code:
+          "REPAIR_ORDER_PART_STAGE_NOT_READY",
+      },
+    );
+  }
+
+  if (
+    partLine.status ===
+    "STAGED"
+  ) {
+    throw new AppError(
+      400,
+      "Part is already staged.",
+      {
+        code:
+          "REPAIR_ORDER_PART_ALREADY_STAGED",
+      },
+    );
+  }
+
+  await stageRepairOrderPartRecord(
+    organizationId,
+    repairOrderId,
+    partLineId,
+    membershipId,
+    input.notes,
+  );
+
+  return getRepairOrderPartLineById(
+    organizationId,
+    repairOrderId,
+    partLineId,
+  );
+}
+
 //************************************************************** */
 
 export async function deleteRepairOrderPartLine(
@@ -655,3 +798,6 @@ export async function deleteRepairOrderPartLine(
     partLineId,
   );
 }
+
+//************************************************************** */
+

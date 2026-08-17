@@ -1,16 +1,11 @@
-import {
-  Router,
-} from "express";
+import { Router } from "express";
 
 import {
   validateBody,
   validateParams,
 } from "../../platform/validation/index.js";
 
-
-import {
-  repairOrderIdSchema,
-} from "./repair-order.schemas.js";
+import { repairOrderIdSchema } from "./repair-order.schemas.js";
 
 import {
   createRepairOrderPartLineHandler,
@@ -22,7 +17,9 @@ import {
   deallocateRepairOrderPartLineHandler,
   issueRepairOrderPartLineHandler,
   installRepairOrderPartLineHandler,
-  markRepairOrderPartToBeOrderedHandler
+  markRepairOrderPartToBeOrderedHandler,
+  pullRepairOrderPartHandler,
+  stageRepairOrderPartHandler,
 } from "./repair-order-part.controller.js";
 
 import {
@@ -33,26 +30,23 @@ import {
   deallocateRepairOrderPartSchema,
   issueRepairOrderPartSchema,
   installRepairOrderPartSchema,
-  markRepairOrderPartToBeOrderedSchema
+  markRepairOrderPartToBeOrderedSchema,
+  pullRepairOrderPartSchema,
+  stageRepairOrderPartSchema,
 } from "./repair-order-part.schemas.js";
 
 //************************************************************** */
 
-const router =
-  Router({
-    mergeParams: true,
-  });
+const router = Router({
+  mergeParams: true,
+});
 
 //************************************************************** */
 
 router.post(
   "/",
-  validateParams(
-    repairOrderIdSchema,
-  ),
-  validateBody(
-    createRepairOrderPartLineSchema,
-  ),
+  validateParams(repairOrderIdSchema),
+  validateBody(createRepairOrderPartLineSchema),
   createRepairOrderPartLineHandler,
 );
 
@@ -60,22 +54,34 @@ router.post(
 
 router.get(
   "/",
-  validateParams(
-    repairOrderIdSchema,
-  ),
+  validateParams(repairOrderIdSchema),
   listRepairOrderPartLinesHandler,
 );
 
 //************************************************************** */
 
 router.post(
+  "/:partLineId/pull",
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(pullRepairOrderPartSchema),
+  pullRepairOrderPartHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:partLineId/stage",
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(stageRepairOrderPartSchema),
+  stageRepairOrderPartHandler,
+);
+
+//************************************************************** */
+
+router.post(
   "/:partLineId/allocate",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    allocateRepairOrderPartSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(allocateRepairOrderPartSchema),
   allocateRepairOrderPartLineHandler,
 );
 
@@ -83,12 +89,8 @@ router.post(
 
 router.post(
   "/:partLineId/deallocate",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    deallocateRepairOrderPartSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(deallocateRepairOrderPartSchema),
   deallocateRepairOrderPartLineHandler,
 );
 
@@ -96,12 +98,8 @@ router.post(
 
 router.post(
   "/:partLineId/issue",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    issueRepairOrderPartSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(issueRepairOrderPartSchema),
   issueRepairOrderPartLineHandler,
 );
 
@@ -109,12 +107,8 @@ router.post(
 
 router.post(
   "/:partLineId/install",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    installRepairOrderPartSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(installRepairOrderPartSchema),
   installRepairOrderPartLineHandler,
 );
 
@@ -122,12 +116,8 @@ router.post(
 
 router.post(
   "/:partLineId/to-be-ordered",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    markRepairOrderPartToBeOrderedSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(markRepairOrderPartToBeOrderedSchema),
   markRepairOrderPartToBeOrderedHandler,
 );
 
@@ -135,9 +125,7 @@ router.post(
 
 router.get(
   "/:partLineId",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
   getRepairOrderPartLineHandler,
 );
 
@@ -145,12 +133,8 @@ router.get(
 
 router.patch(
   "/:partLineId",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
-  validateBody(
-    updateRepairOrderPartLineSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
+  validateBody(updateRepairOrderPartLineSchema),
   updateRepairOrderPartLineHandler,
 );
 
@@ -158,9 +142,7 @@ router.patch(
 
 router.delete(
   "/:partLineId",
-  validateParams(
-    repairOrderPartParamsSchema,
-  ),
+  validateParams(repairOrderPartParamsSchema),
   deleteRepairOrderPartLineHandler,
 );
 

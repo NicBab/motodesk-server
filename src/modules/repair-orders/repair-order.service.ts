@@ -30,7 +30,7 @@ import type {
   ApproveRepairOrderInput,
   DeclineRepairOrderApprovalInput,
   RequestRepairOrderApprovalInput,
-  CompleteRepairOrderPartsReviewInput
+  CompleteRepairOrderPartsReviewInput,
 } from "./repair-order.schemas.js";
 
 import { findCustomerById } from "../customers/customer.repository.js";
@@ -611,7 +611,6 @@ export async function requestRepairOrderApproval(
 
 //************************************************************** */
 
-
 export async function approveRepairOrder(
   organizationId: string,
   repairOrderId: string,
@@ -691,92 +690,60 @@ export async function completeRepairOrderPartsReview(
   membershipId: string | null,
   input: CompleteRepairOrderPartsReviewInput,
 ) {
-  const repairOrder =
-    await getRepairOrderById(
-      organizationId,
-      repairOrderId,
-    );
+  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
 
-  if (
-    repairOrder.status !==
-    "PARTS_REVIEW"
-  ) {
+  if (repairOrder.status !== "PARTS_REVIEW") {
     throw new AppError(
       400,
       "Parts review can only be completed while the repair order is in PARTS_REVIEW.",
       {
-        code:
-          "REPAIR_ORDER_PARTS_REVIEW_INVALID_STATUS",
+        code: "REPAIR_ORDER_PARTS_REVIEW_INVALID_STATUS",
       },
     );
   }
 
-  const blockingLines =
-    repairOrder.partLines.filter(
-      (line) =>
-        line.blocksWork,
-    );
+  const blockingLines = repairOrder.partLines.filter((line) => line.blocksWork);
 
-  const unresolvedLines =
-    blockingLines.filter(
-      (line) =>
-        line.status ===
-        "NEEDS_REVIEW",
-    );
+  const unresolvedLines = blockingLines.filter(
+    (line) => line.status === "NEEDS_REVIEW",
+  );
 
-  if (
-    unresolvedLines.length >
-    0
-  ) {
+  if (unresolvedLines.length > 0) {
     throw new AppError(
       400,
       "Every blocking part must be resolved before completing parts review.",
       {
-        code:
-          "REPAIR_ORDER_PARTS_REVIEW_INCOMPLETE",
+        code: "REPAIR_ORDER_PARTS_REVIEW_INCOMPLETE",
       },
     );
   }
 
-  const waitingStatuses =
-    new Set([
-      "TO_BE_ORDERED",
-      "ORDERED",
-      "PARTIALLY_RECEIVED",
-      "BACKORDERED",
-    ]);
+  const readyStatuses = new Set([
+    "PULLED",
+    "STAGED",
+    "RECEIVED",
+    "ISSUED",
+    "INSTALLED",
+    "WAIVED",
+  ]);
 
-  const waitingOnParts =
-    blockingLines.some(
-      (line) =>
-        waitingStatuses.has(
-          line.status,
-        ),
-    );
-
-  const nextStatus =
-    waitingOnParts
-      ? "WAITING_ON_PARTS"
-      : "READY_TO_WORK";
-
-  return updateRepairOrderStatus(
-    organizationId,
-    repairOrderId,
-    membershipId,
-    {
-      status:
-        nextStatus,
-
-      notes:
-        input.notes ??
-        (
-          waitingOnParts
-            ? "Parts review completed. Repair order is waiting on outstanding parts."
-            : "Parts review completed. All blocking parts are available."
-        ),
-
-      automatic:
-        false,
-    },
+  const allBlockingPartsReady = blockingLines.every((line) =>
+    readyStatuses.has(line.status),
   );
+
+  const nextStatus = allBlockingPartsReady
+    ? "READY_TO_WORK"
+    : "WAITING_ON_PARTS";
+
+  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+    status: nextStatus,
+
+    notes:
+      input.notes ??
+      (allBlockingPartsReady
+        ? "Parts review completed. Repair order is waiting on outstanding parts."
+        : "Parts review completed. All blocking parts are available."),
+
+    automatic: false,
+  });
 }
