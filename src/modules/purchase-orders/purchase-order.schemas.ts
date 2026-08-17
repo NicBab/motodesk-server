@@ -176,6 +176,36 @@ export const listPurchaseOrdersQuerySchema =
 
 //************************************************************** */
 
+export const receivePurchaseOrderLineSchema =
+  z.object({
+    purchaseOrderLineId: z
+      .string()
+      .trim()
+      .min(
+        1,
+        "Purchase Order Line ID is required.",
+      ),
+
+    quantity: z
+      .number()
+      .positive(
+        "Received quantity must be greater than zero.",
+      ),
+
+    notes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional(),
+  });
+
+//************************************************************** */
+
+export type ReceivePurchaseOrderLineInput =
+  z.infer<
+    typeof receivePurchaseOrderLineSchema
+  >;
+
 export type CreatePurchaseOrderInput =
   z.infer<
     typeof createPurchaseOrderSchema

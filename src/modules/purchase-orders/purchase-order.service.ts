@@ -18,7 +18,9 @@ import {
   createPurchaseOrderRecord,
   findPurchaseOrderById,
   findPurchaseOrdersByOrganization,
+  orderPurchaseOrderRecord,
   updatePurchaseOrderRecord,
+  receivePurchaseOrderLineRecord
 } from "./purchase-order.repository.js";
 
 import type {
@@ -29,6 +31,7 @@ import type {
   CreatePurchaseOrderInput,
   ListPurchaseOrdersQueryInput,
   UpdatePurchaseOrderInput,
+  ReceivePurchaseOrderLineInput
 } from "./purchase-order.schemas.js";
 
 //************************************************************** */
@@ -231,6 +234,191 @@ export async function listPurchaseOrders(
     organizationId,
     query,
   );
+}
+
+//************************************************************** */
+
+export async function orderPurchaseOrder(
+  organizationId: string,
+  purchaseOrderId: string,
+  membershipId: string | null,
+) {
+  const purchaseOrder =
+    await getPurchaseOrderById(
+      organizationId,
+      purchaseOrderId,
+    );
+
+  if (
+    purchaseOrder.status !==
+    "DRAFT"
+  ) {
+    throw new AppError(
+      400,
+      "Only draft purchase orders can be ordered.",
+      {
+        code:
+          "PURCHASE_ORDER_NOT_DRAFT",
+      },
+    );
+  }
+
+  if (
+    purchaseOrder.lines.length ===
+    0
+  ) {
+    throw new AppError(
+      400,
+      "A purchase order must contain at least one line before it can be ordered.",
+      {
+        code:
+          "PURCHASE_ORDER_LINES_REQUIRED",
+      },
+    );
+  }
+
+  const result =
+    await orderPurchaseOrderRecord(
+      organizationId,
+      purchaseOrderId,
+      membershipId,
+    );
+
+  if (
+    !result ||
+    !result.purchaseOrder
+  ) {
+    throw new AppError(
+      400,
+      "Purchase order could not be ordered.",
+      {
+        code:
+          "PURCHASE_ORDER_ORDER_FAILED",
+      },
+    );
+  }
+
+  if (
+    result.alreadyOrdered
+  ) {
+    throw new AppError(
+      400,
+      "Purchase order has already been ordered.",
+      {
+        code:
+          "PURCHASE_ORDER_ALREADY_ORDERED",
+      },
+    );
+  }
+
+  return result.purchaseOrder;
+}
+
+//************************************************************** */
+
+export async function receivePurchaseOrderLine(
+  organizationId: string,
+  purchaseOrderId: string,
+  membershipId: string | null,
+  input: ReceivePurchaseOrderLineInput,
+) {
+  const purchaseOrder =
+    await getPurchaseOrderById(
+      organizationId,
+      purchaseOrderId,
+    );
+
+  if (
+    purchaseOrder.status !==
+      "ORDERED" &&
+    purchaseOrder.status !==
+      "PARTIALLY_RECEIVED"
+  ) {
+    throw new AppError(
+      400,
+      "Only ordered purchase orders can receive inventory.",
+      {
+        code:
+          "PURCHASE_ORDER_NOT_RECEIVABLE",
+      },
+    );
+  }
+
+  const result =
+    await receivePurchaseOrderLineRecord(
+      organizationId,
+      purchaseOrderId,
+      input.purchaseOrderLineId,
+      input.quantity,
+      membershipId,
+      input.notes,
+    );
+
+  if (!result) {
+    throw new AppError(
+      404,
+      "Purchase order not found.",
+      {
+        code:
+          "PURCHASE_ORDER_NOT_FOUND",
+      },
+    );
+  }
+
+  if (
+    "lineNotFound" in result &&
+    result.lineNotFound
+  ) {
+    throw new AppError(
+      400,
+      "Purchase order line not found.",
+      {
+        code:
+          "PURCHASE_ORDER_LINE_NOT_FOUND",
+      },
+    );
+  }
+
+  if (
+    "exceedsRemaining" in result &&
+    result.exceedsRemaining
+  ) {
+    throw new AppError(
+      400,
+      "Received quantity exceeds the remaining ordered quantity.",
+      {
+        code:
+          "PURCHASE_ORDER_RECEIPT_EXCEEDS_REMAINING",
+      },
+    );
+  }
+
+  if (
+    "inventoryFailed" in result &&
+    result.inventoryFailed
+  ) {
+    throw new AppError(
+      400,
+      "Purchase order inventory receipt failed.",
+      {
+        code:
+          "PURCHASE_ORDER_RECEIPT_FAILED",
+      },
+    );
+  }
+
+  if (!result.purchaseOrder) {
+    throw new AppError(
+      400,
+      "Purchase order receipt could not be completed.",
+      {
+        code:
+          "PURCHASE_ORDER_RECEIPT_FAILED",
+      },
+    );
+  }
+
+  return result.purchaseOrder;
 }
 
 //************************************************************** */

@@ -8,6 +8,14 @@ import type {
   UpdatePurchaseOrderInput,
 } from "./purchase-order.schemas.js";
 
+import {
+  PartInventoryTransactionType,
+} from "../../generated/prisma/client.js";
+
+import {
+  applyInventoryMutationWithTransaction,
+} from "../parts/part-inventory.repository.js";
+
 //************************************************************** */
 
 export interface PurchaseOrderLineSnapshot {
@@ -275,6 +283,420 @@ export async function findPurchaseOrdersByOrganization(
         "desc",
     },
   });
+}
+
+//************************************************************** */
+
+export async function orderPurchaseOrderRecord(
+  organizationId: string,
+  purchaseOrderId: string,
+  createdByMembershipId: string | null,
+) {
+  return prisma.$transaction(
+    async (transaction) => {
+      const purchaseOrder =
+        await transaction.purchaseOrder.findFirst({
+          where: {
+            id:
+              purchaseOrderId,
+            organizationId,
+          },
+
+          include: {
+            lines: true,
+          },
+        });
+
+      if (!purchaseOrder) {
+        return null;
+      }
+
+      if (
+        purchaseOrder.status !==
+        "DRAFT"
+      ) {
+        return {
+          purchaseOrder,
+          alreadyOrdered:
+            true,
+        };
+      }
+
+      for (
+        const line
+        of purchaseOrder.lines
+      ) {
+        await applyInventoryMutationWithTransaction(
+          transaction,
+          {
+            partId:
+              line.partId,
+
+            type:
+              PartInventoryTransactionType.PURCHASE_ORDERED,
+
+            quantity:
+              Number(
+                line.orderedQty.toString(),
+              ),
+
+            onOrderDelta:
+              Number(
+                line.orderedQty.toString(),
+              ),
+
+            referenceType:
+              "PURCHASE_ORDER",
+
+            referenceId:
+              purchaseOrder.id,
+
+            createdByMembershipId,
+          },
+        );
+
+        if (
+          line.repairOrderPartLineId
+        ) {
+          const repairOrderPartLine =
+            await transaction.repairOrderPartLine.findUnique({
+              where: {
+                id:
+                  line.repairOrderPartLineId,
+              },
+            });
+
+          if (repairOrderPartLine) {
+            const currentOrderedQty =
+              Number(
+                repairOrderPartLine.orderedQty.toString(),
+              );
+
+            await transaction.repairOrderPartLine.update({
+              where: {
+                id:
+                  line.repairOrderPartLineId,
+              },
+
+              data: {
+                orderedQty:
+                  currentOrderedQty +
+                  Number(
+                    line.orderedQty.toString(),
+                  ),
+
+                status:
+                  "ORDERED",
+              },
+            });
+          }
+        }
+      }
+
+      await transaction.purchaseOrder.update({
+        where: {
+          id:
+            purchaseOrderId,
+        },
+
+        data: {
+          status:
+            "ORDERED",
+
+          orderedAt:
+            new Date(),
+        },
+      });
+
+      const updatedPurchaseOrder =
+        await transaction.purchaseOrder.findUnique({
+          where: {
+            id:
+              purchaseOrderId,
+          },
+
+          include: {
+            vendor: true,
+
+            lines: {
+              include: {
+                part: true,
+                repairOrderPartLine:
+                  true,
+              },
+
+              orderBy: {
+                createdAt:
+                  "asc",
+              },
+            },
+          },
+        });
+
+      return {
+        purchaseOrder:
+          updatedPurchaseOrder,
+
+        alreadyOrdered:
+          false,
+      };
+    },
+  );
+}
+
+//************************************************************** */
+
+export async function receivePurchaseOrderLineRecord(
+  organizationId: string,
+  purchaseOrderId: string,
+  purchaseOrderLineId: string,
+  quantity: number,
+  createdByMembershipId: string | null,
+  notes?: string,
+) {
+  return prisma.$transaction(
+    async (transaction) => {
+      const purchaseOrder =
+        await transaction.purchaseOrder.findFirst({
+          where: {
+            id:
+              purchaseOrderId,
+            organizationId,
+          },
+
+          include: {
+            lines: true,
+          },
+        });
+
+      if (!purchaseOrder) {
+        return null;
+      }
+
+      const line =
+        purchaseOrder.lines.find(
+          (item) =>
+            item.id ===
+            purchaseOrderLineId,
+        );
+
+      if (!line) {
+        return {
+          purchaseOrder,
+          lineNotFound:
+            true,
+        };
+      }
+
+      const orderedQty =
+        Number(
+          line.orderedQty.toString(),
+        );
+
+      const currentReceivedQty =
+        Number(
+          line.receivedQty.toString(),
+        );
+
+      const remainingQty =
+        orderedQty -
+        currentReceivedQty;
+
+      if (
+        quantity >
+        remainingQty
+      ) {
+        return {
+          purchaseOrder,
+          line,
+          exceedsRemaining:
+            true,
+          remainingQty,
+        };
+      }
+
+      const inventoryResult =
+        await applyInventoryMutationWithTransaction(
+          transaction,
+          {
+            partId:
+              line.partId,
+
+            type:
+              PartInventoryTransactionType.PURCHASE_RECEIPT,
+
+            quantity,
+
+            onHandDelta:
+              quantity,
+
+            onOrderDelta:
+              -quantity,
+
+            referenceType:
+              "PURCHASE_ORDER",
+
+            referenceId:
+              purchaseOrder.id,
+
+            ...(notes !== undefined
+              ? {
+                  notes,
+                }
+              : {}),
+
+            createdByMembershipId,
+          },
+        );
+
+      if (!inventoryResult) {
+        return {
+          purchaseOrder,
+          inventoryFailed:
+            true,
+        };
+      }
+
+      const receivedQty =
+        currentReceivedQty +
+        quantity;
+
+      await transaction.purchaseOrderLine.update({
+        where: {
+          id:
+            purchaseOrderLineId,
+        },
+
+        data: {
+          receivedQty,
+        },
+      });
+
+      if (
+        line.repairOrderPartLineId
+      ) {
+        const repairOrderPartLine =
+          await transaction.repairOrderPartLine.findUnique({
+            where: {
+              id:
+                line.repairOrderPartLineId,
+            },
+          });
+
+        if (repairOrderPartLine) {
+          const currentRoReceivedQty =
+            Number(
+              repairOrderPartLine.receivedQty.toString(),
+            );
+
+          const newRoReceivedQty =
+            currentRoReceivedQty +
+            quantity;
+
+          const roStatus =
+            newRoReceivedQty >=
+            Number(
+              repairOrderPartLine.orderedQty.toString(),
+            )
+              ? "RECEIVED"
+              : "PARTIALLY_RECEIVED";
+
+          await transaction.repairOrderPartLine.update({
+            where: {
+              id:
+                line.repairOrderPartLineId,
+            },
+
+            data: {
+              receivedQty:
+                newRoReceivedQty,
+
+              status:
+                roStatus,
+            },
+          });
+        }
+      }
+
+      const updatedLines =
+        await transaction.purchaseOrderLine.findMany({
+          where: {
+            purchaseOrderId,
+          },
+        });
+
+      const allReceived =
+        updatedLines.every(
+          (item) =>
+            Number(
+              item.receivedQty.toString(),
+            ) >=
+            Number(
+              item.orderedQty.toString(),
+            ),
+        );
+
+      await transaction.purchaseOrder.update({
+        where: {
+          id:
+            purchaseOrderId,
+        },
+
+        data: {
+          status:
+            allReceived
+              ? "RECEIVED"
+              : "PARTIALLY_RECEIVED",
+
+          ...(allReceived
+            ? {
+                receivedAt:
+                  new Date(),
+              }
+            : {}),
+        },
+      });
+
+      const updatedPurchaseOrder =
+        await transaction.purchaseOrder.findUnique({
+          where: {
+            id:
+              purchaseOrderId,
+          },
+
+          include: {
+            vendor: true,
+
+            lines: {
+              include: {
+                part: true,
+                repairOrderPartLine:
+                  true,
+              },
+
+              orderBy: {
+                createdAt:
+                  "asc",
+              },
+            },
+          },
+        });
+
+      return {
+        purchaseOrder:
+          updatedPurchaseOrder,
+
+        lineNotFound:
+          false,
+
+        exceedsRemaining:
+          false,
+
+        inventoryFailed:
+          false,
+      };
+    },
+  );
 }
 
 //************************************************************** */

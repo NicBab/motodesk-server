@@ -25,6 +25,8 @@ import {
   getPurchaseOrderHandler,
   listPurchaseOrdersHandler,
   updatePurchaseOrderHandler,
+  orderPurchaseOrderHandler,
+  receivePurchaseOrderLineHandler
 } from "./purchase-order.controller.js";
 
 import {
@@ -32,6 +34,7 @@ import {
   listPurchaseOrdersQuerySchema,
   purchaseOrderIdSchema,
   updatePurchaseOrderSchema,
+  receivePurchaseOrderLineSchema
 } from "./purchase-order.schemas.js";
 
 //************************************************************** */
@@ -97,5 +100,32 @@ router.patch(
 );
 
 //************************************************************** */
+
+router.post(
+  "/:purchaseOrderId/order",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(
+    purchaseOrderIdSchema,
+  ),
+  orderPurchaseOrderHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:purchaseOrderId/receive",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(
+    purchaseOrderIdSchema,
+  ),
+  validateBody(
+    receivePurchaseOrderLineSchema,
+  ),
+  receivePurchaseOrderLineHandler,
+);
 
 export default router;

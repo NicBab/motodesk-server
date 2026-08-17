@@ -180,6 +180,10 @@ enum PartInventoryTransactionType {
   DAMAGE
   TRANSFER
   CYCLE_COUNT
+
+  PURCHASE_ORDERED
+  PURCHASE_CANCELLED
+  PURCHASE_RECEIPT
 }
 
 //************************************************************** */
@@ -227,18 +231,18 @@ model Organization {
   email String?
   phone String?
 
-  memberships         Membership[]
-  auditLogs           AuditLog[]
-  customers           Customer[]
-  vehicles            Vehicle[]
-  repairOrders        RepairOrder[]
-  parts               Part[]
-  vendors             Vendor[]
-  purchaseOrders PurchaseOrder[]
+  memberships           Membership[]
+  auditLogs             AuditLog[]
+  customers             Customer[]
+  vehicles              Vehicle[]
+  repairOrders          RepairOrder[]
+  parts                 Part[]
+  vendors               Vendor[]
+  purchaseOrders        PurchaseOrder[]
   purchaseOrderSequence PurchaseOrderSequence?
-  repairOrderSequence RepairOrderSequence?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  repairOrderSequence   RepairOrderSequence?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 }
 
 //************************************************************** */
@@ -647,7 +651,7 @@ model Part {
 
   inventoryTransactions PartInventoryTransaction[]
   repairOrderPartLines  RepairOrderPartLine[]
-  purchaseOrderLines PurchaseOrderLine[]
+  purchaseOrderLines    PurchaseOrderLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -766,7 +770,7 @@ model PurchaseOrder {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  vendor Vendor @relation(fields: [vendorId], references: [id],onDelete: Restrict)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
 
   lines PurchaseOrderLine[]
 
@@ -774,12 +778,12 @@ model PurchaseOrder {
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, poNumber])
-
   @@index([organizationId])
   @@index([organizationId, vendorId])
   @@index([organizationId, status])
   @@index([organizationId, orderedAt])
 }
+
 //************************************************************** */
 
 model PurchaseOrderLine {
@@ -810,6 +814,7 @@ model PurchaseOrderLine {
   @@index([partId])
   @@index([repairOrderPartLineId])
 }
+
 //************************************************************** */
 
 model PurchaseOrderSequence {
@@ -820,4 +825,5 @@ model PurchaseOrderSequence {
 
   updatedAt DateTime @updatedAt
 }
+
 //************************************************************** */

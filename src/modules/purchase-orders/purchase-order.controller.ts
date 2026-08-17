@@ -11,6 +11,10 @@ import type {
 } from "../auth/index.js";
 
 import {
+  getRequestContext,
+} from "../../platform/request/request.context.js";
+
+import {
   requireValidatedBody,
   requireValidatedParams,
   requireValidatedQuery,
@@ -25,7 +29,9 @@ import {
   createPurchaseOrder,
   getPurchaseOrderById,
   listPurchaseOrders,
+  orderPurchaseOrder,
   updatePurchaseOrder,
+  receivePurchaseOrderLine
 } from "./purchase-order.service.js";
 
 import type {
@@ -33,7 +39,9 @@ import type {
   ListPurchaseOrdersQueryInput,
   PurchaseOrderIdInput,
   UpdatePurchaseOrderInput,
+  ReceivePurchaseOrderLineInput
 } from "./purchase-order.schemas.js";
+
 
 //************************************************************** */
 
@@ -142,6 +150,78 @@ export async function getPurchaseOrderHandler(
 
 //************************************************************** */
 
+export async function orderPurchaseOrderHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    purchaseOrderId,
+  } =
+    requireValidatedParams<PurchaseOrderIdInput>(
+      request,
+    );
+
+  const membershipId =
+    getRequestContext().membership?.id ??
+    null;
+
+  const purchaseOrder =
+    await orderPurchaseOrder(
+      organizationId,
+      purchaseOrderId,
+      membershipId,
+    );
+
+  ok(
+    response,
+    purchaseOrder,
+  );
+}
+
+//************************************************************** */
+
+export async function receivePurchaseOrderLineHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    purchaseOrderId,
+  } =
+    requireValidatedParams<PurchaseOrderIdInput>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<ReceivePurchaseOrderLineInput>(
+      request,
+    );
+
+  const membershipId =
+    getRequestContext().membership?.id ??
+    null;
+
+  const purchaseOrder =
+    await receivePurchaseOrderLine(
+      organizationId,
+      purchaseOrderId,
+      membershipId,
+      input,
+    );
+
+  ok(
+    response,
+    purchaseOrder,
+  );
+}
+
+//************************************************************** */
+
 export async function updatePurchaseOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
@@ -173,3 +253,4 @@ export async function updatePurchaseOrderHandler(
     purchaseOrder,
   );
 }
+
