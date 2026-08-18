@@ -130,6 +130,8 @@ model Membership {
 
   technicianAssignmentsCreated TechnicianAssignment[] @relation("TechnicianAssignmentAssignedBy")
 
+  serviceBayAssignmentsCreated ServiceBayAssignment[] @relation("ServiceBayAssignmentAssignedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

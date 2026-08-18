@@ -15,6 +15,7 @@ import vendorRouter from "../vendors/vendor.routes.js";
 import purchaseOrderRouter from "../purchase-orders/purchase-order.routes.js";
 import scheduleRouter from "../scheduling/schedule.routes.js";
 import technicianAssignmentRouter from "../technician-assignments/technician-assignment.routes.js";
+import serviceBayRouter from "../service-bays/service-bay.routes.js";
 
 import {
   createOrganizationSchema,
@@ -112,6 +113,13 @@ router.use(
 router.use(
   "/:organizationId/technician-assignments",
   technicianAssignmentRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/service-bays",
+  serviceBayRouter,
 );
 
 //************************************************************** */

@@ -146,6 +146,7 @@ model RepairOrder {
   partLines             RepairOrderPartLine[]
   schedules             Schedule[]
   technicianAssignments TechnicianAssignment[]
+  serviceBayAssignments ServiceBayAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -17,6 +17,8 @@ model Organization {
   purchaseOrders        PurchaseOrder[]
   schedules             Schedule[]
   technicianAssignments TechnicianAssignment[]
+  serviceBays           ServiceBay[]
+  serviceBayAssignments ServiceBayAssignment[]
   purchaseOrderSequence PurchaseOrderSequence?
   repairOrderSequence   RepairOrderSequence?
   createdAt             DateTime               @default(now())

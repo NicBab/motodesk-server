@@ -46,7 +46,9 @@
 
     "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts",
 
-    "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts"
+    "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
+
+    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts"
     
   },
   "keywords": [],
