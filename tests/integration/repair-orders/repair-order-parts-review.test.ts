@@ -5,7 +5,7 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
 //************************************************************** */
 
-async function createPartsReviewFixture(options: {
+export async function createPartsReviewFixture(options: {
   qtyOnHand: number;
   suffix: string;
 }) {
