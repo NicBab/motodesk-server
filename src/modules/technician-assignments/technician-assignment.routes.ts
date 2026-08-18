@@ -12,9 +12,17 @@ import {
   validateParams,
 } from "../../platform/validation/index.js";
 
-import { assignTechnicianHandler } from "./technician-assignment.controller.js";
+import {
+  assignTechnicianHandler,
+  reassignTechnicianHandler,
+  removeTechnicianAssignmentHandler,
+} from "./technician-assignment.controller.js";
 
-import { assignTechnicianSchema } from "./technician-assignment.schemas.js";
+import {
+  assignTechnicianSchema,
+  reassignTechnicianSchema,
+  removeTechnicianAssignmentSchema,
+} from "./technician-assignment.schemas.js";
 
 //************************************************************** */
 
@@ -38,6 +46,32 @@ router.post(
   validateParams(technicianAssignmentParamsSchema),
   validateBody(assignTechnicianSchema),
   assignTechnicianHandler,
+);
+
+//************************************************************** */
+// Reassign Technician
+
+router.post(
+  "/repair-orders/:repairOrderId/reassign",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(technicianAssignmentParamsSchema),
+  validateBody(reassignTechnicianSchema),
+  reassignTechnicianHandler,
+);
+
+//************************************************************** */
+// Remove Technician Assignment
+
+router.post(
+  "/repair-orders/:repairOrderId/remove",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(technicianAssignmentParamsSchema),
+  validateBody(removeTechnicianAssignmentSchema),
+  removeTechnicianAssignmentHandler,
 );
 
 //************************************************************** */

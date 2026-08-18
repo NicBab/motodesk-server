@@ -13,9 +13,9 @@ import {
 
 import { ok } from "../../platform/http/api-response.js";
 
-import { assignTechnician } from "./technician-assignment.service.js";
+import { assignTechnician, reassignTechnician, removeTechnicianAssignment } from "./technician-assignment.service.js";
 
-import type { AssignTechnicianInput } from "./technician-assignment.schemas.js";
+import type { AssignTechnicianInput, ReassignTechnicianInput, RemoveTechnicianAssignmentInput } from "./technician-assignment.schemas.js";
 
 //************************************************************** */
 
@@ -63,4 +63,79 @@ export async function assignTechnicianHandler(
   );
 
   ok(response, assignment);
+}
+
+//************************************************************** */
+// Reassign Technician
+
+export async function reassignTechnicianHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+  } =
+    requireValidatedParams<TechnicianAssignmentParams>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<ReassignTechnicianInput>(
+      request,
+    );
+
+  const assignedByMembershipId =
+    getRequestContext().membership?.id ??
+    null;
+
+  const assignment =
+    await reassignTechnician(
+      organizationId,
+      repairOrderId,
+      assignedByMembershipId,
+      input,
+    );
+
+  ok(
+    response,
+    assignment,
+  );
+}
+
+//************************************************************** */
+// Remove Technician Assignment
+
+export async function removeTechnicianAssignmentHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const {
+    repairOrderId,
+  } =
+    requireValidatedParams<TechnicianAssignmentParams>(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<RemoveTechnicianAssignmentInput>(
+      request,
+    );
+
+  const assignment =
+    await removeTechnicianAssignment(
+      organizationId,
+      repairOrderId,
+      input,
+    );
+
+  ok(
+    response,
+    assignment,
+  );
 }
