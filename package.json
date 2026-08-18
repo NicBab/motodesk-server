@@ -42,7 +42,9 @@
     "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",
     "test:purchase-order-ordering": "tsx --test tests/integration/purchase-orders/purchase-order-ordering.test.ts",
     "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
-    "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts"
+    "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts",
+
+    "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts"
     
   },
   "keywords": [],

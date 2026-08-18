@@ -1,0 +1,33 @@
+enum ScheduleStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+model Schedule {
+  id             String @id @default(cuid())
+  organizationId String
+  repairOrderId  String
+
+  scheduledDate DateTime
+  promisedDate  DateTime?
+
+  status            ScheduleStatus @default(SCHEDULED)
+  cancelledAt       DateTime?
+  cancellationNotes String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([repairOrderId])
+  @@index([organizationId, scheduledDate])
+  @@index([organizationId, status])
+  @@index([repairOrderId, status])
+}

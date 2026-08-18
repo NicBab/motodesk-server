@@ -241,12 +241,9 @@ export const completeRepairOrderPartsReviewSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
-//************************************************************** */
-
-export type CompleteRepairOrderPartsReviewInput =
-  z.infer<
-    typeof completeRepairOrderPartsReviewSchema
-  >;
+export type CompleteRepairOrderPartsReviewInput = z.infer<
+  typeof completeRepairOrderPartsReviewSchema
+>;
 
 export type RequestRepairOrderApprovalInput = z.infer<
   typeof requestRepairOrderApprovalSchema

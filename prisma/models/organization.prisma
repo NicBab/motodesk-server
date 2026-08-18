@@ -15,6 +15,7 @@ model Organization {
   parts                 Part[]
   vendors               Vendor[]
   purchaseOrders        PurchaseOrder[]
+  schedules             Schedule[]
   purchaseOrderSequence PurchaseOrderSequence?
   repairOrderSequence   RepairOrderSequence?
   createdAt             DateTime               @default(now())
