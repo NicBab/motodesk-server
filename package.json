@@ -44,7 +44,9 @@
     "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
     "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts",
 
-    "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts"
+    "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts",
+
+    "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts"
     
   },
   "keywords": [],

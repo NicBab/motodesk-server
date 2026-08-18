@@ -143,8 +143,9 @@ model RepairOrder {
 
   laborLines RepairOrderLaborLine[]
 
-  partLines RepairOrderPartLine[]
-  schedules Schedule[]
+  partLines             RepairOrderPartLine[]
+  schedules             Schedule[]
+  technicianAssignments TechnicianAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

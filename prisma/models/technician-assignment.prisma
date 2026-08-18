@@ -1,0 +1,34 @@
+enum TechnicianAssignmentStatus {
+  ACTIVE
+  REASSIGNED
+  REMOVED
+}
+
+model TechnicianAssignment {
+  id                     String @id @default(cuid())
+  organizationId         String
+  repairOrderId          String
+  technicianMembershipId String
+
+  assignedByMembershipId String?
+
+  status TechnicianAssignmentStatus @default(ACTIVE)
+
+  assignedAt DateTime  @default(now())
+  endedAt    DateTime?
+  notes      String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  technician Membership @relation("TechnicianAssignmentTechnician", fields: [technicianMembershipId], references: [id], onDelete: Restrict)
+
+  assignedByMembership Membership? @relation("TechnicianAssignmentAssignedBy", fields: [assignedByMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([repairOrderId])
+  @@index([technicianMembershipId])
+  @@index([repairOrderId, status])
+  @@index([organizationId, technicianMembershipId, status])
+}

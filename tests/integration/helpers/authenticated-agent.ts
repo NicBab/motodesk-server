@@ -4,18 +4,24 @@ import { app } from "../../../src/app.js";
 
 //************************************************************** */
 
-const DEV_USER_EMAIL =
-  "dev.owner@motodesk.local";
+const DEV_USER_EMAIL = "dev.owner@motodesk.local";
 
-const DEV_USER_PASSWORD =
-  "MotoDeskDev123!";
+const DEV_USER_PASSWORD = "MotoDeskDev123!";
 
-const DEV_ORGANIZATION_SLUG =
-  "motodesk-dev-shop";
+const DEV_ORGANIZATION_SLUG = "motodesk-dev-shop";
 
 //************************************************************** */
 
+// type OrganizationMembershipResponse = {
+//   organization?: {
+//     id?: unknown;
+//     slug?: unknown;
+//   };
+// };
+
 type OrganizationMembershipResponse = {
+  id?: unknown;
+
   organization?: {
     id?: unknown;
     slug?: unknown;
@@ -25,32 +31,20 @@ type OrganizationMembershipResponse = {
 //************************************************************** */
 
 export async function createAuthenticatedAgent() {
-  const agent =
-    request.agent(app);
+  const agent = request.agent(app);
 
   // Login with the seeded development owner.
-  const loginResponse =
-    await agent
-      .post("/api/v1/auth/login")
-      .send({
-        email: DEV_USER_EMAIL,
-        password: DEV_USER_PASSWORD,
-      });
+  const loginResponse = await agent.post("/api/v1/auth/login").send({
+    email: DEV_USER_EMAIL,
+    password: DEV_USER_PASSWORD,
+  });
 
-  if (
-    loginResponse.status !== 200 ||
-    loginResponse.body?.success !== true
-  ) {
-    throw new Error(
-      `Dev login failed with status ${loginResponse.status}.`,
-    );
+  if (loginResponse.status !== 200 || loginResponse.body?.success !== true) {
+    throw new Error(`Dev login failed with status ${loginResponse.status}.`);
   }
 
   // Load the organizations available to the seeded user.
-  const organizationsResponse =
-    await agent.get(
-      "/api/v1/organizations/me",
-    );
+  const organizationsResponse = await agent.get("/api/v1/organizations/me");
 
   if (
     organizationsResponse.status !== 200 ||
@@ -61,49 +55,41 @@ export async function createAuthenticatedAgent() {
     );
   }
 
-  const memberships =
-    organizationsResponse.body.data;
+  const memberships = organizationsResponse.body.data;
 
   if (!Array.isArray(memberships)) {
-    throw new Error(
-      "Organization lookup did not return an array.",
-    );
+    throw new Error("Organization lookup did not return an array.");
   }
 
-  const membership =
-    memberships.find(
-      (
-        item: OrganizationMembershipResponse,
-      ) =>
-        item.organization?.slug ===
-        DEV_ORGANIZATION_SLUG,
-    );
+  const membership = memberships.find(
+    (item: OrganizationMembershipResponse) =>
+      item.organization?.slug === DEV_ORGANIZATION_SLUG,
+  );
 
-  const organizationId =
-    membership?.organization?.id;
+  const organizationId = membership?.organization?.id;
 
-  if (
-    typeof organizationId !== "string"
-  ) {
+  const membershipId = membership?.id;
+
+  if (typeof organizationId !== "string") {
     throw new Error(
       `Seeded organization "${DEV_ORGANIZATION_SLUG}" was not found.`,
     );
   }
 
-  // Switch the access token into the seeded organization.
-  const switchResponse =
-    await agent
-      .post(
-        "/api/v1/auth/switch-organization",
-      )
-      .send({
-        organizationId,
-      });
+  if (typeof membershipId !== "string") {
+    throw new Error(
+      `Seeded membership for organization "${DEV_ORGANIZATION_SLUG}" was not found.`,
+    );
+  }
 
-  if (
-    switchResponse.status !== 200 ||
-    switchResponse.body?.success !== true
-  ) {
+  // Switch the access token into the seeded organization.
+  const switchResponse = await agent
+    .post("/api/v1/auth/switch-organization")
+    .send({
+      organizationId,
+    });
+
+  if (switchResponse.status !== 200 || switchResponse.body?.success !== true) {
     throw new Error(
       `Organization switch failed with status ${switchResponse.status}.`,
     );
@@ -112,5 +98,6 @@ export async function createAuthenticatedAgent() {
   return {
     agent,
     organizationId,
+    membershipId,
   };
 }

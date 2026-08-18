@@ -126,6 +126,10 @@ model Membership {
 
   partInventoryTransactions PartInventoryTransaction[] @relation("PartInventoryTransactionCreatedBy")
 
+  technicianAssignments TechnicianAssignment[] @relation("TechnicianAssignmentTechnician")
+
+  technicianAssignmentsCreated TechnicianAssignment[] @relation("TechnicianAssignmentAssignedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
