@@ -13,7 +13,6 @@ export const repairOrderStatusSchema = z.enum([
   "IN_PROGRESS",
   "PAUSED",
   "WAITING_ON_ADDITIONAL_APPROVAL",
-  "WAITING_ON_ADDITIONAL_PARTS",
   "WORK_COMPLETE",
   "QUALITY_CHECK",
   "READY_FOR_PICKUP",

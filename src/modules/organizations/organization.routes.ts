@@ -19,6 +19,7 @@ import serviceBayRouter from "../service-bays/service-bay.routes.js";
 import repairOrderWorkStatusRouter from "../repair-orders/repair-order-work-status.routes.js";
 import repairOrderReopenRouter from "../repair-orders/repair-order-reopen.routes.js";
 import repairOrderAdditionalWorkRouter from "../repair-orders/repair-order-additional-work.routes.js";
+import repairOrderAdditionalApprovalRouter from "../repair-orders/repair-order-additional-approval.routes.js";
 
 import {
   createOrganizationSchema,
@@ -144,6 +145,13 @@ router.use(
 router.use(
   "/:organizationId/repair-orders",
   repairOrderAdditionalWorkRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/repair-orders",
+  repairOrderAdditionalApprovalRouter,
 );
 
 //************************************************************** */

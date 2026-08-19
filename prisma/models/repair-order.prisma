@@ -11,7 +11,6 @@ enum RepairOrderStatus {
   IN_PROGRESS
   PAUSED
   WAITING_ON_ADDITIONAL_APPROVAL
-  WAITING_ON_ADDITIONAL_PARTS
   WORK_COMPLETE
   QUALITY_CHECK
   READY_FOR_PICKUP
@@ -80,6 +79,13 @@ enum RepairOrderPartResolutionMethod {
   INVENTORY_TRANSFER
   NOT_REQUIRED
   MANAGER_OVERRIDE
+}
+
+enum RepairOrderLaborStatus {
+  PROPOSED
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 //************************************************************** */
@@ -209,6 +215,8 @@ model RepairOrderLaborLine {
 
   hours Decimal @default(0) @db.Decimal(8, 2)
   rate  Decimal @default(0) @db.Decimal(12, 2)
+
+  status RepairOrderLaborStatus @default(PROPOSED)
 
   startedAt   DateTime?
   completedAt DateTime?

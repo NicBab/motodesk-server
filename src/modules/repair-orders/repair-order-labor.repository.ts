@@ -149,6 +149,8 @@ export async function startRepairOrderLaborLineRecord(
 
       data: {
         startedAt,
+
+        status: "ACTIVE",
       },
 
       include: {
@@ -227,6 +229,8 @@ export async function completeRepairOrderLaborLineRecord(
         completed: true,
 
         completedAt,
+
+        status: "COMPLETED",
 
         ...((
           await transaction.repairOrderLaborLine.findUnique({
