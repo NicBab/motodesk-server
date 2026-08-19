@@ -37,6 +37,11 @@
     "test:repair-order-parts": "tsx --test tests/integration/repair-orders/repair-order-parts.test.ts",
     "test:repair-order-readiness": "tsx --test tests/integration/repair-orders/repair-order-readiness.test.ts",
     "test:repair-order-parts-review":"tsx --test tests/integration/repair-orders/repair-order-parts-review.test.ts",
+    "test:repair-order-work-status": "tsx --test tests/integration/repair-order-work-status/*.test.ts",
+    "test:repair-order-quality-check": "tsx --test tests/integration/repair-order-quality-check/*.test.ts",
+    "test:repair-order-cashier": "tsx --test tests/integration/repair-order-cashier/*.test.ts",
+    "test:repair-order-reopen": "tsx --test tests/integration/repair-order-reopen/*.test.ts",
+    "test:repair-order-additional-work": "tsx --test tests/integration/repair-order-additional-work/*.test.ts",
 
     "test:purchase-orders": "tsx --test tests/integration/purchase-orders/*.test.ts",
     "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",
@@ -48,9 +53,9 @@
 
     "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
 
-    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
-    
-    "test:repair-order-work-status": "tsx --test tests/integration/repair-order-work-status/*.test.ts"
+    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts"
+
+
     
   },
   "keywords": [],

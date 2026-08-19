@@ -3,7 +3,7 @@ import { AppError } from "../../platform/errors/app-error.js";
 import {
   getRepairOrderById,
   updateRepairOrderStatus,
-} from "../repair-orders/repair-order.service.js";
+} from "./repair-order.service.js";
 
 import type {
   PauseRepairOrderWorkInput,
