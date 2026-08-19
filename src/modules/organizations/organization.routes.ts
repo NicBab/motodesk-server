@@ -16,6 +16,7 @@ import purchaseOrderRouter from "../purchase-orders/purchase-order.routes.js";
 import scheduleRouter from "../scheduling/schedule.routes.js";
 import technicianAssignmentRouter from "../technician-assignments/technician-assignment.routes.js";
 import serviceBayRouter from "../service-bays/service-bay.routes.js";
+import repairOrderWorkStatusRouter from "../repair-order-work-status/repair-order-work-status.routes.js";
 
 import {
   createOrganizationSchema,
@@ -120,6 +121,13 @@ router.use(
 router.use(
   "/:organizationId/service-bays",
   serviceBayRouter,
+);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/repair-order-work-status",
+  repairOrderWorkStatusRouter,
 );
 
 //************************************************************** */

@@ -48,7 +48,9 @@
 
     "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
 
-    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts"
+    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
+    
+    "test:repair-order-work-status": "tsx --test tests/integration/repair-order-work-status/*.test.ts"
     
   },
   "keywords": [],
