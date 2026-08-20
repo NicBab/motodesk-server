@@ -7,22 +7,23 @@ model Organization {
   email String?
   phone String?
 
-  memberships           Membership[]
-  auditLogs             AuditLog[]
-  customers             Customer[]
-  vehicles              Vehicle[]
-  repairOrders          RepairOrder[]
-  parts                 Part[]
-  vendors               Vendor[]
-  purchaseOrders        PurchaseOrder[]
-  schedules             Schedule[]
-  technicianAssignments TechnicianAssignment[]
-  serviceBays           ServiceBay[]
-  serviceBayAssignments ServiceBayAssignment[]
-  purchaseOrderSequence PurchaseOrderSequence?
-  repairOrderSequence   RepairOrderSequence?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  memberships                   Membership[]
+  auditLogs                     AuditLog[]
+  customers                     Customer[]
+  vehicles                      Vehicle[]
+  repairOrders                  RepairOrder[]
+  parts                         Part[]
+  vendors                       Vendor[]
+  purchaseOrders                PurchaseOrder[]
+  schedules                     Schedule[]
+  technicianAssignments         TechnicianAssignment[]
+  serviceBays                   ServiceBay[]
+  serviceBayAssignments         ServiceBayAssignment[]
+  repairOrderLaborCancellations RepairOrderLaborCancellation[]
+  purchaseOrderSequence         PurchaseOrderSequence?
+  repairOrderSequence           RepairOrderSequence?
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime                       @updatedAt
 }
 
 //************************************************************** */

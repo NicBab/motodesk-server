@@ -153,6 +153,7 @@ model RepairOrder {
   schedules             Schedule[]
   technicianAssignments TechnicianAssignment[]
   serviceBayAssignments ServiceBayAssignment[]
+  laborCancellations    RepairOrderLaborCancellation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -225,10 +226,10 @@ model RepairOrderLaborLine {
 
   repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
 
-  technician Membership? @relation("RepairOrderLaborTechnician", fields: [technicianMembershipId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  technician    Membership?                    @relation("RepairOrderLaborTechnician", fields: [technicianMembershipId], references: [id], onDelete: SetNull)
+  cancellations RepairOrderLaborCancellation[]
+  createdAt     DateTime                       @default(now())
+  updatedAt     DateTime                       @updatedAt
 
   @@index([repairOrderId])
   @@index([technicianMembershipId])
@@ -282,4 +283,29 @@ model RepairOrderPartLine {
   @@index([partId])
   @@index([repairOrderId, status])
   @@index([repairOrderId, blocksWork])
+}
+
+model RepairOrderLaborCancellation {
+  id String @id @default(cuid())
+
+  repairOrderId           String
+  laborLineId             String
+  organizationId          String
+  cancelledByMembershipId String?
+
+  reason String
+
+  createdAt DateTime @default(now())
+
+  repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  laborLine RepairOrderLaborLine @relation(fields: [laborLineId], references: [id], onDelete: Cascade)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  cancelledByMembership Membership? @relation("RepairOrderLaborCancellationCancelledBy", fields: [cancelledByMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([repairOrderId])
+  @@index([laborLineId])
+  @@index([organizationId])
 }

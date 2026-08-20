@@ -264,6 +264,10 @@ export async function completeRepairOrderLaborLineRecord(
           repairOrderId,
 
           completed: false,
+
+          status: {
+            not: "CANCELLED",
+          },
         },
       });
 

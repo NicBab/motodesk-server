@@ -132,6 +132,8 @@ model Membership {
 
   serviceBayAssignmentsCreated ServiceBayAssignment[] @relation("ServiceBayAssignmentAssignedBy")
 
+  repairOrderLaborCancellationsCreated RepairOrderLaborCancellation[] @relation("RepairOrderLaborCancellationCancelledBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
