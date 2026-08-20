@@ -1,0 +1,38 @@
+//************************************************************** */
+// Membership Permission
+//
+// Permission definitions live in application code.
+// This table stores the permissions actually granted to a
+// membership inside an organization.
+//
+// Roles act as presets when a membership is provisioned.
+// Authorization checks use these membership permissions.
+//
+// OWNER will ultimately receive implicit full access.
+//************************************************************** */
+
+model MembershipPermission {
+  id String @id @default(cuid())
+
+  organizationId String
+  membershipId   String
+
+  permission String
+
+  grantedByMembershipId String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  membership Membership @relation("MembershipPermissions", fields: [membershipId], references: [id], onDelete: Cascade)
+
+  grantedBy Membership? @relation("MembershipPermissionsGrantedBy", fields: [grantedByMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([membershipId, permission])
+  @@index([organizationId])
+  @@index([membershipId])
+  @@index([organizationId, membershipId])
+  @@index([permission])
+}

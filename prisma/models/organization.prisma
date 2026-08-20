@@ -20,6 +20,7 @@ model Organization {
   serviceBays                   ServiceBay[]
   serviceBayAssignments         ServiceBayAssignment[]
   repairOrderLaborCancellations RepairOrderLaborCancellation[]
+  membershipPermissions         MembershipPermission[]
   purchaseOrderSequence         PurchaseOrderSequence?
   repairOrderSequence           RepairOrderSequence?
   createdAt                     DateTime                       @default(now())

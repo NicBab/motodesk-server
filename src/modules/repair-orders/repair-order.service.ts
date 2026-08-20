@@ -734,8 +734,8 @@ export async function completeRepairOrderPartsReview(
     notes:
       input.notes ??
       (allBlockingPartsReady
-        ? "Parts review completed. Repair order is waiting on outstanding parts."
-        : "Parts review completed. All blocking parts are available."),
+        ? "Parts review completed. All blocking parts are available."
+        : "Parts review completed. Repair order is waiting on outstanding parts."),
 
     automatic: false,
   });

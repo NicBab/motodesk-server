@@ -134,6 +134,10 @@ model Membership {
 
   repairOrderLaborCancellationsCreated RepairOrderLaborCancellation[] @relation("RepairOrderLaborCancellationCancelledBy")
 
+  permissions MembershipPermission[] @relation("MembershipPermissions")
+
+  permissionsGranted MembershipPermission[] @relation("MembershipPermissionsGrantedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
