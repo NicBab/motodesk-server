@@ -3,21 +3,40 @@ import type {
   Response,
 } from "express";
 
+import {
+  MembershipRole,
+} from "../../generated/prisma/client.js";
+
 import { AppError } from "../../platform/errors/app-error.js";
-import type { AuthenticatedRequest } from "../auth/index.js";
-import type { Permission } from "./permission.constants.js";
-import { checkPermissions } from "./permission.utils.js";
+
+import type {
+  AuthenticatedRequest,
+} from "../auth/index.js";
+
+import type {
+  Permission,
+} from "./permission.constants.js";
+
+import {
+  findMembershipPermissions,
+} from "./permission.repository.js";
+
+import {
+  checkEffectivePermissions,
+  getEffectivePermissions,
+  getPermissionsForRole,
+} from "./permission.utils.js";
 
 //************************************************************** */
 
 export function requirePermissions(
   ...permissions: Permission[]
 ) {
-  return (
+  return async (
     request: AuthenticatedRequest,
     _response: Response,
     next: NextFunction,
-  ): void => {
+  ): Promise<void> => {
     const membership =
       request.authenticatedMembership;
 
@@ -31,9 +50,39 @@ export function requirePermissions(
       );
     }
 
+    let effectivePermissions: Permission[];
+
+    if (
+      membership.role ===
+      MembershipRole.OWNER
+    ) {
+      effectivePermissions =
+        getPermissionsForRole(
+          MembershipRole.OWNER,
+        );
+    } else {
+      const storedPermissions =
+        await findMembershipPermissions(
+          membership.organizationId,
+          membership.id,
+        );
+
+      const membershipPermissions =
+        storedPermissions.map(
+          (record) =>
+            record.permission as Permission,
+        );
+
+      effectivePermissions =
+        getEffectivePermissions(
+          membership.role,
+          membershipPermissions,
+        );
+    }
+
     const result =
-      checkPermissions(
-        membership.role,
+      checkEffectivePermissions(
+        effectivePermissions,
         permissions,
       );
 
@@ -54,3 +103,5 @@ export function requirePermissions(
     next();
   };
 }
+
+//************************************************************** */

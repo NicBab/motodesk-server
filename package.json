@@ -58,7 +58,8 @@
 
     "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
 
-    "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts"
+    "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts",
+    "test:effective-membership-authorization": "tsx --test tests/integration/effective-membership-authorization/*.test.ts"
 
 
     
