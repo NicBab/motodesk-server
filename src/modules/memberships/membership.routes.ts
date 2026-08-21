@@ -1,30 +1,34 @@
 import { Router } from "express";
+
 import { authenticateRequest } from "../auth/index.js";
-import { Permissions } from "../permissions/permission.constants.js";
-import { requirePermissions } from "../permissions/permission.middleware.js";
+
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
-import {
-  requireOrganizationAccess,
-} from "../organizations/index.js";
+import { requireOrganizationAccess } from "../organizations/index.js";
 
-import {
-  getMembershipHandler,
-  listMembershipsHandler,
-  updateMembershipHandler,
-} from "./membership.controller.js";
+import { requirePermissions } from "../permissions/permission.middleware.js";
 
-import {
-  listMembershipsQuerySchema,
-  membershipIdSchema,
-  updateMembershipSchema,
-} from "./membership.schemas.js";
+import { Permissions } from "../permissions/permission.constants.js";
 
 import {
   validateBody,
   validateParams,
   validateQuery,
 } from "../../platform/validation/index.js";
+
+import {
+  createMembershipSchema,
+  listMembershipsQuerySchema,
+  membershipIdSchema,
+  updateMembershipSchema,
+} from "./membership.schemas.js";
+
+import {
+  createMembershipHandler,
+  getMembershipHandler,
+  listMembershipsHandler,
+  updateMembershipHandler,
+} from "./membership.controller.js";
 
 //************************************************************** */
 
@@ -39,13 +43,21 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  requirePermissions(
-    Permissions.MEMBERSHIPS_VIEW,
-  ),
-  validateQuery(
-    listMembershipsQuerySchema,
-  ),
+  requirePermissions(Permissions.MEMBERSHIPS_VIEW),
+  validateQuery(listMembershipsQuerySchema),
   listMembershipsHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.MEMBERSHIPS_CREATE),
+  validateBody(createMembershipSchema),
+  createMembershipHandler,
 );
 
 //************************************************************** */
@@ -55,9 +67,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  requirePermissions(
-    Permissions.MEMBERSHIPS_VIEW,
-  ),
+  requirePermissions(Permissions.MEMBERSHIPS_VIEW),
   validateParams(membershipIdSchema),
   getMembershipHandler,
 );
@@ -69,9 +79,7 @@ router.patch(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  requirePermissions(
-    Permissions.MEMBERSHIPS_UPDATE,
-  ),
+  requirePermissions(Permissions.MEMBERSHIPS_UPDATE),
   validateParams(membershipIdSchema),
   validateBody(updateMembershipSchema),
   updateMembershipHandler,
@@ -80,3 +88,5 @@ router.patch(
 //************************************************************** */
 
 export default router;
+
+//************************************************************** */

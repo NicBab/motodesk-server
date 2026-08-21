@@ -60,7 +60,8 @@
 
     "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts",
     "test:effective-membership-authorization": "tsx --test tests/integration/effective-membership-authorization/*.test.ts",
-    "test:membership-role-permissions": "tsx --test tests/integration/membership-role-permissions/*.test.ts"
+    "test:membership-role-permissions": "tsx --test tests/integration/membership-role-permissions/*.test.ts",
+    "test:membership-creation": "tsx --test tests/integration/membership-creation/*.test.ts"
 
 
     

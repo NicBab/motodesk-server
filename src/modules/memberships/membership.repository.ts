@@ -1,20 +1,17 @@
+import {
+  MembershipStatus,
+  type MembershipRole,
+} from "../../generated/prisma/client.js";
+
 import { prisma } from "../../config/prisma.js";
 
-import type {
-  MembershipUpdateData,
-} from "./membership.types.js";
+import type { MembershipUpdateData } from "./membership.types.js";
 
-import type {
-  PaginationInput,
-} from "../../platform/http/pagination.js";
+import type { PaginationInput } from "../../platform/http/pagination.js";
 
-import {
-  buildPagination,
-} from "../../platform/database/repository.js";
+import { buildPagination } from "../../platform/database/repository.js";
 
-import type {
-  Permission,
-} from "../permissions/permission.constants.js";
+import type { Permission } from "../permissions/permission.constants.js";
 
 //************************************************************** */
 
@@ -28,10 +25,7 @@ export async function findMembershipsByOrganization(
     },
 
     ...(pagination !== undefined
-      ? buildPagination(
-          pagination.page,
-          pagination.pageSize,
-        )
+      ? buildPagination(pagination.page, pagination.pageSize)
       : {}),
 
     include: {
@@ -92,6 +86,75 @@ export async function findMembershipForUpdate(
 
 //************************************************************** */
 
+export async function findUserForMembershipByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: {
+      email,
+    },
+
+    select: {
+      id: true,
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function findMembershipByUserAndOrganization(
+  userId: string,
+  organizationId: string,
+) {
+  return prisma.membership.findUnique({
+    where: {
+      userId_organizationId: {
+        userId,
+        organizationId,
+      },
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function createMembershipWithPermissions(
+  organizationId: string,
+  userId: string,
+  role: MembershipRole,
+  permissions: Permission[],
+  grantedByMembershipId: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const membership = await transaction.membership.create({
+      data: {
+        organizationId,
+        userId,
+        role,
+        status: MembershipStatus.ACTIVE,
+      },
+
+      include: {
+        user: true,
+        organization: true,
+      },
+    });
+
+    if (permissions.length > 0) {
+      await transaction.membershipPermission.createMany({
+        data: permissions.map((permission) => ({
+          organizationId,
+          membershipId: membership.id,
+          permission,
+          grantedByMembershipId,
+        })),
+      });
+    }
+
+    return membership;
+  });
+}
+
+//************************************************************** */
+
 export async function updateMembershipRecord(
   membershipId: string,
   data: MembershipUpdateData,
@@ -131,68 +194,55 @@ export async function updateMembershipRoleAndPermissions(
   permissions: Permission[],
   grantedByMembershipId: string,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const membership =
-        await transaction.membership.update({
-          where: {
-            id: membershipId,
-          },
+  return prisma.$transaction(async (transaction) => {
+    const membership = await transaction.membership.update({
+      where: {
+        id: membershipId,
+      },
 
-          data: {
-            ...(data.role !== undefined
-              ? {
-                  role: data.role,
-                }
-              : {}),
+      data: {
+        ...(data.role !== undefined
+          ? {
+              role: data.role,
+            }
+          : {}),
 
-            ...(data.status !== undefined
-              ? {
-                  status: data.status,
-                }
-              : {}),
-          },
+        ...(data.status !== undefined
+          ? {
+              status: data.status,
+            }
+          : {}),
+      },
 
-          include: {
-            user: true,
-            organization: true,
-          },
-        });
+      include: {
+        user: true,
+        organization: true,
+      },
+    });
 
-      await transaction.membershipPermission.deleteMany({
-        where: {
+    await transaction.membershipPermission.deleteMany({
+      where: {
+        organizationId,
+        membershipId,
+      },
+    });
+
+    if (permissions.length > 0) {
+      await transaction.membershipPermission.createMany({
+        data: permissions.map((permission) => ({
           organizationId,
           membershipId,
-        },
+          permission,
+          grantedByMembershipId,
+        })),
       });
+    }
 
-      if (permissions.length > 0) {
-        await transaction.membershipPermission.createMany({
-          data: permissions.map(
-            (permission) => ({
-              organizationId,
-              membershipId,
-              permission,
-              grantedByMembershipId,
-            }),
-          ),
-        });
-      }
-
-      return membership;
-    },
-  );
+    return membership;
+  });
 }
 
 //************************************************************** */
-
-
-
-
-
-
-
-
 
 // import { prisma } from "../../config/prisma.js";
 // import type {
