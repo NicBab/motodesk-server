@@ -19,7 +19,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
 
-    "test": "tsx --test",
+
+    "test": "tsx --test --test-concurrency=1",
     "test:customers": "tsx --test tests/integration/customers/*.test.ts",
     "test:vehicles": "tsx --test tests/integration/vehicles/*.test.ts",
     "test:parts": "tsx --test tests/integration/parts/*.test.ts",
@@ -55,7 +56,9 @@
 
     "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
 
-    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts"
+    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
+
+    "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts"
 
 
     
