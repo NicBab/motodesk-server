@@ -4,6 +4,10 @@ import {
   MembershipRole,
 } from "../../generated/prisma/client.js";
 
+import {
+  paginationQuerySchema,
+} from "../../platform/http/pagination.schema.js";
+
 //************************************************************** */
 
 export const createMembershipInvitationSchema =
@@ -48,6 +52,11 @@ export const membershipInvitationIdSchema =
 
 //************************************************************** */
 
+export const listMembershipInvitationsQuerySchema =
+  paginationQuerySchema;
+
+//************************************************************** */
+
 export type CreateMembershipInvitationInput =
   z.infer<
     typeof createMembershipInvitationSchema
@@ -61,6 +70,11 @@ export type AcceptMembershipInvitationInput =
 export type MembershipInvitationIdInput =
   z.infer<
     typeof membershipInvitationIdSchema
+  >;
+
+export type ListMembershipInvitationsQueryInput =
+  z.infer<
+    typeof listMembershipInvitationsQuerySchema
   >;
 
 //************************************************************** */

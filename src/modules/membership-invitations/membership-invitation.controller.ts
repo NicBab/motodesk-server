@@ -13,6 +13,7 @@ import {
 import {
   requireValidatedBody,
   requireValidatedParams,
+  requireValidatedQuery,
 } from "../../platform/validation/validated-request.js";
 
 import {
@@ -24,12 +25,14 @@ import {
   acceptMembershipInvitation,
   createMembershipInvitation,
   revokeMembershipInvitation,
+  listMembershipInvitations,
 } from "./membership-invitation.service.js";
 
 import type {
   AcceptMembershipInvitationInput,
   CreateMembershipInvitationInput,
   MembershipInvitationIdInput,
+  ListMembershipInvitationsQueryInput,
 } from "./membership-invitation.schemas.js";
 
 //************************************************************** */
@@ -58,6 +61,41 @@ function requireOrganizationId(
 }
 
 //************************************************************** */
+
+export async function listMembershipInvitationsHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(
+      request,
+    );
+
+  const query =
+    requireValidatedQuery<ListMembershipInvitationsQueryInput>(
+      request,
+    );
+
+  const invitations =
+    await listMembershipInvitations(
+      organizationId,
+      {
+        page:
+          query.page,
+
+        pageSize:
+          query.pageSize,
+      },
+    );
+
+  ok(
+    response,
+    invitations,
+  );
+}
+
+//************************************************************** */
+
 
 export async function createMembershipInvitationHandler(
   request: AuthenticatedRequest,

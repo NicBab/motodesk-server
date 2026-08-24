@@ -13,16 +13,19 @@ import { Permissions } from "../permissions/permission.constants.js";
 import {
   validateBody,
   validateParams,
+  validateQuery,
 } from "../../platform/validation/index.js";
 
 import {
   createMembershipInvitationSchema,
   membershipInvitationIdSchema,
+  listMembershipInvitationsQuerySchema,
 } from "./membership-invitation.schemas.js";
 
 import {
   createMembershipInvitationHandler,
   revokeMembershipInvitationHandler,
+  listMembershipInvitationsHandler,
 } from "./membership-invitation.controller.js";
 
 //************************************************************** */
@@ -30,6 +33,18 @@ import {
 const router = Router({
   mergeParams: true,
 });
+
+//************************************************************** */
+
+router.get(
+  "/",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.MEMBERSHIPS_INVITE),
+  validateQuery(listMembershipInvitationsQuerySchema),
+  listMembershipInvitationsHandler,
+);
 
 //************************************************************** */
 

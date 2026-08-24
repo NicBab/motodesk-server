@@ -26,7 +26,15 @@ import {
   findMembershipInvitationByTokenHash,
   findPendingMembershipInvitationByEmail,
   revokeMembershipInvitationRecord,
+  countMembershipInvitationsByOrganization,
+  findMembershipInvitationsByOrganization,
 } from "./membership-invitation.repository.js";
+
+import {
+  createPaginatedData,
+  type PaginatedData,
+  type PaginationInput,
+} from "../../platform/http/pagination.js";
 
 //************************************************************** */
 
@@ -53,6 +61,47 @@ export interface CreateMembershipInvitationResult {
 }
 
 //************************************************************** */
+
+export async function listMembershipInvitations(
+  organizationId: string,
+  pagination: PaginationInput,
+): Promise<
+  PaginatedData<{
+    id: string;
+    organizationId: string;
+    invitedByMembershipId: string;
+    email: string;
+    role: MembershipRole;
+    expiresAt: Date;
+    acceptedAt: Date | null;
+    revokedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>
+> {
+  const [
+    invitations,
+    totalItems,
+  ] = await Promise.all([
+    findMembershipInvitationsByOrganization(
+      organizationId,
+      pagination,
+    ),
+
+    countMembershipInvitationsByOrganization(
+      organizationId,
+    ),
+  ]);
+
+  return createPaginatedData(
+    invitations,
+    pagination,
+    totalItems,
+  );
+}
+
+//************************************************************** */
+
 
 export async function createMembershipInvitation(
   organizationId: string,

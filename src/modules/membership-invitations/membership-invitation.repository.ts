@@ -7,6 +7,43 @@ import { prisma } from "../../config/prisma.js";
 
 import type { Permission } from "../permissions/permission.constants.js";
 
+import type { PaginationInput } from "../../platform/http/pagination.js";
+
+import { buildPagination } from "../../platform/database/repository.js";
+
+//************************************************************** */
+
+export async function findMembershipInvitationsByOrganization(
+  organizationId: string,
+  pagination?: PaginationInput,
+) {
+  return prisma.membershipInvitation.findMany({
+    where: {
+      organizationId,
+    },
+
+    ...(pagination !== undefined
+      ? buildPagination(pagination.page, pagination.pageSize)
+      : {}),
+
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function countMembershipInvitationsByOrganization(
+  organizationId: string,
+): Promise<number> {
+  return prisma.membershipInvitation.count({
+    where: {
+      organizationId,
+    },
+  });
+}
+
 //************************************************************** */
 
 export async function findPendingMembershipInvitationByEmail(
