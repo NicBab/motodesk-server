@@ -60,6 +60,10 @@ import {
   resendEmailVerificationSchema,
 } from "./identity/resend-email-verification/index.js";
 
+import { acceptMembershipInvitationSchema } from "../membership-invitations/membership-invitation.schemas.js";
+
+import { acceptMembershipInvitationHandler } from "../membership-invitations/membership-invitation.controller.js";
+
 //*********************************************************************** */
 
 const router = Router();
@@ -69,6 +73,14 @@ router.post("/register", validateBody(registerSchema), register);
 router.post("/login", validateBody(loginSchema), login);
 
 router.post("/refresh", validateBody(refreshSessionSchema), refresh);
+
+router.post(
+  "/accept-membership-invitation",
+  authenticateRequest,
+  initializeRequestContext,
+  validateBody(acceptMembershipInvitationSchema),
+  acceptMembershipInvitationHandler,
+);
 
 router.post(
   "/switch-organization",

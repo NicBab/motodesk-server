@@ -8,6 +8,7 @@ model Organization {
   phone String?
 
   memberships                   Membership[]
+  membershipInvitations         MembershipInvitation[]
   auditLogs                     AuditLog[]
   customers                     Customer[]
   vehicles                      Vehicle[]
@@ -23,8 +24,9 @@ model Organization {
   membershipPermissions         MembershipPermission[]
   purchaseOrderSequence         PurchaseOrderSequence?
   repairOrderSequence           RepairOrderSequence?
-  createdAt                     DateTime                       @default(now())
-  updatedAt                     DateTime                       @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 //************************************************************** */

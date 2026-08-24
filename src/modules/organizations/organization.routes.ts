@@ -23,6 +23,7 @@ import repairOrderAdditionalWorkRouter from "../repair-orders/repair-order-addit
 import repairOrderAdditionalApprovalRouter from "../repair-orders/repair-order-additional-approval.routes.js";
 import repairOrderLaborCancelRouter from "../repair-orders/repair-order-labor-cancel.routes.js";
 import repairOrderPartCancelRouter from "../repair-orders/repair-order-part-cancel.routes.js";
+import membershipInvitationRouter from "../membership-invitations/membership-invitation.routes.js";
 
 import {
   createOrganizationSchema,
@@ -134,6 +135,13 @@ router.use("/:organizationId/repair-orders", repairOrderLaborCancelRouter);
 //************************************************************** */
 
 router.use("/:organizationId/repair-orders", repairOrderPartCancelRouter);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/membership-invitations",
+  membershipInvitationRouter,
+);
 
 //************************************************************** */
 

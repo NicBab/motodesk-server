@@ -57,6 +57,7 @@ model AuthToken {
 }
 
 //************************************************************** */
+
 model Session {
   id String @id @default(cuid())
 
@@ -138,12 +139,44 @@ model Membership {
 
   permissionsGranted MembershipPermission[] @relation("MembershipPermissionsGrantedBy")
 
+  membershipInvitationsCreated MembershipInvitation[] @relation("MembershipInvitationInvitedBy")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, organizationId])
   @@index([userId])
   @@index([organizationId])
+}
+
+//************************************************************** */
+
+model MembershipInvitation {
+  id String @id @default(cuid())
+
+  organizationId       String
+  invitedByMembershipId String
+
+  email String
+  role  MembershipRole
+
+  tokenHash String @unique
+
+  expiresAt DateTime
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invitedBy Membership @relation("MembershipInvitationInvitedBy", fields: [invitedByMembershipId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([expiresAt])
+  @@index([organizationId, email])
 }
 
 //************************************************************** */
