@@ -2,6 +2,10 @@ import { MembershipRole } from "../../generated/prisma/client.js";
 
 import { AppError } from "../../platform/errors/app-error.js";
 
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../audit/audit.constants.js";
+
+import { createAuditLog } from "../audit/audit.service.js";
+
 import type { AuthenticatedUser } from "../auth/auth.types.js";
 
 import { generateRandomToken, hashToken } from "../auth/tokens/token.crypto.js";
@@ -139,6 +143,40 @@ export async function createMembershipInvitation(
     expiresAt,
   );
 
+  await createAuditLog({
+    action: AUDIT_ACTIONS.INVITATION_CREATED,
+
+    entityType: AUDIT_ENTITY_TYPES.INVITATION,
+
+    entityId: invitation.id,
+
+    actor: {
+      organizationId,
+    },
+
+    after: {
+      id: invitation.id,
+
+      organizationId: invitation.organizationId,
+
+      invitedByMembershipId: invitation.invitedByMembershipId,
+
+      email: invitation.email,
+
+      role: invitation.role,
+
+      expiresAt: invitation.expiresAt,
+
+      acceptedAt: invitation.acceptedAt,
+
+      revokedAt: invitation.revokedAt,
+    },
+
+    metadata: {
+      actorMembershipId: actor.membershipId,
+    },
+  });
+
   return {
     invitation: {
       id: invitation.id,
@@ -208,7 +246,30 @@ export async function revokeMembershipInvitation(
     });
   }
 
-  return revokeMembershipInvitationRecord(invitationId);
+  const revokedInvitation =
+    await revokeMembershipInvitationRecord(invitationId);
+
+  await createAuditLog({
+    action: AUDIT_ACTIONS.INVITATION_REVOKED,
+
+    entityType: AUDIT_ENTITY_TYPES.INVITATION,
+
+    entityId: invitationId,
+
+    actor: {
+      organizationId,
+    },
+
+    before: invitation,
+
+    after: revokedInvitation,
+
+    metadata: {
+      actorMembershipId: actor.membershipId,
+    },
+  });
+
+  return revokedInvitation;
 }
 
 //************************************************************** */
@@ -276,7 +337,7 @@ export async function acceptMembershipInvitation(
 
   const permissions = getPermissionsForRole(invitation.role);
 
-  return acceptMembershipInvitationRecord(
+  const membership = await acceptMembershipInvitationRecord(
     invitation.id,
     invitation.organizationId,
     user.id,
@@ -284,6 +345,36 @@ export async function acceptMembershipInvitation(
     permissions,
     invitation.invitedByMembershipId,
   );
+
+  await createAuditLog({
+    action: AUDIT_ACTIONS.INVITATION_ACCEPTED,
+
+    entityType: AUDIT_ENTITY_TYPES.INVITATION,
+
+    entityId: invitation.id,
+
+    actor: {
+      userId: user.id,
+
+      organizationId: invitation.organizationId,
+    },
+
+    before: invitation,
+
+    after: {
+      acceptedAt: new Date(),
+
+      membershipId: membership.id,
+
+      membershipRole: membership.role,
+    },
+
+    metadata: {
+      invitedByMembershipId: invitation.invitedByMembershipId,
+    },
+  });
+
+  return membership;
 }
 
 //************************************************************** */
