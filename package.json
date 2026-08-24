@@ -25,6 +25,9 @@
     "test:vehicles": "tsx --test tests/integration/vehicles/*.test.ts",
     "test:parts": "tsx --test tests/integration/parts/*.test.ts",
     "test:vendors": "tsx --test tests/integration/vendors/*.test.ts",
+    "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts",
+    "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
+    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
 
     "test:customer-crud": "tsx --test tests/integration/customers/customer-crud.test.ts",
     "test:vehicle-crud": "tsx --test tests/integration/vehicles/vehicle-crud.test.ts",
@@ -52,12 +55,6 @@
     "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
     "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts",
 
-    "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts",
-
-    "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
-
-    "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
-
     "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts",
     "test:effective-membership-authorization": "tsx --test tests/integration/effective-membership-authorization/*.test.ts",
     "test:membership-role-permissions": "tsx --test tests/integration/membership-role-permissions/*.test.ts",
@@ -66,10 +63,9 @@
     "test:membership-audit": "tsx --test tests/integration/membership-audit/*.test.ts",
     "test:membership-status-enforcement": "tsx --test tests/integration/membership-status-enforcement/*.test.ts",
     "test:membership-removal": "tsx --test tests/integration/membership-removal/*.test.ts",
-    "test:membership-invitation-listing": "tsx --test tests/integration/membership-invitation-listing/*.test.ts"
+    "test:membership-invitation-listing": "tsx --test tests/integration/membership-invitation-listing/*.test.ts",
+    "test:membership-invitation-refresh": "tsx --test tests/integration/membership-invitation-refresh/*.test.ts"
 
-
-    
   },
   "keywords": [],
   "author": "",

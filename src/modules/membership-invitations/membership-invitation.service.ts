@@ -28,6 +28,7 @@ import {
   revokeMembershipInvitationRecord,
   countMembershipInvitationsByOrganization,
   findMembershipInvitationsByOrganization,
+  refreshMembershipInvitationRecord,
 } from "./membership-invitation.repository.js";
 
 import {
@@ -79,29 +80,16 @@ export async function listMembershipInvitations(
     updatedAt: Date;
   }>
 > {
-  const [
-    invitations,
-    totalItems,
-  ] = await Promise.all([
-    findMembershipInvitationsByOrganization(
-      organizationId,
-      pagination,
-    ),
+  const [invitations, totalItems] = await Promise.all([
+    findMembershipInvitationsByOrganization(organizationId, pagination),
 
-    countMembershipInvitationsByOrganization(
-      organizationId,
-    ),
+    countMembershipInvitationsByOrganization(organizationId),
   ]);
 
-  return createPaginatedData(
-    invitations,
-    pagination,
-    totalItems,
-  );
+  return createPaginatedData(invitations, pagination, totalItems);
 }
 
 //************************************************************** */
-
 
 export async function createMembershipInvitation(
   organizationId: string,
@@ -320,6 +308,101 @@ export async function revokeMembershipInvitation(
 
   return revokedInvitation;
 }
+
+//************************************************************** */
+
+export async function refreshMembershipInvitation(
+  organizationId: string,
+  invitationId: string,
+  actor: MembershipActorContext,
+): Promise<CreateMembershipInvitationResult> {
+  if (actor.organizationId !== organizationId) {
+    throw new AppError(
+      403,
+      "You cannot refresh invitations for another organization.",
+      {
+        code: "CROSS_ORGANIZATION_ACCESS_FORBIDDEN",
+      },
+    );
+  }
+
+  const invitation = await findMembershipInvitationById(
+    organizationId,
+    invitationId,
+  );
+
+  if (!invitation) {
+    throw new AppError(404, "Membership invitation not found.", {
+      code: "MEMBERSHIP_INVITATION_NOT_FOUND",
+    });
+  }
+
+  if (invitation.acceptedAt) {
+    throw new AppError(409, "Accepted invitations cannot be refreshed.", {
+      code: "MEMBERSHIP_INVITATION_ALREADY_ACCEPTED",
+    });
+  }
+
+  const token = generateRandomToken();
+
+  const tokenHash = hashToken(token);
+
+  const expiresAt = new Date(
+    Date.now() + MEMBERSHIP_INVITATION_TTL_MILLISECONDS,
+  );
+
+  const refreshedInvitation = await refreshMembershipInvitationRecord(
+    invitationId,
+    tokenHash,
+    expiresAt,
+  );
+
+  await createAuditLog({
+    action: AUDIT_ACTIONS.INVITATION_CREATED,
+
+    entityType: AUDIT_ENTITY_TYPES.INVITATION,
+
+    entityId: invitationId,
+
+    actor: {
+      organizationId,
+    },
+
+    before: invitation,
+
+    after: refreshedInvitation,
+
+    metadata: {
+      actorMembershipId: actor.membershipId,
+
+      refreshed: true,
+    },
+  });
+
+  return {
+    invitation: {
+      id: refreshedInvitation.id,
+
+      organizationId: refreshedInvitation.organizationId,
+
+      invitedByMembershipId: refreshedInvitation.invitedByMembershipId,
+
+      email: refreshedInvitation.email,
+
+      role: refreshedInvitation.role,
+
+      expiresAt: refreshedInvitation.expiresAt,
+
+      createdAt: refreshedInvitation.createdAt,
+
+      updatedAt: refreshedInvitation.updatedAt,
+    },
+
+    token,
+  };
+}
+
+//************************************************************** */
 
 //************************************************************** */
 

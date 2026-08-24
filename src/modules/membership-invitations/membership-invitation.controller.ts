@@ -26,6 +26,7 @@ import {
   createMembershipInvitation,
   revokeMembershipInvitation,
   listMembershipInvitations,
+  refreshMembershipInvitation
 } from "./membership-invitation.service.js";
 
 import type {
@@ -197,6 +198,58 @@ export async function revokeMembershipInvitationHandler(
   ok(
     response,
     invitation,
+  );
+}
+
+//************************************************************** */
+
+export async function refreshMembershipInvitationHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(
+      request,
+    );
+
+  const params =
+    requireValidatedParams<MembershipInvitationIdInput>(
+      request,
+    );
+
+  const context =
+    getRequestContext();
+
+  if (!context.membership) {
+    throw new AppError(
+      403,
+      "Organization membership is required.",
+      {
+        code:
+          "ORGANIZATION_MEMBERSHIP_REQUIRED",
+      },
+    );
+  }
+
+  const result =
+    await refreshMembershipInvitation(
+      organizationId,
+      params.invitationId,
+      {
+        organizationId:
+          context.membership.organizationId,
+
+        membershipId:
+          context.membership.id,
+
+        role:
+          context.membership.role,
+      },
+    );
+
+  ok(
+    response,
+    result,
   );
 }
 

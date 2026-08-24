@@ -139,6 +139,32 @@ export async function revokeMembershipInvitationRecord(invitationId: string) {
 
 //************************************************************** */
 
+export async function refreshMembershipInvitationRecord(
+  invitationId: string,
+  tokenHash: string,
+  expiresAt: Date,
+) {
+  return prisma.membershipInvitation.update({
+    where: {
+      id:
+        invitationId,
+    },
+
+    data: {
+      tokenHash,
+      expiresAt,
+
+      revokedAt:
+        null,
+
+      acceptedAt:
+        null,
+    },
+  });
+}
+
+//************************************************************** */
+
 export async function acceptMembershipInvitationRecord(
   invitationId: string,
   organizationId: string,
@@ -186,5 +212,7 @@ export async function acceptMembershipInvitationRecord(
     return membership;
   });
 }
+
+
 
 //************************************************************** */

@@ -26,6 +26,7 @@ import {
   createMembershipInvitationHandler,
   revokeMembershipInvitationHandler,
   listMembershipInvitationsHandler,
+  refreshMembershipInvitationHandler,
 } from "./membership-invitation.controller.js";
 
 //************************************************************** */
@@ -56,6 +57,18 @@ router.post(
   requirePermissions(Permissions.MEMBERSHIPS_INVITE),
   validateBody(createMembershipInvitationSchema),
   createMembershipInvitationHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:invitationId/refresh",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.MEMBERSHIPS_INVITE),
+  validateParams(membershipInvitationIdSchema),
+  refreshMembershipInvitationHandler,
 );
 
 //************************************************************** */
