@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { MembershipStatus } from "../../generated/prisma/client.js";
+
 import { AppError } from "../../platform/errors/app-error.js";
 
 import {
@@ -14,19 +16,17 @@ import type {
   AuthenticatedUser,
 } from "./auth.types.js";
 
-import {
-  validateAccessSession,
-} from "./sessions/session.service.js";
+import { validateAccessSession } from "./sessions/session.service.js";
 
-import {
-  verifyAccessToken,
-} from "./tokens/jwt.service.js";
+import { verifyAccessToken } from "./tokens/jwt.service.js";
 
 //************************************************************** */
 
 export interface AuthenticatedRequest extends Request {
   authenticatedUser?: AuthenticatedUser;
+
   authenticatedMembership?: AuthenticatedMembership | null;
+
   authenticationSessionId?: string;
 }
 
@@ -92,6 +92,7 @@ export async function authenticateRequest(
     }
 
     request.authenticatedUser = user;
+
     request.authenticationSessionId = validatedSession.session.id;
 
     request.authenticatedMembership = null;
@@ -103,7 +104,7 @@ export async function authenticateRequest(
         tokenPayload.organizationId,
       );
 
-      if (!membership) {
+      if (!membership || membership.status !== MembershipStatus.ACTIVE) {
         next(
           new AppError(401, "Organization membership is unavailable.", {
             code: "ORGANIZATION_MEMBERSHIP_UNAVAILABLE",
@@ -115,9 +116,13 @@ export async function authenticateRequest(
 
       request.authenticatedMembership = {
         id: membership.id,
+
         organizationId: membership.organizationId,
+
         organizationName: membership.organization.name,
+
         role: membership.role,
+
         status: membership.status,
       };
     }
