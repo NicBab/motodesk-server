@@ -11,6 +11,7 @@ import { createAuditLog } from "../audit/audit.service.js";
 
 import {
   assertMembershipCreateAllowed,
+  assertMembershipRemovalAllowed,
   assertMembershipUpdateAllowed,
 } from "./membership.policy.js";
 
@@ -22,6 +23,7 @@ import {
   findMembershipForUpdate,
   findMembershipsByOrganization,
   findUserForMembershipByEmail,
+  removeMembershipRecord,
   updateMembershipRecord,
   updateMembershipRoleAndPermissions,
 } from "./membership.repository.js";
@@ -222,6 +224,56 @@ export async function updateMembership(
 
       roleChanged,
       statusChanged,
+    },
+  });
+
+  return record;
+}
+
+//************************************************************** */
+
+export async function removeMembership(
+  organizationId: string,
+  membershipId: string,
+  actor: MembershipActorContext,
+): Promise<MembershipRecord> {
+  const existing = await findMembershipForUpdate(organizationId, membershipId);
+
+  if (!existing) {
+    throw new AppError(404, "Membership not found.", {
+      code: "MEMBERSHIP_NOT_FOUND",
+    });
+  }
+
+  assertMembershipRemovalAllowed(actor, existing, organizationId);
+
+  if (existing.status === MembershipStatus.REMOVED) {
+    throw new AppError(409, "Membership has already been removed.", {
+      code: "MEMBERSHIP_ALREADY_REMOVED",
+    });
+  }
+
+  const membership = await removeMembershipRecord(organizationId, membershipId);
+
+  const record = toMembershipRecord(membership);
+
+  await createAuditLog({
+    action: AUDIT_ACTIONS.MEMBERSHIP_REMOVED,
+
+    entityType: AUDIT_ENTITY_TYPES.MEMBERSHIP,
+
+    entityId: membership.id,
+
+    actor: {
+      organizationId,
+    },
+
+    before: existing,
+
+    after: record,
+
+    metadata: {
+      actorMembershipId: actor.membershipId,
     },
   });
 

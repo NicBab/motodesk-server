@@ -244,119 +244,35 @@ export async function updateMembershipRoleAndPermissions(
 
 //************************************************************** */
 
-// import { prisma } from "../../config/prisma.js";
-// import type {
-//   MembershipUpdateData,
-// } from "./membership.types.js";
+export async function removeMembershipRecord(
+  organizationId: string,
+  membershipId: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const membership = await transaction.membership.update({
+      where: {
+        id: membershipId,
+      },
 
-// import type {
-//   PaginationInput,
-// } from "../../platform/http/pagination.js";
+      data: {
+        status: MembershipStatus.REMOVED,
+      },
 
-// import {
-//   buildPagination,
-// } from "../../platform/database/repository.js";
+      include: {
+        user: true,
+        organization: true,
+      },
+    });
 
-// //************************************************************** */
+    await transaction.membershipPermission.deleteMany({
+      where: {
+        organizationId,
+        membershipId,
+      },
+    });
 
-// export async function findMembershipsByOrganization(
-//   organizationId: string,
-//   pagination?: PaginationInput,
-// ) {
-//   return prisma.membership.findMany({
-//     where: {
-//       organizationId,
-//     },
+    return membership;
+  });
+}
 
-//     ...(pagination !== undefined
-//       ? buildPagination(
-//           pagination.page,
-//           pagination.pageSize,
-//         )
-//       : {}),
-
-//     include: {
-//       user: true,
-//       organization: true,
-//     },
-
-//     orderBy: {
-//       createdAt: "asc",
-//     },
-//   });
-// }
-
-// //************************************************************** */
-
-// export async function countMembershipsByOrganization(
-//   organizationId: string,
-// ): Promise<number> {
-//   return prisma.membership.count({
-//     where: {
-//       organizationId,
-//     },
-//   });
-// }
-// //************************************************************** */
-
-// export async function findMembershipById(
-//   organizationId: string,
-//   membershipId: string,
-// ) {
-//   return prisma.membership.findFirst({
-//     where: {
-//       id: membershipId,
-//       organizationId,
-//     },
-//     include: {
-//       user: true,
-//       organization: true,
-//     },
-//   });
-// }
-
-// //************************************************************** */
-
-// export async function findMembershipForUpdate(
-//   organizationId: string,
-//   membershipId: string,
-// ) {
-//   return prisma.membership.findFirst({
-//     where: {
-//       id: membershipId,
-//       organizationId,
-//     },
-//   });
-// }
-
-// //************************************************************** */
-
-// export async function updateMembershipRecord(
-//   membershipId: string,
-//   data: MembershipUpdateData,
-// ) {
-//   return prisma.membership.update({
-//     where: {
-//       id: membershipId,
-//     },
-//     data: {
-//       ...(data.role !== undefined
-//         ? {
-//             role: data.role,
-//           }
-//         : {}),
-
-//       ...(data.status !== undefined
-//         ? {
-//             status: data.status,
-//           }
-//         : {}),
-//     },
-//     include: {
-//       user: true,
-//       organization: true,
-//     },
-//   });
-// }
-
-// //************************************************************** */
+//************************************************************** */

@@ -64,7 +64,8 @@
     "test:membership-creation": "tsx --test tests/integration/membership-creation/*.test.ts",
     "test:membership-invitations": "tsx --test tests/integration/membership-invitations/*.test.ts",
     "test:membership-audit": "tsx --test tests/integration/membership-audit/*.test.ts",
-    "test:membership-status-enforcement": "tsx --test tests/integration/membership-status-enforcement/*.test.ts"
+    "test:membership-status-enforcement": "tsx --test tests/integration/membership-status-enforcement/*.test.ts",
+    "test:membership-removal": "tsx --test tests/integration/membership-removal/*.test.ts"
 
 
     

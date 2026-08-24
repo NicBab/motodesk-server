@@ -27,6 +27,7 @@ import {
   createMembershipHandler,
   getMembershipHandler,
   listMembershipsHandler,
+  removeMembershipHandler,
   updateMembershipHandler,
 } from "./membership.controller.js";
 
@@ -83,6 +84,18 @@ router.patch(
   validateParams(membershipIdSchema),
   validateBody(updateMembershipSchema),
   updateMembershipHandler,
+);
+
+//************************************************************** */
+
+router.delete(
+  "/:membershipId",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.MEMBERSHIPS_DELETE),
+  validateParams(membershipIdSchema),
+  removeMembershipHandler,
 );
 
 //************************************************************** */
