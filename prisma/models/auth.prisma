@@ -34,6 +34,7 @@ enum MembershipStatus {
   INVITED
   ACTIVE
   SUSPENDED
+  REMOVED
 }
 
 //************************************************************** */
@@ -154,7 +155,7 @@ model Membership {
 model MembershipInvitation {
   id String @id @default(cuid())
 
-  organizationId       String
+  organizationId        String
   invitedByMembershipId String
 
   email String
@@ -162,7 +163,7 @@ model MembershipInvitation {
 
   tokenHash String @unique
 
-  expiresAt DateTime
+  expiresAt  DateTime
   acceptedAt DateTime?
   revokedAt  DateTime?
 
