@@ -36,3 +36,27 @@ export type AuthenticatedPermissionContext = {
   role: MembershipRole;
   permissions: Permission[];
 };
+
+//************************************************************** */
+
+export type PermissionCatalogItem = {
+  permission: Permission;
+  group: string;
+  action: string;
+};
+
+//************************************************************** */
+
+export type PermissionRoleDefaults = Record<
+  MembershipRole,
+  Permission[]
+>;
+
+//************************************************************** */
+
+export type PermissionCatalog = {
+  permissions: PermissionCatalogItem[];
+  roleDefaults: PermissionRoleDefaults;
+};
+
+//************************************************************** */

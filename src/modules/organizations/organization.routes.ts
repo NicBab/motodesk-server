@@ -25,6 +25,7 @@ import repairOrderLaborCancelRouter from "../repair-orders/repair-order-labor-ca
 import repairOrderPartCancelRouter from "../repair-orders/repair-order-part-cancel.routes.js";
 import membershipInvitationRouter from "../membership-invitations/membership-invitation.routes.js";
 import auditRouter from "../audit/audit.routes.js";
+import permissionCatalogRouter from "../permissions/permission-catalog.routes.js";
 
 import {
   createOrganizationSchema,
@@ -156,6 +157,10 @@ router.use("/:organizationId/repair-orders", repairOrderPartCancelRouter);
 
 //************************************************************** */
 
+router.use("/:organizationId/permission-catalog", permissionCatalogRouter);
+
+//************************************************************** */
+
 router.use(
   "/:organizationId/membership-invitations",
   membershipInvitationRouter,
@@ -206,4 +211,3 @@ router.delete(
 export default router;
 
 //************************************************************** */
-

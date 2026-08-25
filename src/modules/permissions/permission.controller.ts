@@ -16,6 +16,7 @@ import { ok } from "../../platform/http/api-response.js";
 import {
   getMembershipPermissions,
   updateMembershipPermissions,
+  getPermissionCatalog,
 } from "./permission.service.js";
 
 import type { UpdateMembershipPermissionsInput } from "./permission.schemas.js";
@@ -93,6 +94,21 @@ export async function updateMembershipPermissionsHandler(
   ok(response, {
     permissions,
   });
+}
+
+//************************************************************** */
+
+export async function getPermissionCatalogHandler(
+  _request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const catalog =
+    getPermissionCatalog();
+
+  ok(
+    response,
+    catalog,
+  );
 }
 
 //************************************************************** */
