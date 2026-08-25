@@ -1,7 +1,5 @@
 import { SessionRevocationReason } from "../../../../generated/prisma/client.js";
 
-import type { LogoutInput } from "./schema.js";
-
 import { parseRefreshToken } from "../../tokens/refresh-token.service.js";
 
 import {
@@ -10,8 +8,10 @@ import {
 
 //************************************************************** */
 
-export async function logoutUser(input: LogoutInput): Promise<void> {
-  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
+export async function logoutUser(
+  refreshToken: string,
+): Promise<void> {
+  const parsedRefreshToken = parseRefreshToken(refreshToken);
 
   await revokeSession(
     parsedRefreshToken.sessionId,
