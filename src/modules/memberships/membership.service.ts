@@ -6,8 +6,8 @@ import {
 } from "../../generated/prisma/client.js";
 
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../audit/audit.constants.js";
-
 import { createAuditLog } from "../audit/audit.service.js";
+import { getPermissionsForRole } from "../permissions/permission.utils.js";
 
 import {
   assertMembershipCreateAllowed,
@@ -33,6 +33,7 @@ import type {
   MembershipListItem,
   MembershipRecord,
   MembershipUpdateData,
+  MembershipListFilters,
 } from "./membership.types.js";
 
 import {
@@ -46,18 +47,19 @@ import {
   type PaginationInput,
 } from "../../platform/http/pagination.js";
 
-import { getPermissionsForRole } from "../permissions/permission.utils.js";
+
 
 //************************************************************** */
 
 export async function listMemberships(
   organizationId: string,
   pagination: PaginationInput,
+  filters: MembershipListFilters,
 ): Promise<PaginatedData<MembershipListItem>> {
   const [memberships, totalItems] = await Promise.all([
-    findMembershipsByOrganization(organizationId, pagination),
+    findMembershipsByOrganization(organizationId, pagination, filters),
 
-    countMembershipsByOrganization(organizationId),
+    countMembershipsByOrganization(organizationId, filters),
   ]);
 
   const items = memberships.map(toMembershipListItem);

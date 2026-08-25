@@ -5,7 +5,10 @@ import {
 
 import { prisma } from "../../config/prisma.js";
 
-import type { MembershipUpdateData } from "./membership.types.js";
+import type {
+  MembershipUpdateData,
+  MembershipListFilters,
+} from "./membership.types.js";
 
 import type { PaginationInput } from "../../platform/http/pagination.js";
 
@@ -18,10 +21,55 @@ import type { Permission } from "../permissions/permission.constants.js";
 export async function findMembershipsByOrganization(
   organizationId: string,
   pagination?: PaginationInput,
+  filters: MembershipListFilters = {},
 ) {
   return prisma.membership.findMany({
     where: {
       organizationId,
+
+      ...(filters.status !== undefined
+        ? {
+            status: filters.status,
+          }
+        : {}),
+
+      ...(filters.role !== undefined
+        ? {
+            role: filters.role,
+          }
+        : {}),
+
+      ...(filters.search !== undefined
+        ? {
+            user: {
+              OR: [
+                {
+                  firstName: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+
+                {
+                  lastName: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+
+                {
+                  email: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          }
+        : {}),
     },
 
     ...(pagination !== undefined
@@ -43,10 +91,55 @@ export async function findMembershipsByOrganization(
 
 export async function countMembershipsByOrganization(
   organizationId: string,
+  filters: MembershipListFilters = {},
 ): Promise<number> {
   return prisma.membership.count({
     where: {
       organizationId,
+
+      ...(filters.status !== undefined
+        ? {
+            status: filters.status,
+          }
+        : {}),
+
+      ...(filters.role !== undefined
+        ? {
+            role: filters.role,
+          }
+        : {}),
+
+      ...(filters.search !== undefined
+        ? {
+            user: {
+              OR: [
+                {
+                  firstName: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+
+                {
+                  lastName: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+
+                {
+                  email: {
+                    contains: filters.search,
+
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          }
+        : {}),
     },
   });
 }

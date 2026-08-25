@@ -2,6 +2,7 @@ import type { Response } from "express";
 import { AppError } from "../../platform/errors/app-error.js";
 import type { AuthenticatedRequest } from "../auth/index.js";
 import { getRequestContext } from "../../platform/request/request.context.js";
+import { created, ok } from "../../platform/http/api-response.js";
 
 import {
   requireValidatedBody,
@@ -16,8 +17,6 @@ import {
   removeMembership,
   updateMembership,
 } from "./membership.service.js";
-
-import { created, ok } from "../../platform/http/api-response.js";
 
 import type {
   CreateMembershipInput,
@@ -53,11 +52,33 @@ export async function listMembershipsHandler(
 
   const query = requireValidatedQuery<ListMembershipsQueryInput>(request);
 
-  const memberships = await listMemberships(organizationId, {
-    page: query.page,
+  const memberships = await listMemberships(
+    organizationId,
+    {
+      page: query.page,
 
-    pageSize: query.pageSize,
-  });
+      pageSize: query.pageSize,
+    },
+    {
+      ...(query.status !== undefined
+        ? {
+            status: query.status,
+          }
+        : {}),
+
+      ...(query.role !== undefined
+        ? {
+            role: query.role,
+          }
+        : {}),
+
+      ...(query.search !== undefined
+        ? {
+            search: query.search,
+          }
+        : {}),
+    },
+  );
 
   ok(response, memberships);
 }

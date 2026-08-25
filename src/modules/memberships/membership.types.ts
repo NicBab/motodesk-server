@@ -63,3 +63,11 @@ export interface MembershipActorContext {
 }
 
 //************************************************************** */
+
+export interface MembershipListFilters {
+  status?: MembershipStatus;
+  role?: MembershipRole;
+  search?: string;
+}
+
+//************************************************************** */
