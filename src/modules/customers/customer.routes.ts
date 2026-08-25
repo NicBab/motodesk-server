@@ -24,6 +24,7 @@ import {
   getCustomerHandler,
   listCustomersHandler,
   updateCustomerHandler,
+  restoreCustomerHandler,
 } from "./customer.controller.js";
 
 import {
@@ -93,6 +94,14 @@ router.post(
   requireOrganizationAccess,
   validateParams(customerIdSchema),
   archiveCustomerHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:customerId/restore",
+  validateParams(customerIdSchema),
+  restoreCustomerHandler,
 );
 
 export default router;

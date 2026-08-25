@@ -20,6 +20,7 @@ import {
   getVehicleById,
   listVehicles,
   updateVehicle,
+  restoreVehicle,
 } from "./vehicle.service.js";
 
 import {
@@ -200,3 +201,28 @@ export async function archiveVehicleHandler(
     vehicle,
   );
 }
+
+//************************************************************** */
+
+export async function restoreVehicleHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const { vehicleId } =
+    requireValidatedParams<VehicleIdInput>(
+      request,
+    );
+
+  const vehicle =
+    await restoreVehicle(
+      organizationId,
+      vehicleId,
+    );
+
+  ok(response, vehicle);
+}
+
+//************************************************************** */

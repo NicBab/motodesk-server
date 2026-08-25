@@ -31,6 +31,7 @@ import {
   getVehicleHandler,
   listVehiclesHandler,
   updateVehicleHandler,
+  restoreVehicleHandler
 } from "./vehicle.controller.js";
 
 //************************************************************** */
@@ -93,6 +94,14 @@ router.post(
   requireOrganizationAccess,
   validateParams(vehicleIdSchema),
   archiveVehicleHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:vehicleId/restore",
+  validateParams(vehicleIdSchema),
+  restoreVehicleHandler,
 );
 
 //************************************************************** */

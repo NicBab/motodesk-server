@@ -245,3 +245,23 @@ export async function archiveCustomerRecord(
     },
   });
 }
+
+//************************************************************** */
+
+export async function restoreCustomerRecord(
+  organizationId: string,
+  customerId: string,
+) {
+  return prisma.customer.updateMany({
+    where: {
+      id: customerId,
+      organizationId,
+      isActive: false,
+    },
+    data: {
+      isActive: true,
+    },
+  });
+}
+
+//************************************************************** */

@@ -6,6 +6,7 @@ import {
   findCustomerById,
   findCustomersByOrganization,
   updateCustomerRecord,
+  restoreCustomerRecord,
 } from "./customer.repository.js";
 
 import type {
@@ -154,3 +155,30 @@ export async function archiveCustomer(
     customerId,
   );
 }
+
+//************************************************************** */
+
+export async function restoreCustomer(
+  organizationId: string,
+  customerId: string,
+) {
+  const result =
+    await restoreCustomerRecord(
+      organizationId,
+      customerId,
+    );
+
+  if (result.count === 0) {
+    throw new AppError(
+      404,
+      "Archived customer not found.",
+    );
+  }
+
+  return getCustomerById(
+    organizationId,
+    customerId,
+  );
+}
+
+//************************************************************** */

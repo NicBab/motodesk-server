@@ -25,6 +25,7 @@ import {
   getCustomerById,
   listCustomers,
   updateCustomer,
+  restoreCustomer,
 } from "./customer.service.js";
 
 import type {
@@ -178,3 +179,28 @@ export async function archiveCustomerHandler(
 
   ok(response, customer);
 }
+
+//************************************************************** */
+
+export async function restoreCustomerHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(request);
+
+  const { customerId } =
+    requireValidatedParams<CustomerIdInput>(
+      request,
+    );
+
+  const customer =
+    await restoreCustomer(
+      organizationId,
+      customerId,
+    );
+
+  ok(response, customer);
+}
+
+//************************************************************** */

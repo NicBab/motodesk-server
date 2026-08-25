@@ -355,3 +355,23 @@ export async function archiveVehicleRecord(
     },
   });
 }
+
+//************************************************************** */
+
+export async function restoreVehicleRecord(
+  organizationId: string,
+  vehicleId: string,
+) {
+  return prisma.vehicle.updateMany({
+    where: {
+      id: vehicleId,
+      organizationId,
+      isActive: false,
+    },
+    data: {
+      isActive: true,
+    },
+  });
+}
+
+//************************************************************** */
