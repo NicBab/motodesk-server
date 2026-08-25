@@ -163,3 +163,103 @@ export async function findOrganizationsForUser(userId: string) {
 }
 
 //************************************************************** */
+
+export async function transferOrganizationOwnershipRecord(
+  organizationId: string,
+  currentOwnerMembershipId: string,
+  newOwnerMembershipId: string,
+  newOwnerPermissions: string[],
+  previousOwnerPermissions: string[],
+) {
+  return prisma.$transaction(
+    async (transaction) => {
+      const newOwnerMembership =
+        await transaction.membership.update({
+          where: {
+            id:
+              newOwnerMembershipId,
+          },
+
+          data: {
+            role:
+              "OWNER",
+          },
+        });
+
+      const previousOwnerMembership =
+        await transaction.membership.update({
+          where: {
+            id:
+              currentOwnerMembershipId,
+          },
+
+          data: {
+            role:
+              "ADMIN",
+          },
+        });
+
+      await transaction.membershipPermission.deleteMany({
+        where: {
+          organizationId,
+
+          membershipId: {
+            in: [
+              currentOwnerMembershipId,
+              newOwnerMembershipId,
+            ],
+          },
+        },
+      });
+
+      if (
+        newOwnerPermissions.length > 0
+      ) {
+        await transaction.membershipPermission.createMany({
+          data: newOwnerPermissions.map(
+            (permission) => ({
+              organizationId,
+
+              membershipId:
+                newOwnerMembershipId,
+
+              permission,
+
+              grantedByMembershipId:
+                currentOwnerMembershipId,
+            }),
+          ),
+        });
+      }
+
+      if (
+        previousOwnerPermissions.length > 0
+      ) {
+        await transaction.membershipPermission.createMany({
+          data: previousOwnerPermissions.map(
+            (permission) => ({
+              organizationId,
+
+              membershipId:
+                currentOwnerMembershipId,
+
+              permission,
+
+              grantedByMembershipId:
+                newOwnerMembershipId,
+            }),
+          ),
+        });
+      }
+
+      return {
+        newOwnerMembership,
+        previousOwnerMembership,
+      };
+    },
+  );
+}
+
+//************************************************************** */
+
+//************************************************************** */

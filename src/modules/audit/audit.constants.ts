@@ -13,6 +13,7 @@ export const AUDIT_ACTIONS = {
   ORGANIZATION_CREATED: "organization.created",
   ORGANIZATION_UPDATED: "organization.updated",
   ORGANIZATION_ARCHIVED: "organization.archived",
+  ORGANIZATION_OWNERSHIP_TRANSFERRED: "organization.ownership_transferred",
 
   MEMBERSHIP_CREATED: "membership.created",
   MEMBERSHIP_UPDATED: "membership.updated",

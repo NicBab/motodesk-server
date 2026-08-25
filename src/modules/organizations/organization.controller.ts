@@ -7,6 +7,7 @@ import {
   requireValidatedBody,
   requireValidatedParams,
 } from "../../platform/validation/validated-request.js";
+
 import type {
   CreateOrganizationRequest,
   OrganizationIdInput,
@@ -18,7 +19,8 @@ import {
   getOrganizationById,
   getOrganizationsForUser,
   updateOrganization,
-  archiveOrganization
+  archiveOrganization,
+  transferOrganizationOwnership,
 } from "./organization.service.js";
 
 import {
@@ -26,6 +28,10 @@ import {
   list as listResponse,
   ok,
 } from "../../platform/http/api-response.js";
+
+import type {
+  TransferOrganizationOwnershipInput,
+} from "./organization-ownership.schemas.js";
 
 
 
@@ -202,6 +208,73 @@ export async function archiveOrganizationHandler(
   ok(
     response,
     organization,
+  );
+}
+
+//************************************************************** */
+
+export async function transferOrganizationOwnershipHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId =
+    requireOrganizationId(
+      request,
+    );
+
+  const input =
+    requireValidatedBody<TransferOrganizationOwnershipInput>(
+      request,
+    );
+
+  const user =
+    request.authenticatedUser;
+
+  if (!user) {
+    throw new AppError(
+      401,
+      "Authentication required.",
+      {
+        code:
+          "AUTHENTICATION_REQUIRED",
+      },
+    );
+  }
+
+  const context =
+    getRequestContext();
+
+  if (!context.membership) {
+    throw new AppError(
+      403,
+      "Organization membership is required.",
+      {
+        code:
+          "ORGANIZATION_MEMBERSHIP_REQUIRED",
+      },
+    );
+  }
+
+  const result =
+    await transferOrganizationOwnership(
+      organizationId,
+      input.membershipId,
+      {
+        organizationId:
+          context.membership.organizationId,
+
+        membershipId:
+          context.membership.id,
+
+        role:
+          context.membership.role,
+      },
+      user.id,
+    );
+
+  ok(
+    response,
+    result,
   );
 }
 
