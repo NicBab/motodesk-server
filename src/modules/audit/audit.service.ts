@@ -1,27 +1,27 @@
 import { Prisma } from "../../generated/prisma/client.js";
 
+import { createAuditRecord } from "./audit.repository.js";
+import type { CreateAuditLogInput } from "./audit.types.js";
+import { sanitizeAuditValue } from "./audit.utils.js";
+
 import {
-  createAuditRecord,
+  countAuditLogsByOrganization,
+  findAuditLogsByOrganization,
+  type AuditLogFilters,
 } from "./audit.repository.js";
-import type {
-  CreateAuditLogInput,
-} from "./audit.types.js";
+
 import {
-  sanitizeAuditValue,
-} from "./audit.utils.js";
+  createPaginatedData,
+  type PaginatedData,
+  type PaginationInput,
+} from "../../platform/http/pagination.js";
 
 //************************************************************** */
 
-function toPrismaJson(
-  value: unknown,
-): Prisma.InputJsonValue {
-  const sanitizedValue =
-    sanitizeAuditValue(value);
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  const sanitizedValue = sanitizeAuditValue(value);
 
-  if (
-    sanitizedValue === null ||
-    sanitizedValue === undefined
-  ) {
+  if (sanitizedValue === null || sanitizedValue === undefined) {
     return {};
   }
 
@@ -32,9 +32,7 @@ function toPrismaJson(
 
 function buildAuditMetadata(
   input: CreateAuditLogInput,
-):
-  | Prisma.InputJsonValue
-  | typeof Prisma.JsonNull {
+): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   const metadata: Record<string, unknown> = {
     ...(input.metadata ?? {}),
   };
@@ -48,18 +46,14 @@ function buildAuditMetadata(
   }
 
   if (input.actor?.sessionId) {
-    metadata.sessionId =
-      input.actor.sessionId;
+    metadata.sessionId = input.actor.sessionId;
   }
 
   if (input.context?.requestId) {
-    metadata.requestId =
-      input.context.requestId;
+    metadata.requestId = input.context.requestId;
   }
 
-  if (
-    Object.keys(metadata).length === 0
-  ) {
+  if (Object.keys(metadata).length === 0) {
     return Prisma.JsonNull;
   }
 
@@ -84,33 +78,46 @@ export async function createAuditLog(
 
     ...(input.actor?.userId !== undefined
       ? {
-          actorUserId:
-            input.actor.userId,
+          actorUserId: input.actor.userId,
         }
       : {}),
 
-    ...(input.actor?.organizationId !==
-    undefined
+    ...(input.actor?.organizationId !== undefined
       ? {
-          organizationId:
-            input.actor.organizationId,
+          organizationId: input.actor.organizationId,
         }
       : {}),
 
-    ...(input.context?.ipAddress !==
-    undefined
+    ...(input.context?.ipAddress !== undefined
       ? {
-          ipAddress:
-            input.context.ipAddress,
+          ipAddress: input.context.ipAddress,
         }
       : {}),
 
-    ...(input.context?.userAgent !==
-    undefined
+    ...(input.context?.userAgent !== undefined
       ? {
-          userAgent:
-            input.context.userAgent,
+          userAgent: input.context.userAgent,
         }
       : {}),
   });
 }
+
+//************************************************************** */
+
+export async function listAuditLogs(
+  organizationId: string,
+  pagination: PaginationInput,
+  filters: AuditLogFilters,
+): Promise<
+  PaginatedData<Awaited<ReturnType<typeof findAuditLogsByOrganization>>[number]>
+> {
+  const [auditLogs, totalItems] = await Promise.all([
+    findAuditLogsByOrganization(organizationId, pagination, filters),
+
+    countAuditLogsByOrganization(organizationId, filters),
+  ]);
+
+  return createPaginatedData(auditLogs, pagination, totalItems);
+}
+
+//************************************************************** */

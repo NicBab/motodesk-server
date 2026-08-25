@@ -66,7 +66,8 @@
     "test:membership-invitation-listing": "tsx --test tests/integration/membership-invitation-listing/*.test.ts",
     "test:membership-invitation-refresh": "tsx --test tests/integration/membership-invitation-refresh/*.test.ts",
 
-    "test:organization-archive": "tsx --test tests/integration/organization-archive/*.test.ts"
+    "test:organization-archive": "tsx --test tests/integration/organization-archive/*.test.ts",
+    "test:audit-listing": "tsx --test tests/integration/audit-listing/*.test.ts"
 
   },
   "keywords": [],
