@@ -64,7 +64,9 @@
     "test:membership-status-enforcement": "tsx --test tests/integration/membership-status-enforcement/*.test.ts",
     "test:membership-removal": "tsx --test tests/integration/membership-removal/*.test.ts",
     "test:membership-invitation-listing": "tsx --test tests/integration/membership-invitation-listing/*.test.ts",
-    "test:membership-invitation-refresh": "tsx --test tests/integration/membership-invitation-refresh/*.test.ts"
+    "test:membership-invitation-refresh": "tsx --test tests/integration/membership-invitation-refresh/*.test.ts",
+
+    "test:organization-archive": "tsx --test tests/integration/organization-archive/*.test.ts"
 
   },
   "keywords": [],

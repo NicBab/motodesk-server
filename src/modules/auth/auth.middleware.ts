@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { MembershipStatus } from "../../generated/prisma/client.js";
+import {
+  MembershipStatus,
+  OrganizationStatus,
+} from "../../generated/prisma/client.js";
 
 import { AppError } from "../../platform/errors/app-error.js";
 
@@ -110,6 +113,14 @@ export async function authenticateRequest(
             code: "ORGANIZATION_MEMBERSHIP_UNAVAILABLE",
           }),
         );
+
+        return;
+      }
+
+      if (membership.organization.status === OrganizationStatus.ARCHIVED) {
+        request.authenticatedMembership = null;
+
+        next();
 
         return;
       }

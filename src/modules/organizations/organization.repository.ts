@@ -1,19 +1,22 @@
+import { OrganizationStatus } from "../../generated/prisma/client.js";
+
 import { prisma } from "../../config/prisma.js";
+
 import type {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from "./organization.types.js";
+
 import { runTransaction } from "../../platform/database/repository.js";
 
 //************************************************************** */
 
-export async function findOrganizationBySlug(
-  slug: string,
-) {
+export async function findOrganizationBySlug(slug: string) {
   return prisma.organization.findUnique({
     where: {
       slug,
     },
+
     select: {
       id: true,
     },
@@ -22,9 +25,7 @@ export async function findOrganizationBySlug(
 
 //************************************************************** */
 
-export async function findOrganizationById(
-  organizationId: string,
-) {
+export async function findOrganizationById(organizationId: string) {
   return prisma.organization.findUnique({
     where: {
       id: organizationId,
@@ -37,41 +38,41 @@ export async function findOrganizationById(
 export async function createOrganizationWithOwner(
   input: CreateOrganizationInput,
 ) {
-  return runTransaction(
-    async (transaction) => {
-      const organization =
-        await transaction.organization.create({
-          data: {
-            name: input.name,
-            slug: input.slug,
+  return runTransaction(async (transaction) => {
+    const organization = await transaction.organization.create({
+      data: {
+        name: input.name,
 
-            ...(input.email !== undefined
-              ? {
-                  email: input.email,
-                }
-              : {}),
+        slug: input.slug,
 
-            ...(input.phone !== undefined
-              ? {
-                  phone: input.phone,
-                }
-              : {}),
-          },
-        });
+        ...(input.email !== undefined
+          ? {
+              email: input.email,
+            }
+          : {}),
 
-      await transaction.membership.create({
-        data: {
-          userId: input.ownerUserId,
-          organizationId:
-            organization.id,
-          role: "OWNER",
-          status: "ACTIVE",
-        },
-      });
+        ...(input.phone !== undefined
+          ? {
+              phone: input.phone,
+            }
+          : {}),
+      },
+    });
 
-      return organization;
-    },
-  );
+    await transaction.membership.create({
+      data: {
+        userId: input.ownerUserId,
+
+        organizationId: organization.id,
+
+        role: "OWNER",
+
+        status: "ACTIVE",
+      },
+    });
+
+    return organization;
+  });
 }
 
 //************************************************************** */
@@ -84,6 +85,7 @@ export async function updateOrganizationRecord(
     where: {
       id: organizationId,
     },
+
     data: {
       ...(data.name !== undefined
         ? {
@@ -108,22 +110,42 @@ export async function updateOrganizationRecord(
 
 //************************************************************** */
 
-export async function findOrganizationsForUser(
-  userId: string,
-) {
+export async function archiveOrganizationRecord(organizationId: string) {
+  return prisma.organization.update({
+    where: {
+      id: organizationId,
+    },
+
+    data: {
+      status: OrganizationStatus.ARCHIVED,
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function findOrganizationsForUser(userId: string) {
   return prisma.membership.findMany({
     where: {
       userId,
+
       status: "ACTIVE",
+
+      organization: {
+        status: OrganizationStatus.ACTIVE,
+      },
     },
+
     orderBy: {
       createdAt: "asc",
     },
+
     select: {
       id: true,
       role: true,
       status: true,
       createdAt: true,
+
       organization: {
         select: {
           id: true,
@@ -131,6 +153,7 @@ export async function findOrganizationsForUser(
           slug: true,
           email: true,
           phone: true,
+          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -138,3 +161,5 @@ export async function findOrganizationsForUser(
     },
   });
 }
+
+//************************************************************** */

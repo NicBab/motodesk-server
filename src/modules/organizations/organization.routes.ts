@@ -36,6 +36,7 @@ import {
   getMyOrganizationsHandler,
   getOrganizationHandler,
   updateOrganizationHandler,
+  archiveOrganizationHandler,
 } from "./organization.controller.js";
 
 //************************************************************** */
@@ -166,6 +167,20 @@ router.patch(
   validateBody(updateOrganizationSchema),
   updateOrganizationHandler,
 );
+
+//************************************************************** */
+
+router.delete(
+  "/:organizationId",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.ORGANIZATION_DELETE),
+  validateParams(organizationIdSchema),
+  archiveOrganizationHandler,
+);
+
+//************************************************************** */
 
 export default router;
 

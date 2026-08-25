@@ -42,14 +42,17 @@ export async function findAuthenticatedMembership(
           }
         : {}),
     },
+
     select: {
       id: true,
       organizationId: true,
       role: true,
       status: true,
+
       organization: {
         select: {
           name: true,
+          status: true,
         },
       },
     },
