@@ -8,14 +8,16 @@ enum CustomerType {
 //************************************************************** */
 
 model Customer {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  type           CustomerType  @default(INDIVIDUAL)
-  vehicles       Vehicle[]
-  repairOrders   RepairOrder[]
-  firstName      String?
-  lastName       String?
-  companyName    String?
+  type           CustomerType @default(INDIVIDUAL)
+
+  vehicles     Vehicle[]
+  repairOrders RepairOrder[]
+
+  firstName   String?
+  lastName    String?
+  companyName String?
 
   email          String?
   phone          String?
@@ -27,6 +29,11 @@ model Customer {
   state        String?
   postalCode   String?
   country      String?
+
+  taxExempt Boolean @default(false)
+  taxId     String?
+
+  discountPercent Decimal @default(0) @db.Decimal(5, 2)
 
   notes    String?
   isActive Boolean @default(true)
@@ -41,6 +48,7 @@ model Customer {
   @@index([organizationId, companyName])
   @@index([organizationId, email])
   @@index([organizationId, phone])
+  @@index([organizationId, taxId])
 }
 
 //************************************************************** */

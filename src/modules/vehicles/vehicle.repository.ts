@@ -1,6 +1,4 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreateVehicleInput,
@@ -18,56 +16,39 @@ export async function createVehicleRecord(
     data: {
       organizationId,
 
-      customerId:
-        input.customerId ?? null,
+      customerId: input.customerId ?? null,
 
-      year:
-        input.year ?? null,
+      year: input.year ?? null,
 
-      make:
-        input.make,
+      make: input.make,
 
-      model:
-        input.model,
+      model: input.model,
 
-      trim:
-        input.trim ?? null,
+      trim: input.trim ?? null,
 
-      vin:
-        input.vin ?? null,
+      vin: input.vin ?? null,
 
-      mileage:
-        input.mileage ?? null,
+      mileage: input.mileage ?? null,
 
-      color:
-        input.color ?? null,
+      color: input.color ?? null,
 
-      licensePlate:
-        input.licensePlate ?? null,
+      licensePlate: input.licensePlate ?? null,
 
-      type:
-        input.type ?? null,
+      type: input.type ?? null,
 
-      classification:
-        input.classification,
+      classification: input.classification,
 
-      inventoryStatus:
-        input.inventoryStatus,
+      inventoryStatus: input.inventoryStatus,
 
-      stockNumber:
-        input.stockNumber ?? null,
+      stockNumber: input.stockNumber ?? null,
 
-      listPrice:
-        input.listPrice ?? null,
+      listPrice: input.listPrice ?? null,
 
-      unitCost:
-        input.unitCost ?? null,
+      unitCost: input.unitCost ?? null,
 
-      salesperson:
-        input.salesperson ?? null,
+      salesperson: input.salesperson ?? null,
 
-      notes:
-        input.notes ?? null,
+      notes: input.notes ?? null,
     },
   });
 }
@@ -98,36 +79,31 @@ export async function findVehiclesByOrganization(
 
       ...(query.customerId !== undefined
         ? {
-            customerId:
-              query.customerId,
+            customerId: query.customerId,
           }
         : {}),
 
       ...(query.type !== undefined
         ? {
-            type:
-              query.type,
+            type: query.type,
           }
         : {}),
 
       ...(query.classification !== undefined
         ? {
-            classification:
-              query.classification,
+            classification: query.classification,
           }
         : {}),
 
       ...(query.inventoryStatus !== undefined
         ? {
-            inventoryStatus:
-              query.inventoryStatus,
+            inventoryStatus: query.inventoryStatus,
           }
         : {}),
 
       ...(query.isActive !== undefined
         ? {
-            isActive:
-              query.isActive,
+            isActive: query.isActive,
           }
         : {}),
 
@@ -136,50 +112,71 @@ export async function findVehiclesByOrganization(
             OR: [
               {
                 make: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 model: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 trim: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 vin: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 stockNumber: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 licensePlate: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
+
+              {
+                customer: {
+                  is: {
+                    firstName: {
+                      contains: query.search,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              },
+
+              {
+                customer: {
+                  is: {
+                    lastName: {
+                      contains: query.search,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+              },
+
+              {
+                customer: {
+                  is: {
+                    companyName: {
+                      contains: query.search,
+                      mode: "insensitive",
+                    },
+                  },
                 },
               },
             ],
@@ -217,120 +214,103 @@ export async function updateVehicleRecord(
     data: {
       ...(input.customerId !== undefined
         ? {
-            customerId:
-              input.customerId,
+            customerId: input.customerId,
           }
         : {}),
 
       ...(input.year !== undefined
         ? {
-            year:
-              input.year,
+            year: input.year,
           }
         : {}),
 
       ...(input.make !== undefined
         ? {
-            make:
-              input.make,
+            make: input.make,
           }
         : {}),
 
       ...(input.model !== undefined
         ? {
-            model:
-              input.model,
+            model: input.model,
           }
         : {}),
 
       ...(input.trim !== undefined
         ? {
-            trim:
-              input.trim,
+            trim: input.trim,
           }
         : {}),
 
       ...(input.vin !== undefined
         ? {
-            vin:
-              input.vin,
+            vin: input.vin,
           }
         : {}),
 
       ...(input.mileage !== undefined
         ? {
-            mileage:
-              input.mileage,
+            mileage: input.mileage,
           }
         : {}),
 
       ...(input.color !== undefined
         ? {
-            color:
-              input.color,
+            color: input.color,
           }
         : {}),
 
       ...(input.licensePlate !== undefined
         ? {
-            licensePlate:
-              input.licensePlate,
+            licensePlate: input.licensePlate,
           }
         : {}),
 
       ...(input.type !== undefined
         ? {
-            type:
-              input.type,
+            type: input.type,
           }
         : {}),
 
       ...(input.classification !== undefined
         ? {
-            classification:
-              input.classification,
+            classification: input.classification,
           }
         : {}),
 
       ...(input.inventoryStatus !== undefined
         ? {
-            inventoryStatus:
-              input.inventoryStatus,
+            inventoryStatus: input.inventoryStatus,
           }
         : {}),
 
       ...(input.stockNumber !== undefined
         ? {
-            stockNumber:
-              input.stockNumber,
+            stockNumber: input.stockNumber,
           }
         : {}),
 
       ...(input.listPrice !== undefined
         ? {
-            listPrice:
-              input.listPrice,
+            listPrice: input.listPrice,
           }
         : {}),
 
       ...(input.unitCost !== undefined
         ? {
-            unitCost:
-              input.unitCost,
+            unitCost: input.unitCost,
           }
         : {}),
 
       ...(input.salesperson !== undefined
         ? {
-            salesperson:
-              input.salesperson,
+            salesperson: input.salesperson,
           }
         : {}),
 
       ...(input.notes !== undefined
         ? {
-            notes:
-              input.notes,
+            notes: input.notes,
           }
         : {}),
     },

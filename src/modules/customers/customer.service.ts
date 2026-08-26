@@ -5,8 +5,8 @@ import {
   createCustomerRecord,
   findCustomerById,
   findCustomersByOrganization,
-  updateCustomerRecord,
   restoreCustomerRecord,
+  updateCustomerRecord,
 } from "./customer.repository.js";
 
 import type {
@@ -47,10 +47,12 @@ export async function listCustomers(
   organizationId: string,
   query: ListCustomersQueryInput,
 ) {
-  return findCustomersByOrganization(
-    organizationId,
-    query,
-  );
+  const customers = await findCustomersByOrganization(organizationId, query);
+
+  return customers.map(({ _count, ...customer }) => ({
+    ...customer,
+    vehicleCount: _count.vehicles,
+  }));
 }
 
 //************************************************************** */
@@ -119,41 +121,23 @@ export async function archiveCustomer(
   organizationId: string,
   customerId: string,
 ) {
-  const existingCustomer =
-    await findCustomerById(
-      organizationId,
-      customerId,
-    );
+  const existingCustomer = await findCustomerById(organizationId, customerId);
 
   if (!existingCustomer) {
-    throw new AppError(
-      404,
-      "Customer not found.",
-      {
-        code: "CUSTOMER_NOT_FOUND",
-      },
-    );
+    throw new AppError(404, "Customer not found.", {
+      code: "CUSTOMER_NOT_FOUND",
+    });
   }
 
   if (!existingCustomer.isActive) {
-    throw new AppError(
-      400,
-      "Customer is already archived.",
-      {
-        code: "CUSTOMER_ALREADY_ARCHIVED",
-      },
-    );
+    throw new AppError(400, "Customer is already archived.", {
+      code: "CUSTOMER_ALREADY_ARCHIVED",
+    });
   }
 
-  await archiveCustomerRecord(
-    organizationId,
-    customerId,
-  );
+  await archiveCustomerRecord(organizationId, customerId);
 
-  return getCustomerById(
-    organizationId,
-    customerId,
-  );
+  return getCustomerById(organizationId, customerId);
 }
 
 //************************************************************** */
@@ -162,23 +146,15 @@ export async function restoreCustomer(
   organizationId: string,
   customerId: string,
 ) {
-  const result =
-    await restoreCustomerRecord(
-      organizationId,
-      customerId,
-    );
+  const result = await restoreCustomerRecord(organizationId, customerId);
 
   if (result.count === 0) {
-    throw new AppError(
-      404,
-      "Archived customer not found.",
-    );
+    throw new AppError(404, "Archived customer not found.", {
+      code: "ARCHIVED_CUSTOMER_NOT_FOUND",
+    });
   }
 
-  return getCustomerById(
-    organizationId,
-    customerId,
-  );
+  return getCustomerById(organizationId, customerId);
 }
 
 //************************************************************** */

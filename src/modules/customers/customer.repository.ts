@@ -1,6 +1,4 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreateCustomerInput,
@@ -19,35 +17,28 @@ export async function createCustomerRecord(
       organizationId,
       type: input.type,
 
-      firstName:
-        input.firstName ?? null,
-      lastName:
-        input.lastName ?? null,
-      companyName:
-        input.companyName ?? null,
+      firstName: input.firstName ?? null,
+      lastName: input.lastName ?? null,
+      companyName: input.companyName ?? null,
 
-      email:
-        input.email ?? null,
-      phone:
-        input.phone ?? null,
-      alternatePhone:
-        input.alternatePhone ?? null,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      alternatePhone: input.alternatePhone ?? null,
 
-      addressLine1:
-        input.addressLine1 ?? null,
-      addressLine2:
-        input.addressLine2 ?? null,
-      city:
-        input.city ?? null,
-      state:
-        input.state ?? null,
-      postalCode:
-        input.postalCode ?? null,
-      country:
-        input.country ?? null,
+      addressLine1: input.addressLine1 ?? null,
+      addressLine2: input.addressLine2 ?? null,
+      city: input.city ?? null,
+      state: input.state ?? null,
+      postalCode: input.postalCode ?? null,
+      country: input.country ?? null,
 
-      notes:
-        input.notes ?? null,
+      taxExempt: input.taxExempt,
+
+      taxId: input.taxId ?? null,
+
+      discountPercent: input.discountPercent,
+
+      notes: input.notes ?? null,
     },
   });
 }
@@ -78,15 +69,13 @@ export async function findCustomersByOrganization(
 
       ...(query.isActive !== undefined
         ? {
-            isActive:
-              query.isActive,
+            isActive: query.isActive,
           }
         : {}),
 
       ...(query.type !== undefined
         ? {
-            type:
-              query.type,
+            type: query.type,
           }
         : {}),
 
@@ -95,51 +84,49 @@ export async function findCustomersByOrganization(
             OR: [
               {
                 firstName: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 lastName: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 companyName: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 email: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+                  mode: "insensitive",
                 },
               },
               {
                 phone: {
-                  contains:
-                    query.search,
+                  contains: query.search,
                 },
               },
               {
                 alternatePhone: {
-                  contains:
-                    query.search,
+                  contains: query.search,
                 },
               },
             ],
           }
         : {}),
+    },
+
+    include: {
+      _count: {
+        select: {
+          vehicles: true,
+        },
+      },
     },
 
     orderBy: [
@@ -155,6 +142,7 @@ export async function findCustomersByOrganization(
     ],
   });
 }
+
 //************************************************************** */
 
 export async function updateCustomerRecord(
@@ -169,60 +157,102 @@ export async function updateCustomerRecord(
     },
 
     data: {
-      ...(input.type !== undefined
-        ? { type: input.type }
-        : {}),
+      ...(input.type !== undefined ? { type: input.type } : {}),
 
       ...(input.firstName !== undefined
-        ? { firstName: input.firstName }
+        ? {
+            firstName: input.firstName,
+          }
         : {}),
 
       ...(input.lastName !== undefined
-        ? { lastName: input.lastName }
+        ? {
+            lastName: input.lastName,
+          }
         : {}),
 
       ...(input.companyName !== undefined
-        ? { companyName: input.companyName }
+        ? {
+            companyName: input.companyName,
+          }
         : {}),
 
       ...(input.email !== undefined
-        ? { email: input.email }
+        ? {
+            email: input.email,
+          }
         : {}),
 
       ...(input.phone !== undefined
-        ? { phone: input.phone }
+        ? {
+            phone: input.phone,
+          }
         : {}),
 
       ...(input.alternatePhone !== undefined
-        ? { alternatePhone: input.alternatePhone }
+        ? {
+            alternatePhone: input.alternatePhone,
+          }
         : {}),
 
       ...(input.addressLine1 !== undefined
-        ? { addressLine1: input.addressLine1 }
+        ? {
+            addressLine1: input.addressLine1,
+          }
         : {}),
 
       ...(input.addressLine2 !== undefined
-        ? { addressLine2: input.addressLine2 }
+        ? {
+            addressLine2: input.addressLine2,
+          }
         : {}),
 
       ...(input.city !== undefined
-        ? { city: input.city }
+        ? {
+            city: input.city,
+          }
         : {}),
 
       ...(input.state !== undefined
-        ? { state: input.state }
+        ? {
+            state: input.state,
+          }
         : {}),
 
       ...(input.postalCode !== undefined
-        ? { postalCode: input.postalCode }
+        ? {
+            postalCode: input.postalCode,
+          }
         : {}),
 
       ...(input.country !== undefined
-        ? { country: input.country }
+        ? {
+            country: input.country,
+          }
+        : {}),
+
+      ...(input.taxExempt !== undefined
+        ? {
+            taxExempt: input.taxExempt,
+          }
+        : {}),
+
+      ...(input.taxId !== undefined
+        ? {
+            taxId: input.taxId,
+          }
+        : {}),
+
+      ...(input.discountPercent !== undefined
+        ? {
+            discountPercent: input.discountPercent,
+          }
         : {}),
 
       ...(input.notes !== undefined
-        ? { notes: input.notes }
+        ? {
+            notes: input.notes,
+          }
         : {}),
     },
   });
@@ -240,6 +270,7 @@ export async function archiveCustomerRecord(
       organizationId,
       isActive: true,
     },
+
     data: {
       isActive: false,
     },
@@ -258,6 +289,7 @@ export async function restoreCustomerRecord(
       organizationId,
       isActive: false,
     },
+
     data: {
       isActive: true,
     },
