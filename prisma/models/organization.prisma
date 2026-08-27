@@ -24,6 +24,7 @@ model Organization {
   parts                         Part[]
   vendors                       Vendor[]
   purchaseOrders                PurchaseOrder[]
+  partReturns                   PartReturn[]
   schedules                     Schedule[]
   technicianAssignments         TechnicianAssignment[]
   serviceBays                   ServiceBay[]
@@ -31,6 +32,7 @@ model Organization {
   repairOrderLaborCancellations RepairOrderLaborCancellation[]
   membershipPermissions         MembershipPermission[]
   purchaseOrderSequence         PurchaseOrderSequence?
+  partReturnSequence            PartReturnSequence?
   repairOrderSequence           RepairOrderSequence?
 
   createdAt DateTime @default(now())

@@ -26,6 +26,7 @@ import repairOrderPartCancelRouter from "../repair-orders/repair-order-part-canc
 import membershipInvitationRouter from "../membership-invitations/membership-invitation.routes.js";
 import auditRouter from "../audit/audit.routes.js";
 import permissionCatalogRouter from "../permissions/permission-catalog.routes.js";
+import { partReturnRouter } from "../part-returns/part-return.routes.js";
 
 import {
   createOrganizationSchema,
@@ -169,6 +170,13 @@ router.use(
 //************************************************************** */
 
 router.use("/:organizationId/audit", auditRouter);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/part-returns",
+  partReturnRouter,
+);
 
 //************************************************************** */
 

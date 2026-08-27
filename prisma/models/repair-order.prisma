@@ -150,6 +150,7 @@ model RepairOrder {
   laborLines RepairOrderLaborLine[]
 
   partLines             RepairOrderPartLine[]
+  partReturns           PartReturn[]
   schedules             Schedule[]
   technicianAssignments TechnicianAssignment[]
   serviceBayAssignments ServiceBayAssignment[]

@@ -70,7 +70,8 @@
     "test:audit-listing": "tsx --test tests/integration/audit-listing/*.test.ts",
     "test:organization-ownership-transfer": "tsx --test tests/integration/organization-ownership-transfer/*.test.ts",
     "test:membership-listing-filters": "tsx --test tests/integration/membership-listing-filters/*.test.ts",
-    "test:permission-catalog": "tsx --test tests/integration/permission-catalog/*.test.ts"
+    "test:permission-catalog": "tsx --test tests/integration/permission-catalog/*.test.ts",
+    "test:part-returns": "tsx --test tests/integration/parts/part-returns/*.test.ts"
 
   },
   "keywords": [],

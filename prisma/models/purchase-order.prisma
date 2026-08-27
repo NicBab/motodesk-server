@@ -38,7 +38,8 @@ model PurchaseOrder {
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
 
-  lines PurchaseOrderLine[]
+  lines       PurchaseOrderLine[]
+  partReturns PartReturn[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

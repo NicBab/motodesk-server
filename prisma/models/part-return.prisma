@@ -1,0 +1,106 @@
+//************************************************************** */
+
+enum PartReturnType {
+  TO_VENDOR
+  TO_INVENTORY
+  WRONG_PART
+  DAMAGED
+  UNUSED_RO_PART
+  CORE_RETURN
+  WARRANTY_RETURN
+}
+
+//************************************************************** */
+
+enum PartReturnCreditStatus {
+  PENDING
+  RECEIVED
+}
+
+//************************************************************** */
+
+enum PartReturnStatus {
+  PENDING
+  SHIPPED
+  CREDITED
+  CLOSED
+}
+
+//************************************************************** */
+
+model PartReturn {
+  id             String @id @default(cuid())
+  organizationId String
+
+  returnNumber Int
+
+  returnType PartReturnType @default(TO_VENDOR)
+
+  partId String?
+
+  partNumber  String?
+  description String?
+
+  quantity Decimal @db.Decimal(12, 3)
+
+  vendorId String?
+
+  vendorName String?
+
+  purchaseOrderId String?
+  poNumber        Int?
+
+  repairOrderId String?
+  roNumber      Int?
+
+  restockingFee Decimal @default(0) @db.Decimal(12, 2)
+
+  returnAuthorizationNumber String?
+
+  creditAmount Decimal @default(0) @db.Decimal(12, 2)
+
+  creditStatus PartReturnCreditStatus @default(PENDING)
+
+  notes String?
+
+  status PartReturnStatus @default(PENDING)
+
+  isActive Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  vendor Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  repairOrder RepairOrder? @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, returnNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, returnType])
+  @@index([organizationId, creditStatus])
+  @@index([organizationId, isActive])
+  @@index([partId])
+  @@index([vendorId])
+  @@index([purchaseOrderId])
+  @@index([repairOrderId])
+}
+
+//************************************************************** */
+
+model PartReturnSequence {
+  organizationId String @id
+  nextNumber     Int    @default(1001)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+//************************************************************** */
