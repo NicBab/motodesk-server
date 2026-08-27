@@ -20,7 +20,7 @@ import {
   listPurchaseOrders,
   orderPurchaseOrder,
   updatePurchaseOrder,
-  receivePurchaseOrderLine,
+  receivePurchaseOrder,
   cancelPurchaseOrder,
 } from "./purchase-order.service.js";
 
@@ -29,7 +29,7 @@ import type {
   ListPurchaseOrdersQueryInput,
   PurchaseOrderIdInput,
   UpdatePurchaseOrderInput,
-  ReceivePurchaseOrderLineInput,
+  ReceivePurchaseOrderInput,
   CancelPurchaseOrderInput,
 } from "./purchase-order.schemas.js";
 
@@ -123,7 +123,7 @@ export async function orderPurchaseOrderHandler(
 
 //************************************************************** */
 
-export async function receivePurchaseOrderLineHandler(
+export async function receivePurchaseOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
@@ -132,11 +132,11 @@ export async function receivePurchaseOrderLineHandler(
   const { purchaseOrderId } =
     requireValidatedParams<PurchaseOrderIdInput>(request);
 
-  const input = requireValidatedBody<ReceivePurchaseOrderLineInput>(request);
+  const input = requireValidatedBody<ReceivePurchaseOrderInput>(request);
 
   const membershipId = getRequestContext().membership?.id ?? null;
 
-  const purchaseOrder = await receivePurchaseOrderLine(
+  const purchaseOrder = await receivePurchaseOrder(
     organizationId,
     purchaseOrderId,
     membershipId,

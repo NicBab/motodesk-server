@@ -39,6 +39,7 @@ model PurchaseOrder {
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
 
   lines       PurchaseOrderLine[]
+  receipts    PurchaseOrderReceipt[]
   partReturns PartReturn[]
 
   createdAt DateTime @default(now())
@@ -82,10 +83,88 @@ model PurchaseOrderLine {
 
   repairOrderPartLine RepairOrderPartLine? @relation(fields: [repairOrderPartLineId], references: [id], onDelete: SetNull)
 
+  receiptLines PurchaseOrderReceiptLine[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([purchaseOrderId])
+  @@index([partId])
+  @@index([repairOrderPartLineId])
+}
+
+//************************************************************** */
+
+model PurchaseOrderReceipt {
+  id              String @id @default(cuid())
+  organizationId  String
+  purchaseOrderId String
+
+  invoiceNumber String?
+  packingSlip   String?
+
+  notes String?
+
+  receivedByMembershipId String?
+
+  receivedAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  receivedByMembership Membership? @relation("PurchaseOrderReceiptReceivedBy", fields: [receivedByMembershipId], references: [id], onDelete: SetNull)
+
+  lines PurchaseOrderReceiptLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([purchaseOrderId])
+  @@index([receivedByMembershipId])
+  @@index([receivedAt])
+}
+
+//************************************************************** */
+
+model PurchaseOrderReceiptLine {
+  id String @id @default(cuid())
+
+  receiptId String
+
+  purchaseOrderLineId String
+
+  partId String?
+
+  repairOrderPartLineId String?
+
+  partNumber  String
+  description String
+
+  receivedQty    Decimal @db.Decimal(12, 3)
+  damagedQty     Decimal @default(0) @db.Decimal(12, 3)
+  backorderedQty Decimal @default(0) @db.Decimal(12, 3)
+
+  actualCost Decimal? @db.Decimal(12, 2)
+
+  binLocation String?
+
+  notes String?
+
+  receipt PurchaseOrderReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  purchaseOrderLine PurchaseOrderLine @relation(fields: [purchaseOrderLineId], references: [id], onDelete: Cascade)
+
+  part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  repairOrderPartLine RepairOrderPartLine? @relation(fields: [repairOrderPartLineId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([receiptId])
+  @@index([purchaseOrderLineId])
   @@index([partId])
   @@index([repairOrderPartLineId])
 }

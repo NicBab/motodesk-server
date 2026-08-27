@@ -40,6 +40,7 @@ import { findVehicleById } from "../vehicles/vehicle.repository.js";
 //************************************************************** */
 
 const READY_PART_STATUSES = new Set([
+  "RECEIVED",
   "PULLED",
   "STAGED",
   "ISSUED",
@@ -74,16 +75,9 @@ const REPAIR_ORDER_STATUS_TRANSITIONS: Record<
     "CANCELLED",
   ],
 
-  PAUSED: [
-    "IN_PROGRESS",
-    "WAITING_ON_ADDITIONAL_APPROVAL",
-    "CANCELLED",
-  ],
+  PAUSED: ["IN_PROGRESS", "WAITING_ON_ADDITIONAL_APPROVAL", "CANCELLED"],
 
-  WAITING_ON_ADDITIONAL_APPROVAL: [
-    "IN_PROGRESS",
-    "CANCELLED",
-  ],
+  WAITING_ON_ADDITIONAL_APPROVAL: ["IN_PROGRESS", "CANCELLED"],
 
   WORK_COMPLETE: ["QUALITY_CHECK", "IN_PROGRESS"],
 

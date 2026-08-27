@@ -1,16 +1,10 @@
 import { Router } from "express";
 
-import {
-  authenticateRequest,
-} from "../auth/index.js";
+import { authenticateRequest } from "../auth/index.js";
 
-import {
-  requireOrganizationAccess,
-} from "../organizations/index.js";
+import { requireOrganizationAccess } from "../organizations/index.js";
 
-import {
-  initializeRequestContext,
-} from "../../platform/request/request.middleware.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
   validateBody,
@@ -34,6 +28,10 @@ import {
 } from "./part.schemas.js";
 
 import partInventoryRouter from "./part-inventory.routes.js";
+
+import { listPartOrderDemandHandler } from "./part-order-demand.controller.js";
+
+import { listPartOrderDemandQuerySchema } from "./part-order-demand.schemas.js";
 
 //************************************************************** */
 
@@ -61,6 +59,14 @@ router.get(
   requireOrganizationAccess,
   validateQuery(listPartsQuerySchema),
   listPartsHandler,
+);
+
+//************************************************************** */
+
+router.get(
+  "/order-demand",
+  validateQuery(listPartOrderDemandQuerySchema),
+  listPartOrderDemandHandler,
 );
 
 //************************************************************** */

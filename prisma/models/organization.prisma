@@ -24,6 +24,7 @@ model Organization {
   parts                         Part[]
   vendors                       Vendor[]
   purchaseOrders                PurchaseOrder[]
+  purchaseOrderReceipts         PurchaseOrderReceipt[]
   partReturns                   PartReturn[]
   schedules                     Schedule[]
   technicianAssignments         TechnicianAssignment[]

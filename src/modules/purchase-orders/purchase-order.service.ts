@@ -12,7 +12,7 @@ import {
   findPurchaseOrdersByOrganization,
   orderPurchaseOrderRecord,
   updatePurchaseOrderRecord,
-  receivePurchaseOrderLineRecord,
+  receivePurchaseOrderRecord,
   cancelPurchaseOrderRecord,
 } from "./purchase-order.repository.js";
 
@@ -22,7 +22,7 @@ import type {
   CreatePurchaseOrderInput,
   ListPurchaseOrdersQueryInput,
   UpdatePurchaseOrderInput,
-  ReceivePurchaseOrderLineInput,
+  ReceivePurchaseOrderInput,
   CancelPurchaseOrderInput,
 } from "./purchase-order.schemas.js";
 
@@ -62,13 +62,37 @@ async function buildLineSnapshots(
 
   for (const line of input.lines) {
     if (!line.partId) {
+      if (line.repairOrderPartLineId !== undefined) {
+        const repairOrderPartLine = await findRepairOrderPartLineByIdOnly(
+          organizationId,
+          line.repairOrderPartLineId,
+        );
+
+        if (!repairOrderPartLine) {
+          throw new AppError(
+            400,
+            "The selected repair order part line is invalid.",
+            {
+              code: "PURCHASE_ORDER_REPAIR_ORDER_PART_LINE_INVALID",
+            },
+          );
+        }
+
+        snapshots.push({
+          repairOrderPartLineId: repairOrderPartLine.id,
+          partNumber: repairOrderPartLine.partNumber,
+          description: repairOrderPartLine.description,
+          orderedQty: line.orderedQty,
+          unitCost: line.unitCost,
+        });
+
+        continue;
+      }
+
       snapshots.push({
         partNumber: line.partNumber!.trim(),
-
         description: line.description!.trim(),
-
         orderedQty: line.orderedQty,
-
         unitCost: line.unitCost,
       });
 
@@ -109,7 +133,10 @@ async function buildLineSnapshots(
         );
       }
 
-      if (repairOrderPartLine.partId !== line.partId) {
+      if (
+        repairOrderPartLine.partId !== null &&
+        repairOrderPartLine.partId !== line.partId
+      ) {
         throw new AppError(
           400,
           "The purchase order part does not match the linked repair order part line.",
@@ -122,19 +149,14 @@ async function buildLineSnapshots(
 
     snapshots.push({
       partId: part.id,
-
       ...(line.repairOrderPartLineId !== undefined
         ? {
             repairOrderPartLineId: line.repairOrderPartLineId,
           }
         : {}),
-
       partNumber: part.partNumber,
-
       description: part.description,
-
       orderedQty: line.orderedQty,
-
       unitCost: line.unitCost,
     });
   }
@@ -235,11 +257,11 @@ export async function orderPurchaseOrder(
 
 //************************************************************** */
 
-export async function receivePurchaseOrderLine(
+export async function receivePurchaseOrder(
   organizationId: string,
   purchaseOrderId: string,
   membershipId: string | null,
-  input: ReceivePurchaseOrderLineInput,
+  input: ReceivePurchaseOrderInput,
 ) {
   const purchaseOrder = await getPurchaseOrderById(
     organizationId,
@@ -252,14 +274,14 @@ export async function receivePurchaseOrderLine(
   ) {
     throw new AppError(
       400,
-      "Only ordered purchase orders can receive inventory.",
+      "Only ordered purchase orders can receive parts.",
       {
         code: "PURCHASE_ORDER_NOT_RECEIVABLE",
       },
     );
   }
 
-  const result = await receivePurchaseOrderLineRecord(
+  const result = await receivePurchaseOrderRecord(
     organizationId,
     purchaseOrderId,
     input,
@@ -272,13 +294,13 @@ export async function receivePurchaseOrderLine(
     });
   }
 
-  if ("lineNotFound" in result && result.lineNotFound) {
+  if (result.lineNotFound) {
     throw new AppError(400, "Purchase order line not found.", {
       code: "PURCHASE_ORDER_LINE_NOT_FOUND",
     });
   }
 
-  if ("exceedsRemaining" in result && result.exceedsRemaining) {
+  if (result.exceedsRemaining) {
     throw new AppError(
       400,
       "Received quantity exceeds the remaining ordered quantity.",
@@ -288,13 +310,13 @@ export async function receivePurchaseOrderLine(
     );
   }
 
-  if ("inventoryFailed" in result && result.inventoryFailed) {
+  if (result.inventoryFailed) {
     throw new AppError(400, "Purchase order inventory receipt failed.", {
       code: "PURCHASE_ORDER_RECEIPT_FAILED",
     });
   }
 
-  if (!result.purchaseOrder) {
+  if (!result.purchaseOrder || !result.receiptId) {
     throw new AppError(400, "Purchase order receipt could not be completed.", {
       code: "PURCHASE_ORDER_RECEIPT_FAILED",
     });
@@ -302,7 +324,7 @@ export async function receivePurchaseOrderLine(
 
   const linkedRepairOrderIds = new Set<string>();
 
-  for (const line of purchaseOrder.lines) {
+  for (const line of result.purchaseOrder.lines) {
     if (line.repairOrderPartLine?.repairOrderId) {
       linkedRepairOrderIds.add(line.repairOrderPartLine.repairOrderId);
     }

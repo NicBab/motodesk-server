@@ -60,16 +60,6 @@ const purchaseOrderLineSchema = z
         message: "Description is required for a manual PO line.",
       });
     }
-
-    if (line.repairOrderPartLineId && !line.partId) {
-      context.addIssue({
-        code: "custom",
-
-        path: ["partId"],
-
-        message: "Repair-order PO lines must be linked to an inventory part.",
-      });
-    }
   });
 
 //************************************************************** */
@@ -130,6 +120,9 @@ export const listPurchaseOrdersQuerySchema = z.object({
 });
 
 //************************************************************** */
+// Legacy single-line receipt contract.
+// Kept temporarily so the current service/controller continue to compile
+// while the batch receipt endpoint is introduced in the next layer.
 
 export const receivePurchaseOrderLineSchema = z.object({
   purchaseOrderLineId: z
@@ -155,6 +148,60 @@ export const receivePurchaseOrderLineSchema = z.object({
 });
 
 //************************************************************** */
+// One Save Receipt = one receipt header with one or more receipt lines.
+
+const receivePurchaseOrderReceiptLineSchema = z.object({
+  purchaseOrderLineId: z
+    .string()
+    .trim()
+    .min(1, "Purchase Order Line ID is required."),
+
+  quantity: z.number().positive("Received quantity must be greater than zero."),
+
+  damagedQty: z.number().nonnegative().default(0),
+
+  backorderedQty: z.number().nonnegative().default(0),
+
+  actualCost: z.number().nonnegative().optional(),
+
+  binLocation: z.string().trim().max(100).optional(),
+
+  notes: z.string().trim().max(1000).optional(),
+});
+
+//************************************************************** */
+
+export const receivePurchaseOrderSchema = z
+  .object({
+    invoiceNumber: z.string().trim().max(200).optional(),
+
+    packingSlip: z.string().trim().max(200).optional(),
+
+    notes: z.string().trim().max(5000).optional(),
+
+    lines: z
+      .array(receivePurchaseOrderReceiptLineSchema)
+      .min(1, "At least one receipt line is required."),
+  })
+  .superRefine((input, context) => {
+    const seenLineIds = new Set<string>();
+
+    input.lines.forEach((line, index) => {
+      if (seenLineIds.has(line.purchaseOrderLineId)) {
+        context.addIssue({
+          code: "custom",
+
+          path: ["lines", index, "purchaseOrderLineId"],
+
+          message: "A purchase order line may only appear once per receipt.",
+        });
+      }
+
+      seenLineIds.add(line.purchaseOrderLineId);
+    });
+  });
+
+//************************************************************** */
 
 export const cancelPurchaseOrderSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
@@ -168,6 +215,10 @@ export type CancelPurchaseOrderInput = z.infer<
 
 export type ReceivePurchaseOrderLineInput = z.infer<
   typeof receivePurchaseOrderLineSchema
+>;
+
+export type ReceivePurchaseOrderInput = z.infer<
+  typeof receivePurchaseOrderSchema
 >;
 
 export type CreatePurchaseOrderInput = z.infer<

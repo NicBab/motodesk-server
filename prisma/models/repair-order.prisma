@@ -275,7 +275,8 @@ model RepairOrderPartLine {
 
   part Part? @relation(fields: [partId], references: [id], onDelete: SetNull)
 
-  purchaseOrderLines PurchaseOrderLine[]
+  purchaseOrderLines        PurchaseOrderLine[]
+  purchaseOrderReceiptLines PurchaseOrderReceiptLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

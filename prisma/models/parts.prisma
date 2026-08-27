@@ -48,10 +48,11 @@ model Part {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  inventoryTransactions PartInventoryTransaction[]
-  repairOrderPartLines  RepairOrderPartLine[]
-  purchaseOrderLines    PurchaseOrderLine[]
-  partReturns           PartReturn[]
+  inventoryTransactions     PartInventoryTransaction[]
+  repairOrderPartLines      RepairOrderPartLine[]
+  purchaseOrderLines        PurchaseOrderLine[]
+  purchaseOrderReceiptLines PurchaseOrderReceiptLine[]
+  partReturns               PartReturn[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

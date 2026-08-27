@@ -71,7 +71,9 @@
     "test:organization-ownership-transfer": "tsx --test tests/integration/organization-ownership-transfer/*.test.ts",
     "test:membership-listing-filters": "tsx --test tests/integration/membership-listing-filters/*.test.ts",
     "test:permission-catalog": "tsx --test tests/integration/permission-catalog/*.test.ts",
-    "test:part-returns": "tsx --test tests/integration/parts/part-returns/*.test.ts"
+    "test:part-returns": "tsx --test tests/integration/parts/part-returns/*.test.ts",
+    "test:part-order-demand": "tsx --test tests/integration/parts/part-order-demand.test.ts",
+    "test:purchase-order-receipt-history":"tsx --test tests/integration/purchase-orders/purchase-order-receipt-history.test.ts"
 
   },
   "keywords": [],
