@@ -14,17 +14,63 @@ export const purchaseOrderStatusSchema = z.enum([
 
 //************************************************************** */
 
-const purchaseOrderLineSchema = z.object({
-  partId: z.string().trim().min(1, "Part ID is required."),
+const purchaseOrderLineSchema = z
+  .object({
+    partId: z.string().trim().min(1).optional(),
 
-  repairOrderPartLineId: z.string().trim().min(1).optional(),
+    repairOrderPartLineId: z.string().trim().min(1).optional(),
 
-  orderedQty: z
-    .number()
-    .positive("Ordered quantity must be greater than zero."),
+    partNumber: z
+      .string()
+      .trim()
+      .min(1, "Part number is required.")
+      .max(150)
+      .optional(),
 
-  unitCost: z.number().nonnegative().default(0),
-});
+    description: z
+      .string()
+      .trim()
+      .min(1, "Description is required.")
+      .max(500)
+      .optional(),
+
+    orderedQty: z
+      .number()
+      .positive("Ordered quantity must be greater than zero."),
+
+    unitCost: z.number().nonnegative().default(0),
+  })
+  .superRefine((line, context) => {
+    if (!line.partId && !line.partNumber) {
+      context.addIssue({
+        code: "custom",
+
+        path: ["partNumber"],
+
+        message: "Part number is required for a manual PO line.",
+      });
+    }
+
+    if (!line.partId && !line.description) {
+      context.addIssue({
+        code: "custom",
+
+        path: ["description"],
+
+        message: "Description is required for a manual PO line.",
+      });
+    }
+
+    if (line.repairOrderPartLineId && !line.partId) {
+      context.addIssue({
+        code: "custom",
+
+        path: ["partId"],
+
+        message: "Repair-order PO lines must be linked to an inventory part.",
+      });
+    }
+  });
 
 //************************************************************** */
 
@@ -93,6 +139,18 @@ export const receivePurchaseOrderLineSchema = z.object({
 
   quantity: z.number().positive("Received quantity must be greater than zero."),
 
+  damagedQty: z.number().nonnegative().default(0),
+
+  backorderedQty: z.number().nonnegative().default(0),
+
+  actualCost: z.number().nonnegative().optional(),
+
+  invoiceNumber: z.string().trim().max(200).optional(),
+
+  packingSlip: z.string().trim().max(200).optional(),
+
+  binLocation: z.string().trim().max(100).optional(),
+
   notes: z.string().trim().max(1000).optional(),
 });
 
@@ -108,29 +166,19 @@ export type CancelPurchaseOrderInput = z.infer<
   typeof cancelPurchaseOrderSchema
 >;
 
-//************************************************************** */
-
 export type ReceivePurchaseOrderLineInput = z.infer<
   typeof receivePurchaseOrderLineSchema
 >;
-
-//************************************************************** */
 
 export type CreatePurchaseOrderInput = z.infer<
   typeof createPurchaseOrderSchema
 >;
 
-//************************************************************** */
-
 export type UpdatePurchaseOrderInput = z.infer<
   typeof updatePurchaseOrderSchema
 >;
 
-//************************************************************** */
-
 export type PurchaseOrderIdInput = z.infer<typeof purchaseOrderIdSchema>;
-
-//************************************************************** */
 
 export type ListPurchaseOrdersQueryInput = z.infer<
   typeof listPurchaseOrdersQuerySchema

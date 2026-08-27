@@ -17,6 +17,7 @@ import {
   createVendor,
   getVendorById,
   listVendors,
+  restoreVendor,
   updateVendor,
 } from "./vendor.service.js";
 
@@ -117,6 +118,21 @@ export async function archiveVendorHandler(
   const { vendorId } = requireValidatedParams<VendorIdInput>(request);
 
   const vendor = await archiveVendor(organizationId, vendorId);
+
+  ok(response, vendor);
+}
+
+//************************************************************** */
+
+export async function restoreVendorHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const { vendorId } = requireValidatedParams<VendorIdInput>(request);
+
+  const vendor = await restoreVendor(organizationId, vendorId);
 
   ok(response, vendor);
 }

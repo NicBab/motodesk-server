@@ -55,21 +55,29 @@ model PurchaseOrder {
 model PurchaseOrderLine {
   id              String @id @default(cuid())
   purchaseOrderId String
-  partId          String
+
+  partId String?
 
   repairOrderPartLineId String?
 
   partNumber  String
   description String
 
-  orderedQty  Decimal @db.Decimal(12, 3)
-  receivedQty Decimal @default(0) @db.Decimal(12, 3)
+  orderedQty     Decimal @db.Decimal(12, 3)
+  receivedQty    Decimal @default(0) @db.Decimal(12, 3)
+  damagedQty     Decimal @default(0) @db.Decimal(12, 3)
+  backorderedQty Decimal @default(0) @db.Decimal(12, 3)
 
-  unitCost Decimal @default(0) @db.Decimal(12, 2)
+  unitCost   Decimal  @default(0) @db.Decimal(12, 2)
+  actualCost Decimal? @db.Decimal(12, 2)
+
+  invoiceNumber String?
+  packingSlip   String?
+  binLocation   String?
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
-  part Part @relation(fields: [partId], references: [id], onDelete: Restrict)
+  part Part? @relation(fields: [partId], references: [id], onDelete: Restrict)
 
   repairOrderPartLine RepairOrderPartLine? @relation(fields: [repairOrderPartLineId], references: [id], onDelete: SetNull)
 

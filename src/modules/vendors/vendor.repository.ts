@@ -1,6 +1,4 @@
-import {
-  prisma,
-} from "../../config/prisma.js";
+import { prisma } from "../../config/prisma.js";
 
 import type {
   CreateVendorInput,
@@ -18,78 +16,46 @@ export async function createVendorRecord(
     data: {
       organizationId,
 
-      name:
-        input.name,
+      name: input.name,
 
-      accountNumber:
-        input.accountNumber ??
-        null,
+      accountNumber: input.accountNumber ?? null,
 
-      email:
-        input.email ??
-        null,
+      email: input.email ?? null,
 
-      phone:
-        input.phone ??
-        null,
+      phone: input.phone ?? null,
 
-      website:
-        input.website ??
-        null,
+      website: input.website ?? null,
 
-      addressLine1:
-        input.addressLine1 ??
-        null,
+      addressLine1: input.addressLine1 ?? null,
 
-      addressLine2:
-        input.addressLine2 ??
-        null,
+      addressLine2: input.addressLine2 ?? null,
 
-      city:
-        input.city ??
-        null,
+      city: input.city ?? null,
 
-      state:
-        input.state ??
-        null,
+      state: input.state ?? null,
 
-      postalCode:
-        input.postalCode ??
-        null,
+      postalCode: input.postalCode ?? null,
 
-      country:
-        input.country ??
-        null,
+      country: input.country ?? null,
 
-      contactName:
-        input.contactName ??
-        null,
+      contactName: input.contactName ?? null,
 
-      contactEmail:
-        input.contactEmail ??
-        null,
+      contactEmail: input.contactEmail ?? null,
 
-      contactPhone:
-        input.contactPhone ??
-        null,
+      contactPhone: input.contactPhone ?? null,
 
-      notes:
-        input.notes ??
-        null,
+      notes: input.notes ?? null,
     },
   });
 }
 
 //************************************************************** */
 
-export async function findVendorById(
-  organizationId: string,
-  vendorId: string,
-) {
+export async function findVendorById(organizationId: string, vendorId: string) {
   return prisma.vendor.findFirst({
     where: {
-      id:
-        vendorId,
+      id: vendorId,
+
       organizationId,
     },
   });
@@ -97,10 +63,7 @@ export async function findVendorById(
 
 //************************************************************** */
 
-export async function findVendorByName(
-  organizationId: string,
-  name: string,
-) {
+export async function findVendorByName(organizationId: string, name: string) {
   return prisma.vendor.findFirst({
     where: {
       organizationId,
@@ -121,8 +84,7 @@ export async function findVendorsByOrganization(
 
       ...(query.isActive !== undefined
         ? {
-            isActive:
-              query.isActive,
+            isActive: query.isActive,
           }
         : {}),
 
@@ -131,46 +93,41 @@ export async function findVendorsByOrganization(
             OR: [
               {
                 name: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+
+                  mode: "insensitive",
                 },
               },
 
               {
                 accountNumber: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+
+                  mode: "insensitive",
                 },
               },
 
               {
                 email: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+
+                  mode: "insensitive",
                 },
               },
 
               {
                 phone: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+
+                  mode: "insensitive",
                 },
               },
 
               {
                 contactName: {
-                  contains:
-                    query.search,
-                  mode:
-                    "insensitive",
+                  contains: query.search,
+
+                  mode: "insensitive",
                 },
               },
             ],
@@ -179,8 +136,7 @@ export async function findVendorsByOrganization(
     },
 
     orderBy: {
-      name:
-        "asc",
+      name: "asc",
     },
   });
 }
@@ -194,114 +150,99 @@ export async function updateVendorRecord(
 ) {
   return prisma.vendor.updateMany({
     where: {
-      id:
-        vendorId,
+      id: vendorId,
+
       organizationId,
     },
 
     data: {
       ...(input.name !== undefined
         ? {
-            name:
-              input.name,
+            name: input.name,
           }
         : {}),
 
       ...(input.accountNumber !== undefined
         ? {
-            accountNumber:
-              input.accountNumber,
+            accountNumber: input.accountNumber,
           }
         : {}),
 
       ...(input.email !== undefined
         ? {
-            email:
-              input.email,
+            email: input.email,
           }
         : {}),
 
       ...(input.phone !== undefined
         ? {
-            phone:
-              input.phone,
+            phone: input.phone,
           }
         : {}),
 
       ...(input.website !== undefined
         ? {
-            website:
-              input.website,
+            website: input.website,
           }
         : {}),
 
       ...(input.addressLine1 !== undefined
         ? {
-            addressLine1:
-              input.addressLine1,
+            addressLine1: input.addressLine1,
           }
         : {}),
 
       ...(input.addressLine2 !== undefined
         ? {
-            addressLine2:
-              input.addressLine2,
+            addressLine2: input.addressLine2,
           }
         : {}),
 
       ...(input.city !== undefined
         ? {
-            city:
-              input.city,
+            city: input.city,
           }
         : {}),
 
       ...(input.state !== undefined
         ? {
-            state:
-              input.state,
+            state: input.state,
           }
         : {}),
 
       ...(input.postalCode !== undefined
         ? {
-            postalCode:
-              input.postalCode,
+            postalCode: input.postalCode,
           }
         : {}),
 
       ...(input.country !== undefined
         ? {
-            country:
-              input.country,
+            country: input.country,
           }
         : {}),
 
       ...(input.contactName !== undefined
         ? {
-            contactName:
-              input.contactName,
+            contactName: input.contactName,
           }
         : {}),
 
       ...(input.contactEmail !== undefined
         ? {
-            contactEmail:
-              input.contactEmail,
+            contactEmail: input.contactEmail,
           }
         : {}),
 
       ...(input.contactPhone !== undefined
         ? {
-            contactPhone:
-              input.contactPhone,
+            contactPhone: input.contactPhone,
           }
         : {}),
 
       ...(input.notes !== undefined
         ? {
-            notes:
-              input.notes,
+            notes: input.notes,
           }
         : {}),
     },
@@ -316,16 +257,36 @@ export async function archiveVendorRecord(
 ) {
   return prisma.vendor.updateMany({
     where: {
-      id:
-        vendorId,
+      id: vendorId,
+
       organizationId,
-      isActive:
-        true,
+
+      isActive: true,
     },
 
     data: {
-      isActive:
-        false,
+      isActive: false,
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function restoreVendorRecord(
+  organizationId: string,
+  vendorId: string,
+) {
+  return prisma.vendor.updateMany({
+    where: {
+      id: vendorId,
+
+      organizationId,
+
+      isActive: false,
+    },
+
+    data: {
+      isActive: true,
     },
   });
 }

@@ -1,18 +1,10 @@
-import {
-  Router,
-} from "express";
+import { Router } from "express";
 
-import {
-  authenticateRequest,
-} from "../auth/index.js";
+import { authenticateRequest } from "../auth/index.js";
 
-import {
-  requireOrganizationAccess,
-} from "../organizations/index.js";
+import { requireOrganizationAccess } from "../organizations/index.js";
 
-import {
-  initializeRequestContext,
-} from "../../platform/request/request.middleware.js";
+import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import {
   validateBody,
@@ -25,6 +17,7 @@ import {
   createVendorHandler,
   getVendorHandler,
   listVendorsHandler,
+  restoreVendorHandler,
   updateVendorHandler,
 } from "./vendor.controller.js";
 
@@ -37,10 +30,9 @@ import {
 
 //************************************************************** */
 
-const router =
-  Router({
-    mergeParams: true,
-  });
+const router = Router({
+  mergeParams: true,
+});
 
 //************************************************************** */
 
@@ -49,9 +41,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateBody(
-    createVendorSchema,
-  ),
+  validateBody(createVendorSchema),
   createVendorHandler,
 );
 
@@ -62,9 +52,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateQuery(
-    listVendorsQuerySchema,
-  ),
+  validateQuery(listVendorsQuerySchema),
   listVendorsHandler,
 );
 
@@ -75,9 +63,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    vendorIdSchema,
-  ),
+  validateParams(vendorIdSchema),
   getVendorHandler,
 );
 
@@ -88,12 +74,8 @@ router.patch(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    vendorIdSchema,
-  ),
-  validateBody(
-    updateVendorSchema,
-  ),
+  validateParams(vendorIdSchema),
+  validateBody(updateVendorSchema),
   updateVendorHandler,
 );
 
@@ -104,10 +86,19 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
-  validateParams(
-    vendorIdSchema,
-  ),
+  validateParams(vendorIdSchema),
   archiveVendorHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/:vendorId/restore",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  validateParams(vendorIdSchema),
+  restoreVendorHandler,
 );
 
 //************************************************************** */

@@ -4,6 +4,7 @@ import type {
   CreatePurchaseOrderInput,
   ListPurchaseOrdersQueryInput,
   UpdatePurchaseOrderInput,
+  ReceivePurchaseOrderLineInput,
 } from "./purchase-order.schemas.js";
 
 import { PartInventoryTransactionType } from "../../generated/prisma/client.js";
@@ -13,7 +14,7 @@ import { applyInventoryMutationWithTransaction } from "../parts/part-inventory.r
 //************************************************************** */
 
 export interface PurchaseOrderLineSnapshot {
-  partId: string;
+  partId?: string;
 
   repairOrderPartLineId?: string;
 
@@ -73,7 +74,7 @@ export async function createPurchaseOrderRecord(
 
         lines: {
           create: lines.map((line) => ({
-            partId: line.partId,
+            partId: line.partId ?? null,
 
             repairOrderPartLineId: line.repairOrderPartLineId ?? null,
 
@@ -117,6 +118,7 @@ export async function findPurchaseOrderById(
   return prisma.purchaseOrder.findFirst({
     where: {
       id: purchaseOrderId,
+
       organizationId,
     },
 
@@ -171,6 +173,7 @@ export async function findPurchaseOrdersByOrganization(
               {
                 vendorReference: {
                   contains: query.search,
+
                   mode: "insensitive",
                 },
               },
@@ -178,6 +181,7 @@ export async function findPurchaseOrdersByOrganization(
               {
                 notes: {
                   contains: query.search,
+
                   mode: "insensitive",
                 },
               },
@@ -186,6 +190,7 @@ export async function findPurchaseOrdersByOrganization(
                 vendor: {
                   name: {
                     contains: query.search,
+
                     mode: "insensitive",
                   },
                 },
@@ -198,6 +203,7 @@ export async function findPurchaseOrdersByOrganization(
                       {
                         partNumber: {
                           contains: query.search,
+
                           mode: "insensitive",
                         },
                       },
@@ -205,6 +211,7 @@ export async function findPurchaseOrdersByOrganization(
                       {
                         description: {
                           contains: query.search,
+
                           mode: "insensitive",
                         },
                       },
@@ -224,6 +231,10 @@ export async function findPurchaseOrdersByOrganization(
         include: {
           part: true,
           repairOrderPartLine: true,
+        },
+
+        orderBy: {
+          createdAt: "asc",
         },
       },
     },
@@ -245,6 +256,7 @@ export async function orderPurchaseOrderRecord(
     const purchaseOrder = await transaction.purchaseOrder.findFirst({
       where: {
         id: purchaseOrderId,
+
         organizationId,
       },
 
@@ -265,21 +277,36 @@ export async function orderPurchaseOrderRecord(
     }
 
     for (const line of purchaseOrder.lines) {
-      await applyInventoryMutationWithTransaction(transaction, {
-        partId: line.partId,
+      const orderedQty = Number(line.orderedQty.toString());
 
-        type: PartInventoryTransactionType.PURCHASE_ORDERED,
+      // Manual PO lines intentionally do not affect inventory.
+      if (line.partId) {
+        const inventoryResult = await applyInventoryMutationWithTransaction(
+          transaction,
+          {
+            partId: line.partId,
 
-        quantity: Number(line.orderedQty.toString()),
+            type: PartInventoryTransactionType.PURCHASE_ORDERED,
 
-        onOrderDelta: Number(line.orderedQty.toString()),
+            quantity: orderedQty,
 
-        referenceType: "PURCHASE_ORDER",
+            onOrderDelta: orderedQty,
 
-        referenceId: purchaseOrder.id,
+            referenceType: "PURCHASE_ORDER",
 
-        createdByMembershipId,
-      });
+            referenceId: purchaseOrder.id,
+
+            createdByMembershipId,
+          },
+        );
+
+        if (!inventoryResult) {
+          return {
+            purchaseOrder,
+            inventoryFailed: true,
+          };
+        }
+      }
 
       if (line.repairOrderPartLineId) {
         const repairOrderPartLine =
@@ -300,8 +327,7 @@ export async function orderPurchaseOrderRecord(
             },
 
             data: {
-              orderedQty:
-                currentOrderedQty + Number(line.orderedQty.toString()),
+              orderedQty: currentOrderedQty + orderedQty,
 
               status: "ORDERED",
             },
@@ -333,6 +359,7 @@ export async function orderPurchaseOrderRecord(
         lines: {
           include: {
             part: true,
+
             repairOrderPartLine: true,
           },
 
@@ -347,6 +374,8 @@ export async function orderPurchaseOrderRecord(
       purchaseOrder: updatedPurchaseOrder,
 
       alreadyOrdered: false,
+
+      inventoryFailed: false,
     };
   });
 }
@@ -356,15 +385,14 @@ export async function orderPurchaseOrderRecord(
 export async function receivePurchaseOrderLineRecord(
   organizationId: string,
   purchaseOrderId: string,
-  purchaseOrderLineId: string,
-  quantity: number,
+  input: ReceivePurchaseOrderLineInput,
   createdByMembershipId: string | null,
-  notes?: string,
 ) {
   return prisma.$transaction(async (transaction) => {
     const purchaseOrder = await transaction.purchaseOrder.findFirst({
       where: {
         id: purchaseOrderId,
+
         organizationId,
       },
 
@@ -378,12 +406,13 @@ export async function receivePurchaseOrderLineRecord(
     }
 
     const line = purchaseOrder.lines.find(
-      (item) => item.id === purchaseOrderLineId,
+      (item) => item.id === input.purchaseOrderLineId,
     );
 
     if (!line) {
       return {
         purchaseOrder,
+
         lineNotFound: true,
       };
     }
@@ -394,60 +423,107 @@ export async function receivePurchaseOrderLineRecord(
 
     const remainingQty = orderedQty - currentReceivedQty;
 
-    if (quantity > remainingQty) {
+    if (input.quantity > remainingQty) {
       return {
         purchaseOrder,
         line,
+
         exceedsRemaining: true,
+
         remainingQty,
       };
     }
 
-    const inventoryResult = await applyInventoryMutationWithTransaction(
-      transaction,
-      {
-        partId: line.partId,
+    //************************************************************** */
+    // Inventory-backed receipt
 
-        type: PartInventoryTransactionType.PURCHASE_RECEIPT,
+    if (line.partId) {
+      const inventoryResult = await applyInventoryMutationWithTransaction(
+        transaction,
+        {
+          partId: line.partId,
 
-        quantity,
+          type: PartInventoryTransactionType.PURCHASE_RECEIPT,
 
-        onHandDelta: quantity,
+          quantity: input.quantity,
 
-        onOrderDelta: -quantity,
+          onHandDelta: input.quantity,
 
-        referenceType: "PURCHASE_ORDER",
+          onOrderDelta: -input.quantity,
 
-        referenceId: purchaseOrder.id,
+          referenceType: "PURCHASE_ORDER",
 
-        ...(notes !== undefined
-          ? {
-              notes,
-            }
-          : {}),
+          referenceId: purchaseOrder.id,
 
-        createdByMembershipId,
-      },
-    );
+          ...(input.notes !== undefined
+            ? {
+                notes: input.notes,
+              }
+            : {}),
 
-    if (!inventoryResult) {
-      return {
-        purchaseOrder,
-        inventoryFailed: true,
-      };
+          createdByMembershipId,
+        },
+      );
+
+      if (!inventoryResult) {
+        return {
+          purchaseOrder,
+
+          inventoryFailed: true,
+        };
+      }
     }
 
-    const receivedQty = currentReceivedQty + quantity;
+    //************************************************************** */
+    // PO line receiving metadata
+
+    const receivedQty = currentReceivedQty + input.quantity;
+
+    const damagedQty = Number(line.damagedQty.toString()) + input.damagedQty;
+
+    const backorderedQty =
+      Number(line.backorderedQty.toString()) + input.backorderedQty;
 
     await transaction.purchaseOrderLine.update({
       where: {
-        id: purchaseOrderLineId,
+        id: input.purchaseOrderLineId,
       },
 
       data: {
         receivedQty,
+
+        damagedQty,
+
+        backorderedQty,
+
+        ...(input.actualCost !== undefined
+          ? {
+              actualCost: input.actualCost,
+            }
+          : {}),
+
+        ...(input.invoiceNumber !== undefined
+          ? {
+              invoiceNumber: input.invoiceNumber,
+            }
+          : {}),
+
+        ...(input.packingSlip !== undefined
+          ? {
+              packingSlip: input.packingSlip,
+            }
+          : {}),
+
+        ...(input.binLocation !== undefined
+          ? {
+              binLocation: input.binLocation,
+            }
+          : {}),
       },
     });
+
+    //************************************************************** */
+    // Linked RO part line
 
     if (line.repairOrderPartLineId) {
       const repairOrderPartLine =
@@ -462,12 +538,12 @@ export async function receivePurchaseOrderLineRecord(
           repairOrderPartLine.receivedQty.toString(),
         );
 
-        const newRoReceivedQty = currentRoReceivedQty + quantity;
+        const newRoReceivedQty = currentRoReceivedQty + input.quantity;
+
+        const roOrderedQty = Number(repairOrderPartLine.orderedQty.toString());
 
         const roStatus =
-          newRoReceivedQty >= Number(repairOrderPartLine.orderedQty.toString())
-            ? "RECEIVED"
-            : "PARTIALLY_RECEIVED";
+          newRoReceivedQty >= roOrderedQty ? "RECEIVED" : "PARTIALLY_RECEIVED";
 
         await transaction.repairOrderPartLine.update({
           where: {
@@ -482,6 +558,9 @@ export async function receivePurchaseOrderLineRecord(
         });
       }
     }
+
+    //************************************************************** */
+    // Re-evaluate overall PO receipt status
 
     const updatedLines = await transaction.purchaseOrderLine.findMany({
       where: {
@@ -503,11 +582,7 @@ export async function receivePurchaseOrderLineRecord(
       data: {
         status: allReceived ? "RECEIVED" : "PARTIALLY_RECEIVED",
 
-        ...(allReceived
-          ? {
-              receivedAt: new Date(),
-            }
-          : {}),
+        receivedAt: allReceived ? new Date() : null,
       },
     });
 
@@ -522,6 +597,7 @@ export async function receivePurchaseOrderLineRecord(
         lines: {
           include: {
             part: true,
+
             repairOrderPartLine: true,
           },
 
@@ -556,6 +632,7 @@ export async function cancelPurchaseOrderRecord(
     const purchaseOrder = await transaction.purchaseOrder.findFirst({
       where: {
         id: purchaseOrderId,
+
         organizationId,
       },
 
@@ -574,6 +651,7 @@ export async function cancelPurchaseOrderRecord(
     ) {
       return {
         purchaseOrder,
+
         notCancellable: true,
       };
     }
@@ -589,36 +667,40 @@ export async function cancelPurchaseOrderRecord(
         continue;
       }
 
-      const inventoryResult = await applyInventoryMutationWithTransaction(
-        transaction,
-        {
-          partId: line.partId,
+      // Only inventory-backed lines have qtyOnOrder to reverse.
+      if (line.partId) {
+        const inventoryResult = await applyInventoryMutationWithTransaction(
+          transaction,
+          {
+            partId: line.partId,
 
-          type: PartInventoryTransactionType.PURCHASE_CANCELLED,
+            type: PartInventoryTransactionType.PURCHASE_CANCELLED,
 
-          quantity: remainingQty,
+            quantity: remainingQty,
 
-          onOrderDelta: -remainingQty,
+            onOrderDelta: -remainingQty,
 
-          referenceType: "PURCHASE_ORDER",
+            referenceType: "PURCHASE_ORDER",
 
-          referenceId: purchaseOrder.id,
+            referenceId: purchaseOrder.id,
 
-          ...(notes !== undefined
-            ? {
-                notes,
-              }
-            : {}),
+            ...(notes !== undefined
+              ? {
+                  notes,
+                }
+              : {}),
 
-          createdByMembershipId,
-        },
-      );
+            createdByMembershipId,
+          },
+        );
 
-      if (!inventoryResult) {
-        return {
-          purchaseOrder,
-          inventoryFailed: true,
-        };
+        if (!inventoryResult) {
+          return {
+            purchaseOrder,
+
+            inventoryFailed: true,
+          };
+        }
       }
 
       if (line.repairOrderPartLineId) {
@@ -690,6 +772,7 @@ export async function cancelPurchaseOrderRecord(
         lines: {
           include: {
             part: true,
+
             repairOrderPartLine: true,
           },
 
@@ -720,6 +803,7 @@ export async function updatePurchaseOrderRecord(
   return prisma.purchaseOrder.updateMany({
     where: {
       id: purchaseOrderId,
+
       organizationId,
     },
 

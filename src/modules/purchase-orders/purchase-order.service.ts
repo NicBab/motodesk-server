@@ -61,6 +61,20 @@ async function buildLineSnapshots(
   const snapshots: PurchaseOrderLineSnapshot[] = [];
 
   for (const line of input.lines) {
+    if (!line.partId) {
+      snapshots.push({
+        partNumber: line.partNumber!.trim(),
+
+        description: line.description!.trim(),
+
+        orderedQty: line.orderedQty,
+
+        unitCost: line.unitCost,
+      });
+
+      continue;
+    }
+
     const part = await findPartById(organizationId, line.partId);
 
     if (!part) {
@@ -248,10 +262,8 @@ export async function receivePurchaseOrderLine(
   const result = await receivePurchaseOrderLineRecord(
     organizationId,
     purchaseOrderId,
-    input.purchaseOrderLineId,
-    input.quantity,
+    input,
     membershipId,
-    input.notes,
   );
 
   if (!result) {
