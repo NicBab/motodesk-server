@@ -74,7 +74,9 @@
     "test:part-returns": "tsx --test tests/integration/parts/part-returns/*.test.ts",
     "test:part-order-demand": "tsx --test tests/integration/parts/part-order-demand.test.ts",
     "test:purchase-order-receipt-history":"tsx --test tests/integration/purchase-orders/purchase-order-receipt-history.test.ts",
-    "test:purchase-order-draft-edit":"tsx --test tests/integration/purchase-orders/purchase-order-draft-editing.test.ts"
+    "test:purchase-order-draft-edit":"tsx --test tests/integration/purchase-orders/purchase-order-draft-editing.test.ts",
+    "test:pos-checkout":"tsx --test tests/integration/sales/pos-checkout.test.ts",
+    "test:pos-returns":"tsx --test tests/integration/sales/pos-returns.test.ts"
 
   },
   "keywords": [],

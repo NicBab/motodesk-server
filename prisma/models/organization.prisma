@@ -32,6 +32,8 @@ model Organization {
   serviceBayAssignments         ServiceBayAssignment[]
   repairOrderLaborCancellations RepairOrderLaborCancellation[]
   membershipPermissions         MembershipPermission[]
+  sales                         Sale[]
+  saleSequence                  SaleSequence?
   purchaseOrderSequence         PurchaseOrderSequence?
   partReturnSequence            PartReturnSequence?
   repairOrderSequence           RepairOrderSequence?

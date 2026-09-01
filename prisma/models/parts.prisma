@@ -53,6 +53,7 @@ model Part {
   purchaseOrderLines        PurchaseOrderLine[]
   purchaseOrderReceiptLines PurchaseOrderReceiptLine[]
   partReturns               PartReturn[]
+  saleLines                 SaleLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

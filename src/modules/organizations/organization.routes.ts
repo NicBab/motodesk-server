@@ -27,6 +27,7 @@ import membershipInvitationRouter from "../membership-invitations/membership-inv
 import auditRouter from "../audit/audit.routes.js";
 import permissionCatalogRouter from "../permissions/permission-catalog.routes.js";
 import { partReturnRouter } from "../part-returns/part-return.routes.js";
+import saleRouter from "../sales/sale.routes.js";
 
 import {
   createOrganizationSchema,
@@ -110,6 +111,10 @@ router.use("/:organizationId/vendors", vendorRouter);
 //************************************************************** */
 
 router.use("/:organizationId/purchase-orders", purchaseOrderRouter);
+
+//************************************************************** */
+
+router.use("/:organizationId/sales", saleRouter);
 
 //************************************************************** */
 
