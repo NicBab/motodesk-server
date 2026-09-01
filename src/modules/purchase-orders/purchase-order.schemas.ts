@@ -14,7 +14,7 @@ export const purchaseOrderStatusSchema = z.enum([
 
 //************************************************************** */
 
-const purchaseOrderLineSchema = z
+export const purchaseOrderLineSchema = z
   .object({
     partId: z.string().trim().min(1).optional(),
 
@@ -87,15 +87,20 @@ export const createPurchaseOrderSchema = z.object({
 export const updatePurchaseOrderSchema = z.object({
   vendorId: z.string().trim().min(1).optional(),
 
-  expectedAt: z.coerce.date().optional(),
+  expectedAt: z.coerce.date().nullable().optional(),
 
-  vendorReference: z.string().trim().max(200).optional(),
+  vendorReference: z.string().trim().max(200).nullable().optional(),
 
   shippingCost: z.number().nonnegative().optional(),
 
   taxAmount: z.number().nonnegative().optional(),
 
-  notes: z.string().trim().max(5000).optional(),
+  notes: z.string().trim().max(5000).nullable().optional(),
+
+  lines: z
+    .array(purchaseOrderLineSchema)
+    .min(1, "At least one purchase order line is required.")
+    .optional(),
 });
 
 //************************************************************** */
@@ -219,6 +224,10 @@ export type ReceivePurchaseOrderLineInput = z.infer<
 
 export type ReceivePurchaseOrderInput = z.infer<
   typeof receivePurchaseOrderSchema
+>;
+
+export type PurchaseOrderLineInput = z.infer<
+  typeof purchaseOrderLineSchema
 >;
 
 export type CreatePurchaseOrderInput = z.infer<

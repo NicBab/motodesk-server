@@ -20,6 +20,7 @@ import type { PurchaseOrderLineSnapshot } from "./purchase-order.repository.js";
 
 import type {
   CreatePurchaseOrderInput,
+  PurchaseOrderLineInput,
   ListPurchaseOrdersQueryInput,
   UpdatePurchaseOrderInput,
   ReceivePurchaseOrderInput,
@@ -56,11 +57,11 @@ async function requireActiveVendor(organizationId: string, vendorId: string) {
 
 async function buildLineSnapshots(
   organizationId: string,
-  input: CreatePurchaseOrderInput,
+  lines: PurchaseOrderLineInput[],
 ): Promise<PurchaseOrderLineSnapshot[]> {
   const snapshots: PurchaseOrderLineSnapshot[] = [];
 
-  for (const line of input.lines) {
+  for (const line of lines) {
     if (!line.partId) {
       if (line.repairOrderPartLineId !== undefined) {
         const repairOrderPartLine = await findRepairOrderPartLineByIdOnly(
@@ -172,7 +173,7 @@ export async function createPurchaseOrder(
 ) {
   await requireActiveVendor(organizationId, input.vendorId);
 
-  const lines = await buildLineSnapshots(organizationId, input);
+  const lines = await buildLineSnapshots(organizationId, input.lines);
 
   return createPurchaseOrderRecord(organizationId, input, lines);
 }
@@ -431,7 +432,23 @@ export async function updatePurchaseOrder(
     await requireActiveVendor(organizationId, input.vendorId);
   }
 
-  await updatePurchaseOrderRecord(organizationId, purchaseOrderId, input);
+  const lines =
+    input.lines !== undefined
+      ? await buildLineSnapshots(organizationId, input.lines)
+      : undefined;
 
-  return getPurchaseOrderById(organizationId, purchaseOrderId);
+  const updatedPurchaseOrder = await updatePurchaseOrderRecord(
+    organizationId,
+    purchaseOrderId,
+    input,
+    lines,
+  );
+
+  if (!updatedPurchaseOrder) {
+    throw new AppError(409, "Purchase order changed before it could be edited.", {
+      code: "PURCHASE_ORDER_EDIT_CONFLICT",
+    });
+  }
+
+  return updatedPurchaseOrder;
 }

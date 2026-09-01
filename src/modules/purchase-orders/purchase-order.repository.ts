@@ -1092,50 +1092,101 @@ export async function updatePurchaseOrderRecord(
   organizationId: string,
   purchaseOrderId: string,
   input: UpdatePurchaseOrderInput,
+  lines?: PurchaseOrderLineSnapshot[],
 ) {
-  return prisma.purchaseOrder.updateMany({
-    where: {
-      id: purchaseOrderId,
+  return prisma.$transaction(async (transaction) => {
+    const updateResult = await transaction.purchaseOrder.updateMany({
+      where: {
+        id: purchaseOrderId,
 
-      organizationId,
-    },
+        organizationId,
 
-    data: {
-      ...(input.vendorId !== undefined
-        ? {
-            vendorId: input.vendorId,
-          }
-        : {}),
+        status: "DRAFT",
+      },
 
-      ...(input.expectedAt !== undefined
-        ? {
-            expectedAt: input.expectedAt,
-          }
-        : {}),
+      data: {
+        ...(input.vendorId !== undefined
+          ? {
+              vendorId: input.vendorId,
+            }
+          : {}),
 
-      ...(input.vendorReference !== undefined
-        ? {
-            vendorReference: input.vendorReference,
-          }
-        : {}),
+        ...(input.expectedAt !== undefined
+          ? {
+              expectedAt: input.expectedAt,
+            }
+          : {}),
 
-      ...(input.shippingCost !== undefined
-        ? {
-            shippingCost: input.shippingCost,
-          }
-        : {}),
+        ...(input.vendorReference !== undefined
+          ? {
+              vendorReference: input.vendorReference,
+            }
+          : {}),
 
-      ...(input.taxAmount !== undefined
-        ? {
-            taxAmount: input.taxAmount,
-          }
-        : {}),
+        ...(input.shippingCost !== undefined
+          ? {
+              shippingCost: input.shippingCost,
+            }
+          : {}),
 
-      ...(input.notes !== undefined
-        ? {
-            notes: input.notes,
-          }
-        : {}),
-    },
+        ...(input.taxAmount !== undefined
+          ? {
+              taxAmount: input.taxAmount,
+            }
+          : {}),
+
+        ...(input.notes !== undefined
+          ? {
+              notes: input.notes,
+            }
+          : {}),
+      },
+    });
+
+    if (updateResult.count !== 1) {
+      return null;
+    }
+
+    if (lines !== undefined) {
+      await transaction.purchaseOrderLine.deleteMany({
+        where: {
+          purchaseOrderId,
+        },
+      });
+
+      await transaction.purchaseOrderLine.createMany({
+        data: lines.map((line) => ({
+          purchaseOrderId,
+
+          partId: line.partId ?? null,
+
+          repairOrderPartLineId: line.repairOrderPartLineId ?? null,
+
+          partNumber: line.partNumber,
+
+          description: line.description,
+
+          orderedQty: line.orderedQty,
+
+          receivedQty: 0,
+
+          damagedQty: 0,
+
+          backorderedQty: 0,
+
+          unitCost: line.unitCost,
+        })),
+      });
+    }
+
+    return transaction.purchaseOrder.findFirst({
+      where: {
+        id: purchaseOrderId,
+
+        organizationId,
+      },
+
+      include: purchaseOrderInclude,
+    });
   });
 }
