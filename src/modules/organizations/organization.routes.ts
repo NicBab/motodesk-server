@@ -28,6 +28,8 @@ import auditRouter from "../audit/audit.routes.js";
 import permissionCatalogRouter from "../permissions/permission-catalog.routes.js";
 import { partReturnRouter } from "../part-returns/part-return.routes.js";
 import saleRouter from "../sales/sale.routes.js";
+import employeeRouter from "../employees/employee.routes.js";
+import timeClockRouter from "../time-clock/time-clock.routes.js";
 
 import {
   createOrganizationSchema,
@@ -122,6 +124,13 @@ router.use("/:organizationId/scheduling", scheduleRouter);
 
 //************************************************************** */
 
+router.use("/:organizationId/employees", employeeRouter);
+//************************************************************** */
+
+router.use("/:organizationId/time-clock", timeClockRouter);
+
+//************************************************************** */
+
 router.use(
   "/:organizationId/technician-assignments",
   technicianAssignmentRouter,
@@ -178,10 +187,7 @@ router.use("/:organizationId/audit", auditRouter);
 
 //************************************************************** */
 
-router.use(
-  "/:organizationId/part-returns",
-  partReturnRouter,
-);
+router.use("/:organizationId/part-returns", partReturnRouter);
 
 //************************************************************** */
 

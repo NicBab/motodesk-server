@@ -144,6 +144,10 @@ model Membership {
 
   purchaseOrderReceiptsReceived PurchaseOrderReceipt[] @relation("PurchaseOrderReceiptReceivedBy")
 
+  employeeTimeEntryCorrections EmployeeTimeEntryCorrection[] @relation("EmployeeTimeEntryCorrectionManager")
+
+  employee Employee? @relation("EmployeeMembership")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

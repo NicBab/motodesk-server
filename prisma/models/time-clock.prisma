@@ -1,0 +1,93 @@
+//************************************************************** */
+
+enum EmployeeTimeEntryStatus {
+  CLOCKED_IN
+  ON_BREAK
+  CLOCKED_OUT
+}
+
+//************************************************************** */
+
+enum EmployeeTimeEntryAuthMethod {
+  PIN
+  MANUAL
+}
+
+//************************************************************** */
+
+enum EmployeeTimeEntrySource {
+  TIME_CLOCK_KIOSK
+  MANAGER_ENTRY
+  MANAGER_CORRECTION
+}
+
+//************************************************************** */
+
+model EmployeeTimeEntry {
+  id             String @id @default(cuid())
+  organizationId String
+  employeeId     String
+
+  employeeName String
+
+  clockInAt  DateTime
+  clockOutAt DateTime?
+
+  breakMinutes Int @default(0)
+
+  workedMinutes Int?
+
+  status EmployeeTimeEntryStatus @default(CLOCKED_IN)
+
+  source EmployeeTimeEntrySource @default(TIME_CLOCK_KIOSK)
+
+  authMethod EmployeeTimeEntryAuthMethod @default(PIN)
+
+  notes String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  corrections EmployeeTimeEntryCorrection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([organizationId, status])
+  @@index([organizationId, clockInAt])
+  @@index([employeeId, clockInAt])
+}
+
+//************************************************************** */
+
+model EmployeeTimeEntryCorrection {
+  id          String @id @default(cuid())
+  timeEntryId String
+
+  field String
+
+  originalValue String?
+
+  updatedValue String?
+
+  reason String
+
+  managerMembershipId String?
+
+  managerName String?
+
+  changedAt DateTime @default(now())
+
+  timeEntry EmployeeTimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  managerMembership Membership? @relation("EmployeeTimeEntryCorrectionManager", fields: [managerMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([timeEntryId])
+  @@index([managerMembershipId])
+  @@index([changedAt])
+}
+
+//************************************************************** */

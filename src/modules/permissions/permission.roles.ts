@@ -104,6 +104,9 @@ export const rolePermissions: RolePermissionMap = {
 
     Permissions.SETTINGS_VIEW,
     Permissions.SETTINGS_UPDATE,
+
+    Permissions.TIME_CLOCK_VIEW,
+    Permissions.TIME_CLOCK_MANAGE,
   ]),
 
   [MembershipRole.MANAGER]: new Set([
@@ -172,6 +175,9 @@ export const rolePermissions: RolePermissionMap = {
     Permissions.ANALYTICS_VIEW,
 
     Permissions.SETTINGS_VIEW,
+
+    Permissions.TIME_CLOCK_VIEW,
+    Permissions.TIME_CLOCK_MANAGE,
   ]),
 
   [MembershipRole.SERVICE_ADVISOR]: new Set([
@@ -211,6 +217,8 @@ export const rolePermissions: RolePermissionMap = {
     Permissions.DOCUMENTS_VIEW,
     Permissions.DOCUMENTS_CREATE,
     Permissions.DOCUMENTS_UPDATE,
+
+    Permissions.TIME_CLOCK_VIEW,
   ]),
 
   [MembershipRole.TECHNICIAN]: new Set([
@@ -234,6 +242,8 @@ export const rolePermissions: RolePermissionMap = {
 
     Permissions.DOCUMENTS_VIEW,
     Permissions.DOCUMENTS_CREATE,
+
+    Permissions.TIME_CLOCK_VIEW,
   ]),
 
   [MembershipRole.PARTS]: new Set([
@@ -262,6 +272,8 @@ export const rolePermissions: RolePermissionMap = {
 
     Permissions.DOCUMENTS_VIEW,
     Permissions.DOCUMENTS_CREATE,
+
+    Permissions.TIME_CLOCK_VIEW,
   ]),
 };
 

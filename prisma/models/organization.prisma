@@ -33,6 +33,8 @@ model Organization {
   repairOrderLaborCancellations RepairOrderLaborCancellation[]
   membershipPermissions         MembershipPermission[]
   sales                         Sale[]
+  employees                     Employee[]
+  employeeTimeEntries           EmployeeTimeEntry[]
   saleSequence                  SaleSequence?
   purchaseOrderSequence         PurchaseOrderSequence?
   partReturnSequence            PartReturnSequence?

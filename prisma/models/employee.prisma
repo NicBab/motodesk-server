@@ -1,0 +1,66 @@
+//************************************************************** */
+
+enum EmployeeRole {
+  TECHNICIAN
+  SERVICE_ADVISOR
+  SHOP_MANAGER
+  CASHIER
+  PARTS_SPECIALIST
+}
+
+//************************************************************** */
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+//************************************************************** */
+
+model Employee {
+  id             String @id @default(cuid())
+  organizationId String
+
+  membershipId String? @unique
+
+  firstName String
+  lastName  String
+
+  role   EmployeeRole
+  status EmployeeStatus @default(ACTIVE)
+
+  phone String?
+  email String?
+
+  hourlyRate Decimal @default(0) @db.Decimal(12, 2)
+  laborRate  Decimal @default(0) @db.Decimal(12, 2)
+
+  hireDate DateTime?
+
+  pinHash String?
+
+  isSchedulable Boolean @default(true)
+
+  dailyStartTime String @default("08:00")
+  dailyEndTime   String @default("17:00")
+
+  maxDailyHours Decimal @default(8) @db.Decimal(5, 2)
+
+  skills String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  membership Membership? @relation("EmployeeMembership", fields: [membershipId], references: [id], onDelete: SetNull)
+
+  timeEntries EmployeeTimeEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, role])
+  @@index([organizationId, lastName, firstName])
+}
+
+//************************************************************** */

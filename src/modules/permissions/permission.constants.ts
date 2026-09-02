@@ -103,6 +103,8 @@ export const Permissions = {
   // Administration
   SETTINGS_VIEW: "settings:view",
   SETTINGS_UPDATE: "settings:update",
+  TIME_CLOCK_VIEW: "time_clock:view",
+  TIME_CLOCK_MANAGE: "time_clock:manage",
 } as const;
 
 //************************************************************** */

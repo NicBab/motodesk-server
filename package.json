@@ -76,7 +76,11 @@
     "test:purchase-order-receipt-history":"tsx --test tests/integration/purchase-orders/purchase-order-receipt-history.test.ts",
     "test:purchase-order-draft-edit":"tsx --test tests/integration/purchase-orders/purchase-order-draft-editing.test.ts",
     "test:pos-checkout":"tsx --test tests/integration/sales/pos-checkout.test.ts",
-    "test:pos-returns":"tsx --test tests/integration/sales/pos-returns.test.ts"
+    "test:pos-returns":"tsx --test tests/integration/sales/pos-returns.test.ts",
+    "test:employee-crud":"tsx --test tests/integration/employees/employee-crud.test.ts",
+    "test:time-clock-kiosk":"tsx --test tests/integration/time-clock/time-clock-kiosk.test.ts",
+    "test:time-clock-manager":"tsx --test tests/integration/time-clock/time-clock-manager.test.ts",
+    "test:time-clock-report":"tsx --test tests/integration/time-clock/time-clock-report.test.ts"
 
   },
   "keywords": [],
