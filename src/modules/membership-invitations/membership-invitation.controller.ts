@@ -126,22 +126,23 @@ export async function createMembershipInvitationHandler(
       request,
     );
 
-  const result =
-    await createMembershipInvitation(
-      organizationId,
-      {
-        organizationId:
-          context.membership.organizationId,
+ const result =
+  await createMembershipInvitation(
+    organizationId,
+    {
+      organizationId:
+        context.membership.organizationId,
 
-        membershipId:
-          context.membership.id,
+      membershipId:
+        context.membership.id,
 
-        role:
-          context.membership.role,
-      },
-      input.email,
-      input.role,
-    );
+      role:
+        context.membership.role,
+    },
+    input.email,
+    input.role,
+    input.employeeId,
+  );
 
   created(
     response,

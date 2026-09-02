@@ -10,6 +10,8 @@ import type { AuthenticatedUser } from "../auth/auth.types.js";
 
 import { generateRandomToken, hashToken } from "../auth/tokens/token.crypto.js";
 
+import { findEmployeeById } from "../employees/employee.repository.js";
+
 import {
   findMembershipByUserAndOrganization,
   findUserForMembershipByEmail,
@@ -96,6 +98,7 @@ export async function createMembershipInvitation(
   actor: MembershipActorContext,
   email: string,
   role: MembershipRole,
+  employeeId?: string,
 ): Promise<CreateMembershipInvitationResult> {
   if (actor.organizationId !== organizationId) {
     throw new AppError(
@@ -128,6 +131,44 @@ export async function createMembershipInvitation(
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  //************************************************************** */
+  // Optional Employee linkage
+
+  if (employeeId) {
+    const employee = await findEmployeeById(organizationId, employeeId);
+
+    if (!employee) {
+      throw new AppError(404, "Employee not found.", {
+        code: "MEMBERSHIP_INVITATION_EMPLOYEE_NOT_FOUND",
+      });
+    }
+
+    if (employee.membershipId) {
+      throw new AppError(
+        409,
+        "Employee already has MotoDesk application access.",
+        {
+          code: "EMPLOYEE_MEMBERSHIP_ALREADY_LINKED",
+        },
+      );
+    }
+
+    if (
+      employee.email &&
+      employee.email.trim().toLowerCase() !== normalizedEmail
+    ) {
+      throw new AppError(
+        400,
+        "Invitation email must match the employee email address.",
+        {
+          code: "EMPLOYEE_INVITATION_EMAIL_MISMATCH",
+        },
+      );
+    }
+  }
+
+  //************************************************************** */
 
   const existingUser = await findUserForMembershipByEmail(normalizedEmail);
 
@@ -178,6 +219,7 @@ export async function createMembershipInvitation(
     role,
     tokenHash,
     expiresAt,
+    employeeId,
   );
 
   await createAuditLog({
@@ -198,6 +240,8 @@ export async function createMembershipInvitation(
 
       invitedByMembershipId: invitation.invitedByMembershipId,
 
+      employeeId: invitation.employeeId,
+
       email: invitation.email,
 
       role: invitation.role,
@@ -211,6 +255,8 @@ export async function createMembershipInvitation(
 
     metadata: {
       actorMembershipId: actor.membershipId,
+
+      employeeId: employeeId ?? null,
     },
   });
 
@@ -476,6 +522,7 @@ export async function acceptMembershipInvitation(
     invitation.role,
     permissions,
     invitation.invitedByMembershipId,
+    invitation.employeeId,
   );
 
   await createAuditLog({

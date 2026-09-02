@@ -53,9 +53,13 @@ export async function findPendingMembershipInvitationByEmail(
   return prisma.membershipInvitation.findFirst({
     where: {
       organizationId,
+
       email,
+
       acceptedAt: null,
+
       revokedAt: null,
+
       expiresAt: {
         gt: new Date(),
       },
@@ -76,6 +80,7 @@ export async function findMembershipInvitationById(
   return prisma.membershipInvitation.findFirst({
     where: {
       id: invitationId,
+
       organizationId,
     },
   });
@@ -91,6 +96,7 @@ export async function findMembershipInvitationByTokenHash(tokenHash: string) {
 
     include: {
       organization: true,
+
       invitedBy: true,
     },
   });
@@ -105,19 +111,28 @@ export async function createMembershipInvitationRecord(
   role: MembershipRole,
   tokenHash: string,
   expiresAt: Date,
+  employeeId?: string,
 ) {
   return prisma.membershipInvitation.create({
     data: {
       organizationId,
+
       invitedByMembershipId,
+
+      employeeId: employeeId ?? null,
+
       email,
+
       role,
+
       tokenHash,
+
       expiresAt,
     },
 
     include: {
       organization: true,
+
       invitedBy: true,
     },
   });
@@ -146,19 +161,17 @@ export async function refreshMembershipInvitationRecord(
 ) {
   return prisma.membershipInvitation.update({
     where: {
-      id:
-        invitationId,
+      id: invitationId,
     },
 
     data: {
       tokenHash,
+
       expiresAt,
 
-      revokedAt:
-        null,
+      revokedAt: null,
 
-      acceptedAt:
-        null,
+      acceptedAt: null,
     },
   });
 }
@@ -172,18 +185,23 @@ export async function acceptMembershipInvitationRecord(
   role: MembershipRole,
   permissions: Permission[],
   grantedByMembershipId: string,
+  employeeId?: string | null,
 ) {
   return prisma.$transaction(async (transaction) => {
     const membership = await transaction.membership.create({
       data: {
         organizationId,
+
         userId,
+
         role,
+
         status: MembershipStatus.ACTIVE,
       },
 
       include: {
         user: true,
+
         organization: true,
       },
     });
@@ -192,10 +210,41 @@ export async function acceptMembershipInvitationRecord(
       await transaction.membershipPermission.createMany({
         data: permissions.map((permission) => ({
           organizationId,
+
           membershipId: membership.id,
+
           permission,
+
           grantedByMembershipId,
         })),
+      });
+    }
+
+    if (employeeId) {
+      const employee = await transaction.employee.findFirst({
+        where: {
+          id: employeeId,
+
+          organizationId,
+        },
+      });
+
+      if (!employee) {
+        throw new Error("Invitation employee link is invalid.");
+      }
+
+      if (employee.membershipId && employee.membershipId !== membership.id) {
+        throw new Error("Employee is already linked to another membership.");
+      }
+
+      await transaction.employee.update({
+        where: {
+          id: employee.id,
+        },
+
+        data: {
+          membershipId: membership.id,
+        },
       });
     }
 
@@ -212,7 +261,5 @@ export async function acceptMembershipInvitationRecord(
     return membership;
   });
 }
-
-
 
 //************************************************************** */

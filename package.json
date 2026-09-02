@@ -80,7 +80,8 @@
     "test:employee-crud":"tsx --test tests/integration/employees/employee-crud.test.ts",
     "test:time-clock-kiosk":"tsx --test tests/integration/time-clock/time-clock-kiosk.test.ts",
     "test:time-clock-manager":"tsx --test tests/integration/time-clock/time-clock-manager.test.ts",
-    "test:time-clock-report":"tsx --test tests/integration/time-clock/time-clock-report.test.ts"
+    "test:time-clock-report":"tsx --test tests/integration/time-clock/time-clock-report.test.ts",
+    "test:membership-invite-link":"tsx --test tests/integration/membership-invitations/employee-membership-invitation-link.test.ts"
 
   },
   "keywords": [],

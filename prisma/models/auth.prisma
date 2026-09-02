@@ -164,6 +164,15 @@ model MembershipInvitation {
   organizationId        String
   invitedByMembershipId String
 
+  /**
+   * Optional because invitations can also be created outside
+   * the Employees module.
+   * When an invitation originates from an Employee record,
+   * this preserves the exact Employee → future Membership link
+   * without relying on email matching.
+   */
+  employeeId String?
+
   email String
   role  MembershipRole
 
@@ -181,6 +190,7 @@ model MembershipInvitation {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+  @@index([employeeId])
   @@index([email])
   @@index([expiresAt])
   @@index([organizationId, email])
