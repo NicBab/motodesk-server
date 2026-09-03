@@ -1,18 +1,41 @@
+//************************************************************** */
+
 enum ScheduleStatus {
+  TENTATIVE
   SCHEDULED
-  CANCELLED
+  CONFIRMED
+  READY
+  IN_PROGRESS
+  PAUSED
+  BLOCKED
   COMPLETED
+  CANCELLED
+  MISSED
+  RESCHEDULE_REQUIRED
 }
+
+//************************************************************** */
 
 model Schedule {
   id             String @id @default(cuid())
   organizationId String
   repairOrderId  String
 
-  scheduledDate DateTime
-  promisedDate  DateTime?
+  technicianEmployeeId String?
+  laborLineId          String?
 
-  status            ScheduleStatus @default(SCHEDULED)
+  scheduledDate DateTime
+  scheduledEnd  DateTime?
+
+  promisedDate DateTime?
+
+  status ScheduleStatus @default(SCHEDULED)
+
+  waitingCustomer Boolean @default(false)
+
+  actualStartedAt   DateTime?
+  actualCompletedAt DateTime?
+
   cancelledAt       DateTime?
   cancellationNotes String?
 
@@ -25,9 +48,19 @@ model Schedule {
 
   repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
 
+  technicianEmployee Employee? @relation(fields: [technicianEmployeeId], references: [id], onDelete: Restrict)
+
+  laborLine RepairOrderLaborLine? @relation(fields: [laborLineId], references: [id], onDelete: SetNull)
+
   @@index([organizationId])
   @@index([repairOrderId])
   @@index([organizationId, scheduledDate])
+  @@index([organizationId, scheduledEnd])
+  @@index([organizationId, technicianEmployeeId])
+  @@index([organizationId, technicianEmployeeId, scheduledDate])
   @@index([organizationId, status])
   @@index([repairOrderId, status])
+  @@index([laborLineId])
 }
+
+//************************************************************** */

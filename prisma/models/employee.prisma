@@ -52,7 +52,12 @@ model Employee {
 
   membership Membership? @relation("EmployeeMembership", fields: [membershipId], references: [id], onDelete: SetNull)
 
+  preferredServiceAppointments ServiceAppointment[] @relation("ServiceAppointmentPreferredTechnician")
+
+  advisedServiceAppointments ServiceAppointment[] @relation("ServiceAppointmentServiceAdvisor")
+
   timeEntries EmployeeTimeEntry[]
+  schedules   Schedule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,0 +1,119 @@
+//************************************************************** */
+
+enum ServiceAppointmentType {
+  DROP_OFF
+  WAITING_CUSTOMER
+  PICKUP_AND_DELIVERY
+  MOBILE_SERVICE
+  INTERNAL_WORK
+  WALK_IN
+  PRE_DELIVERY_INSPECTION
+  WARRANTY
+  RECALL
+}
+
+//************************************************************** */
+
+enum ServiceAppointmentStatus {
+  REQUESTED
+  TENTATIVE
+  CONFIRMED
+  CHECKED_IN
+  CONVERTED_TO_RO
+  IN_SERVICE
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+//************************************************************** */
+
+enum ServiceAppointmentContactMethod {
+  PHONE
+  SMS
+  EMAIL
+  IN_PERSON
+}
+
+//************************************************************** */
+
+model ServiceAppointment {
+  id             String @id @default(cuid())
+  organizationId String
+
+  appointmentNumber Int
+
+  customerId String?
+  vehicleId  String?
+
+  repairOrderId String? @unique
+
+  customerName String
+
+  appointmentType ServiceAppointmentType   @default(DROP_OFF)
+  status          ServiceAppointmentStatus @default(REQUESTED)
+
+  requestedService  String
+  customerComplaint String?
+
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+
+  estimatedDurationMinutes Int @default(60)
+
+  preferredTechnicianEmployeeId String?
+  serviceAdvisorEmployeeId      String?
+
+  waitingCustomer      Boolean @default(false)
+  transportationNeeded Boolean @default(false)
+
+  contactMethod ServiceAppointmentContactMethod?
+
+  internalNotes String?
+  customerNotes String?
+
+  confirmedAt DateTime?
+  checkedInAt DateTime?
+
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  repairOrder RepairOrder? @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
+
+  preferredTechnician Employee? @relation("ServiceAppointmentPreferredTechnician", fields: [preferredTechnicianEmployeeId], references: [id], onDelete: SetNull)
+
+  serviceAdvisor Employee? @relation("ServiceAppointmentServiceAdvisor", fields: [serviceAdvisorEmployeeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, appointmentNumber])
+  @@index([organizationId])
+  @@index([organizationId, scheduledStart])
+  @@index([organizationId, status])
+  @@index([organizationId, customerId])
+  @@index([organizationId, vehicleId])
+  @@index([preferredTechnicianEmployeeId])
+  @@index([serviceAdvisorEmployeeId])
+}
+
+//************************************************************** */
+
+model ServiceAppointmentSequence {
+  organizationId String @id
+
+  nextNumber Int @default(1001)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+//************************************************************** */

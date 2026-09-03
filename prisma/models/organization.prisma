@@ -35,6 +35,8 @@ model Organization {
   sales                         Sale[]
   employees                     Employee[]
   employeeTimeEntries           EmployeeTimeEntry[]
+  serviceAppointments           ServiceAppointment[]
+  serviceAppointmentSequence    ServiceAppointmentSequence?
   saleSequence                  SaleSequence?
   purchaseOrderSequence         PurchaseOrderSequence?
   partReturnSequence            PartReturnSequence?

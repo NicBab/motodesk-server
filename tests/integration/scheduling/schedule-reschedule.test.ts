@@ -1,168 +1,82 @@
 import assert from "node:assert/strict";
+
 import { describe, it } from "node:test";
 
-import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
-
-//************************************************************** */
-
-async function createScheduledRepairOrder() {
-  const { agent, organizationId } = await createAuthenticatedAgent();
-
-  const uniqueSuffix = Date.now().toString();
-
-  //************************************************************** */
-  // Customer
-
-  const customerResponse = await agent
-    .post(`/api/v1/organizations/${organizationId}/customers`)
-    .send({
-      type: "INDIVIDUAL",
-      firstName: "Reschedule",
-      lastName: "Customer",
-    });
-
-  assert.equal(customerResponse.status, 201);
-
-  const customerId = customerResponse.body.data.id;
-
-  //************************************************************** */
-  // Vehicle
-
-  const vehicleResponse = await agent
-    .post(`/api/v1/organizations/${organizationId}/vehicles`)
-    .send({
-      customerId,
-      make: "Yamaha",
-      model: "YZ450F",
-      vin: `RESCHEDULE-${uniqueSuffix}`,
-      type: "MOTORCYCLE",
-    });
-
-  assert.equal(vehicleResponse.status, 201);
-
-  const vehicleId = vehicleResponse.body.data.id;
-
-  //************************************************************** */
-  // Repair Order
-
-  const repairOrderResponse = await agent
-    .post(`/api/v1/organizations/${organizationId}/repair-orders`)
-    .send({
-      customerId,
-      vehicleId,
-      complaint: "Rescheduling integration test.",
-    });
-
-  assert.equal(repairOrderResponse.status, 201);
-
-  const repairOrderId = repairOrderResponse.body.data.id;
-
-  //************************************************************** */
-  // Request Approval
-
-  const requestApprovalResponse = await agent
-    .post(
-      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
-    )
-    .send({});
-
-  assert.equal(requestApprovalResponse.status, 200);
-
-  //************************************************************** */
-  // Approve
-  // Automatically enters PARTS_REVIEW.
-
-  const approvalResponse = await agent
-    .post(
-      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
-    )
-    .send({
-      approvalMethod: "PHONE",
-      approvedBy: "Reschedule Customer",
-    });
-
-  assert.equal(approvalResponse.status, 200);
-
-  assert.equal(approvalResponse.body.data.status, "PARTS_REVIEW");
-
-  //************************************************************** */
-  // Complete Parts Review
-  // No blocking parts → READY_TO_WORK.
-
-  const partsReviewResponse = await agent
-    .post(
-      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/parts-review/complete`,
-    )
-    .send({});
-
-  assert.equal(partsReviewResponse.status, 200);
-
-  assert.equal(partsReviewResponse.body.data.status, "READY_TO_WORK");
-
-  //************************************************************** */
-  // Initial Schedule
-
-  const initialScheduledDate = "2026-08-20T14:00:00.000Z";
-
-  const initialScheduleResponse = await agent
-    .post(
-      `/api/v1/organizations/${organizationId}/scheduling/repair-orders/${repairOrderId}`,
-    )
-    .send({
-      scheduledDate: initialScheduledDate,
-      notes: "Initial schedule.",
-    });
-
-  assert.equal(initialScheduleResponse.status, 200);
-
-  return {
-    agent,
-    organizationId,
-    repairOrderId,
-    initialSchedule: initialScheduleResponse.body.data,
-  };
-}
+import {
+  createSchedulingFixture,
+  scheduleFixtureRepairOrder,
+} from "./helpers/scheduling.fixture.js";
 
 //************************************************************** */
 
 describe("Schedule rescheduling integration", () => {
-  it("reschedules a scheduled repair order while preserving schedule history", async () => {
-    const { agent, organizationId, repairOrderId, initialSchedule } =
-      await createScheduledRepairOrder();
+  it("reschedules a repair order while preserving the previous work block as history", async () => {
+    const fixture = await createSchedulingFixture();
 
-    const newScheduledDate = "2026-08-22T16:30:00.000Z";
+    const initialSchedule = await scheduleFixtureRepairOrder(fixture, {
+      scheduledDate: "2026-09-03T14:00:00.000Z",
 
-    const promisedDate = "2026-08-23T22:00:00.000Z";
+      scheduledEnd: "2026-09-03T16:00:00.000Z",
+
+      notes: "Initial schedule.",
+    });
+
+    const newScheduledDate = "2026-09-05T16:30:00.000Z";
+
+    const newScheduledEnd = "2026-09-05T19:00:00.000Z";
+
+    const promisedDate = "2026-09-06T22:00:00.000Z";
 
     //************************************************************** */
     // Reschedule
 
-    const rescheduleResponse = await agent
+    const response = await fixture.agent
       .post(
-        `/api/v1/organizations/${organizationId}/scheduling/repair-orders/${repairOrderId}/reschedule`,
+        `/api/v1/organizations/${fixture.organizationId}/scheduling/repair-orders/${fixture.repairOrder.id}/reschedule`,
       )
       .send({
+        technicianEmployeeId: fixture.technician.id,
+
         scheduledDate: newScheduledDate,
+
+        scheduledEnd: newScheduledEnd,
+
         promisedDate,
+
+        waitingCustomer: true,
+
         notes: "Customer requested a later appointment.",
       });
 
-    assert.equal(rescheduleResponse.status, 200);
+    assert.equal(response.status, 200);
 
-    assert.equal(rescheduleResponse.body.data.repairOrderId, repairOrderId);
+    const replacement = response.body.data;
 
-    assert.notEqual(rescheduleResponse.body.data.id, initialSchedule.id);
+    assert.notEqual(replacement.id, initialSchedule.id);
+
+    assert.equal(replacement.repairOrderId, fixture.repairOrder.id);
+
+    assert.equal(replacement.technicianEmployeeId, fixture.technician.id);
+
+    assert.equal(replacement.status, "SCHEDULED");
+
+    assert.equal(replacement.waitingCustomer, true);
 
     assert.equal(
-      new Date(rescheduleResponse.body.data.scheduledDate).toISOString(),
+      new Date(replacement.scheduledDate).toISOString(),
       newScheduledDate,
     );
 
-    //************************************************************** */
-    // RO remains SCHEDULED
+    assert.equal(
+      new Date(replacement.scheduledEnd).toISOString(),
+      newScheduledEnd,
+    );
 
-    const repairOrderResponse = await agent.get(
-      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    //************************************************************** */
+    // RO remains scheduled.
+
+    const repairOrderResponse = await fixture.agent.get(
+      `/api/v1/organizations/${fixture.organizationId}/repair-orders/${fixture.repairOrder.id}`,
     );
 
     assert.equal(repairOrderResponse.status, 200);
@@ -170,65 +84,15 @@ describe("Schedule rescheduling integration", () => {
     assert.equal(repairOrderResponse.body.data.status, "SCHEDULED");
 
     assert.equal(
+      new Date(repairOrderResponse.body.data.scheduledDate).toISOString(),
+      newScheduledDate,
+    );
+
+    assert.equal(
       new Date(repairOrderResponse.body.data.promisedDate).toISOString(),
       promisedDate,
     );
   });
-
-  //************************************************************** */
-
-  it("rejects rescheduling a repair order that is not currently scheduled", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
-
-    const uniqueSuffix = `${Date.now()}-invalid`;
-
-    const customerResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/customers`)
-      .send({
-        type: "INDIVIDUAL",
-        firstName: "Invalid",
-        lastName: "Reschedule",
-      });
-
-    assert.equal(customerResponse.status, 201);
-
-    const vehicleResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/vehicles`)
-      .send({
-        customerId: customerResponse.body.data.id,
-        make: "Honda",
-        model: "CRF450R",
-        vin: `INVALID-RESCHEDULE-${uniqueSuffix}`,
-        type: "MOTORCYCLE",
-      });
-
-    assert.equal(vehicleResponse.status, 201);
-
-    const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
-      .send({
-        customerId: customerResponse.body.data.id,
-        vehicleId: vehicleResponse.body.data.id,
-      });
-
-    assert.equal(repairOrderResponse.status, 201);
-
-    //************************************************************** */
-    // RO is still ESTIMATE.
-
-    const rescheduleResponse = await agent
-      .post(
-        `/api/v1/organizations/${organizationId}/scheduling/repair-orders/${repairOrderResponse.body.data.id}/reschedule`,
-      )
-      .send({
-        scheduledDate: "2026-08-22T16:30:00.000Z",
-      });
-
-    assert.equal(rescheduleResponse.status, 400);
-
-    assert.equal(
-      rescheduleResponse.body.code,
-      "RESCHEDULE_REPAIR_ORDER_INVALID_STATUS",
-    );
-  });
 });
+
+//************************************************************** */

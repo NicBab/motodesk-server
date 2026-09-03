@@ -1,29 +1,32 @@
 import type { Response } from "express";
 
-import { AppError } from "../../platform/errors/app-error.js";
-
-import type { AuthenticatedRequest } from "../auth/index.js";
+import { ok } from "../../platform/http/api-response.js";
 
 import { getRequestContext } from "../../platform/request/request.context.js";
+
+import { AppError } from "../../platform/errors/app-error.js";
 
 import {
   requireValidatedBody,
   requireValidatedParams,
+  requireValidatedQuery,
 } from "../../platform/validation/validated-request.js";
 
-import { ok } from "../../platform/http/api-response.js";
-
-import {
-  scheduleRepairOrder,
-  rescheduleRepairOrder,
-  cancelRepairOrderSchedule,
-} from "./schedule.service.js";
+import type { AuthenticatedRequest } from "../auth/index.js";
 
 import type {
-  ScheduleRepairOrderInput,
-  RescheduleRepairOrderInput,
   CancelScheduleInput,
+  RescheduleRepairOrderInput,
+  ScheduleBoardQueryInput,
+  ScheduleRepairOrderInput,
 } from "./schedule.schemas.js";
+
+import {
+  cancelRepairOrderSchedule,
+  getScheduleBoard,
+  rescheduleRepairOrder,
+  scheduleRepairOrder,
+} from "./schedule.service.js";
 
 //************************************************************** */
 
@@ -49,6 +52,23 @@ function requireOrganizationId(request: AuthenticatedRequest): string {
 }
 
 //************************************************************** */
+// Dispatch Board
+
+export async function getScheduleBoardHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const organizationId = requireOrganizationId(request);
+
+  const query = requireValidatedQuery<ScheduleBoardQueryInput>(request);
+
+  const board = await getScheduleBoard(organizationId, query);
+
+  ok(response, board);
+}
+
+//************************************************************** */
+// Schedule Repair Order
 
 export async function scheduleRepairOrderHandler(
   request: AuthenticatedRequest,
@@ -74,6 +94,7 @@ export async function scheduleRepairOrderHandler(
 }
 
 //************************************************************** */
+// Reschedule Repair Order
 
 export async function rescheduleRepairOrderHandler(
   request: AuthenticatedRequest,
@@ -96,6 +117,7 @@ export async function rescheduleRepairOrderHandler(
 }
 
 //************************************************************** */
+// Cancel Repair Order Schedule
 
 export async function cancelRepairOrderScheduleHandler(
   request: AuthenticatedRequest,
@@ -119,3 +141,5 @@ export async function cancelRepairOrderScheduleHandler(
 
   ok(response, cancelledSchedule);
 }
+
+//************************************************************** */

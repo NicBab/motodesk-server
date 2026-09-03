@@ -30,6 +30,7 @@ import { partReturnRouter } from "../part-returns/part-return.routes.js";
 import saleRouter from "../sales/sale.routes.js";
 import employeeRouter from "../employees/employee.routes.js";
 import timeClockRouter from "../time-clock/time-clock.routes.js";
+import serviceAppointmentRouter from "../service-appointments/service-appointment.routes.js";
 
 import {
   createOrganizationSchema,
@@ -121,6 +122,13 @@ router.use("/:organizationId/sales", saleRouter);
 //************************************************************** */
 
 router.use("/:organizationId/scheduling", scheduleRouter);
+
+//************************************************************** */
+
+router.use(
+  "/:organizationId/scheduling/appointments",
+  serviceAppointmentRouter,
+);
 
 //************************************************************** */
 
