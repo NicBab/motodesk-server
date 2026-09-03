@@ -31,6 +31,7 @@ import saleRouter from "../sales/sale.routes.js";
 import employeeRouter from "../employees/employee.routes.js";
 import timeClockRouter from "../time-clock/time-clock.routes.js";
 import serviceAppointmentRouter from "../service-appointments/service-appointment.routes.js";
+import reportRouter from "../reports/report.routes.js";
 
 import {
   createOrganizationSchema,
@@ -196,6 +197,10 @@ router.use("/:organizationId/audit", auditRouter);
 //************************************************************** */
 
 router.use("/:organizationId/part-returns", partReturnRouter);
+
+//************************************************************** */
+
+router.use("/:organizationId/reports", reportRouter);
 
 //************************************************************** */
 
