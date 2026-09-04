@@ -37,6 +37,11 @@ import { findCustomerById } from "../customers/customer.repository.js";
 
 import { findVehicleById } from "../vehicles/vehicle.repository.js";
 
+import {
+  cashierRepairOrderRecord,
+  pickupRepairOrderRecord,
+} from "./repair-order-cashier-pickup.repository.js";
+
 //************************************************************** */
 
 const READY_PART_STATUSES = new Set([
@@ -483,34 +488,111 @@ export async function failRepairOrderQualityCheck(
 
 //************************************************************** */
 
+// export async function cashierRepairOrder(
+//   organizationId: string,
+//   repairOrderId: string,
+//   membershipId: string | null,
+//   input: CashierRepairOrderInput,
+// ) {
+//   const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+//   if (repairOrder.status !== "READY_FOR_PICKUP") {
+//     throw new AppError(
+//       400,
+//       "Repair order can only be cashiered when it is ready for pickup.",
+//       {
+//         code: "REPAIR_ORDER_CASHIER_INVALID_STATUS",
+//       },
+//     );
+//   }
+
+//   return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+//     status: "CASHIERED",
+
+//     notes: input.notes ?? "Repair order cashiered.",
+
+//     automatic: false,
+//   });
+// }
+
 export async function cashierRepairOrder(
   organizationId: string,
   repairOrderId: string,
   membershipId: string | null,
   input: CashierRepairOrderInput,
 ) {
-  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
 
-  if (repairOrder.status !== "READY_FOR_PICKUP") {
+  if (
+    repairOrder.status !==
+    "READY_FOR_PICKUP"
+  ) {
     throw new AppError(
       400,
       "Repair order can only be cashiered when it is ready for pickup.",
       {
-        code: "REPAIR_ORDER_CASHIER_INVALID_STATUS",
+        code:
+          "REPAIR_ORDER_CASHIER_INVALID_STATUS",
       },
     );
   }
 
-  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
-    status: "CASHIERED",
+  const updatedRepairOrder =
+    await cashierRepairOrderRecord(
+      organizationId,
+      repairOrderId,
+      membershipId,
+      input,
+    );
 
-    notes: input.notes ?? "Repair order cashiered.",
+  if (
+    !updatedRepairOrder
+  ) {
+    throw new AppError(
+      400,
+      "Repair order can only be cashiered when it is ready for pickup.",
+      {
+        code:
+          "REPAIR_ORDER_CASHIER_INVALID_STATUS",
+      },
+    );
+  }
 
-    automatic: false,
-  });
+  return updatedRepairOrder;
 }
 
 //************************************************************** */
+
+// export async function pickupRepairOrder(
+//   organizationId: string,
+//   repairOrderId: string,
+//   membershipId: string | null,
+//   input: PickupRepairOrderInput,
+// ) {
+//   const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+
+//   if (repairOrder.status !== "CASHIERED") {
+//     throw new AppError(
+//       400,
+//       "Repair order can only be picked up after it has been cashiered.",
+//       {
+//         code: "REPAIR_ORDER_PICKUP_INVALID_STATUS",
+//       },
+//     );
+//   }
+
+//   return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
+//     status: "PICKED_UP",
+
+//     notes: input.notes ?? "Unit picked up by customer.",
+
+//     automatic: false,
+//   });
+// }
 
 export async function pickupRepairOrder(
   organizationId: string,
@@ -518,25 +600,48 @@ export async function pickupRepairOrder(
   membershipId: string | null,
   input: PickupRepairOrderInput,
 ) {
-  const repairOrder = await getRepairOrderById(organizationId, repairOrderId);
+  const repairOrder =
+    await getRepairOrderById(
+      organizationId,
+      repairOrderId,
+    );
 
-  if (repairOrder.status !== "CASHIERED") {
+  if (
+    repairOrder.status !==
+    "CASHIERED"
+  ) {
     throw new AppError(
       400,
       "Repair order can only be picked up after it has been cashiered.",
       {
-        code: "REPAIR_ORDER_PICKUP_INVALID_STATUS",
+        code:
+          "REPAIR_ORDER_PICKUP_INVALID_STATUS",
       },
     );
   }
 
-  return updateRepairOrderStatus(organizationId, repairOrderId, membershipId, {
-    status: "PICKED_UP",
+  const updatedRepairOrder =
+    await pickupRepairOrderRecord(
+      organizationId,
+      repairOrderId,
+      membershipId,
+      input,
+    );
 
-    notes: input.notes ?? "Unit picked up by customer.",
+  if (
+    !updatedRepairOrder
+  ) {
+    throw new AppError(
+      400,
+      "Repair order can only be picked up after it has been cashiered.",
+      {
+        code:
+          "REPAIR_ORDER_PICKUP_INVALID_STATUS",
+      },
+    );
+  }
 
-    automatic: false,
-  });
+  return updatedRepairOrder;
 }
 
 //************************************************************** */

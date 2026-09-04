@@ -6,7 +6,7 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 //************************************************************** */
 
 describe("Repair Order cashier and pickup integration", () => {
-  it("cashiers, picks up, and closes a repair order through the valid lifecycle", async () => {
+  it("cashiers, picks up, and closes a repair order through the valid lifecycle while persisting operational event data", async () => {
     const { agent, organizationId } = await createAuthenticatedAgent();
 
     const uniqueSuffix = Date.now().toString();
@@ -119,12 +119,36 @@ describe("Repair Order cashier and pickup integration", () => {
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/cashier`,
       )
       .send({
+        paymentReference: "TEST-PAID-001",
+
+        paymentRemote: true,
+
+        remainingBalance: 0,
+
         notes: "Customer balance settled.",
       });
 
     assert.equal(cashierResponse.status, 200);
 
-    assert.equal(cashierResponse.body.data.status, "CASHIERED");
+    const cashieredRepairOrder = cashierResponse.body.data;
+
+    assert.equal(cashieredRepairOrder.status, "CASHIERED");
+
+    assert.equal(cashieredRepairOrder.cashierStatus, "COMPLETED");
+
+    assert.equal(cashieredRepairOrder.paymentReference, "TEST-PAID-001");
+
+    assert.equal(cashieredRepairOrder.paymentRemote, true);
+
+    assert.equal(Number(cashieredRepairOrder.remainingBalance), 0);
+
+    assert.equal(cashieredRepairOrder.pickupStatus, "READY");
+
+    assert.ok(cashieredRepairOrder.cashieredDate);
+
+    const cashieredDate = new Date(cashieredRepairOrder.cashieredDate);
+
+    assert.equal(Number.isNaN(cashieredDate.getTime()), false);
 
     //************************************************************** */
     // Pickup
@@ -134,12 +158,32 @@ describe("Repair Order cashier and pickup integration", () => {
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/pickup`,
       )
       .send({
+        pickupRecipient: "Cashier Workflow",
+
         notes: "Unit released to customer.",
       });
 
     assert.equal(pickupResponse.status, 200);
 
-    assert.equal(pickupResponse.body.data.status, "PICKED_UP");
+    const pickedUpRepairOrder = pickupResponse.body.data;
+
+    assert.equal(pickedUpRepairOrder.status, "PICKED_UP");
+
+    assert.equal(pickedUpRepairOrder.cashierStatus, "COMPLETED");
+
+    assert.equal(pickedUpRepairOrder.pickupStatus, "COMPLETED");
+
+    assert.equal(pickedUpRepairOrder.pickupRecipient, "Cashier Workflow");
+
+    assert.equal(pickedUpRepairOrder.pickupNotes, "Unit released to customer.");
+
+    assert.ok(pickedUpRepairOrder.pickupDate);
+
+    const pickupDate = new Date(pickedUpRepairOrder.pickupDate);
+
+    assert.equal(Number.isNaN(pickupDate.getTime()), false);
+
+    assert.equal(pickupDate.getTime() >= cashieredDate.getTime(), true);
 
     //************************************************************** */
     // Close
@@ -157,7 +201,7 @@ describe("Repair Order cashier and pickup integration", () => {
     assert.equal(closeResponse.body.data.status, "CLOSED");
 
     //************************************************************** */
-    // Verify history
+    // Verify persisted values after the complete lifecycle
 
     const finalRepairOrder = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
@@ -165,7 +209,32 @@ describe("Repair Order cashier and pickup integration", () => {
 
     assert.equal(finalRepairOrder.status, 200);
 
-    const statuses = finalRepairOrder.body.data.statusHistory.map(
+    const finalData = finalRepairOrder.body.data;
+
+    assert.equal(finalData.status, "CLOSED");
+
+    assert.equal(finalData.cashierStatus, "COMPLETED");
+
+    assert.ok(finalData.cashieredDate);
+
+    assert.equal(finalData.paymentReference, "TEST-PAID-001");
+
+    assert.equal(finalData.paymentRemote, true);
+
+    assert.equal(Number(finalData.remainingBalance), 0);
+
+    assert.equal(finalData.pickupStatus, "COMPLETED");
+
+    assert.ok(finalData.pickupDate);
+
+    assert.equal(finalData.pickupRecipient, "Cashier Workflow");
+
+    assert.equal(finalData.pickupNotes, "Unit released to customer.");
+
+    //************************************************************** */
+    // Verify history
+
+    const statuses = finalData.statusHistory.map(
       (history: { status: string }) => history.status,
     );
 
@@ -183,6 +252,9 @@ describe("Repair Order cashier and pickup integration", () => {
 
     const uniqueSuffix = `${Date.now()}-invalid`;
 
+    //************************************************************** */
+    // Customer
+
     const customerResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/customers`)
       .send({
@@ -196,6 +268,9 @@ describe("Repair Order cashier and pickup integration", () => {
     assert.equal(customerResponse.status, 201);
 
     const customerId = customerResponse.body.data.id;
+
+    //************************************************************** */
+    // Vehicle
 
     const vehicleResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/vehicles`)
@@ -214,6 +289,9 @@ describe("Repair Order cashier and pickup integration", () => {
     assert.equal(vehicleResponse.status, 201);
 
     const vehicleId = vehicleResponse.body.data.id;
+
+    //************************************************************** */
+    // Repair Order
 
     const repairOrderResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/repair-orders`)
@@ -274,3 +352,5 @@ describe("Repair Order cashier and pickup integration", () => {
     assert.equal(closeResponse.body.code, "REPAIR_ORDER_CLOSE_INVALID_STATUS");
   });
 });
+
+//************************************************************** */

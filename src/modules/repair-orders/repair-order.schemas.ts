@@ -193,14 +193,30 @@ export const failRepairOrderQualityCheckSchema = z.object({
 });
 
 //************************************************************** */
+// Cashier
+//
+// These fields already exist on the RepairOrder model and are
+// already sent by the current production client.
 
 export const cashierRepairOrderSchema = z.object({
+  paymentReference: z.string().trim().max(250).optional(),
+
+  paymentRemote: z.boolean().optional(),
+
+  remainingBalance: z.number().nonnegative().optional(),
+
   notes: z.string().trim().max(2000).optional(),
 });
 
 //************************************************************** */
+// Pickup
+//
+// pickupRecipient already exists on the RepairOrder model and is
+// already sent by the current production client.
 
 export const pickupRepairOrderSchema = z.object({
+  pickupRecipient: z.string().trim().max(200).optional(),
+
   notes: z.string().trim().max(2000).optional(),
 });
 
