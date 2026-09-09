@@ -29,6 +29,9 @@ export const authenticationUserSelect = {
   firstName: true,
   lastName: true,
   phone: true,
+  jobTitle: true,
+  preferredTimezone: true,
+  displayMode: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -75,14 +78,3 @@ export async function findUserForLogin(
 }
 
 //************************************************************** */
-
-
-
-
-
-
-
-
-
-
-

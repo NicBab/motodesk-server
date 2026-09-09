@@ -9,7 +9,6 @@ import {
   runTransaction,
 } from "../../../../platform/database/repository.js";
 
-
 //************************************************************** */
 
 export const authenticationMembershipSelect = {
@@ -34,6 +33,9 @@ export const authenticationUserSelect = {
   firstName: true,
   lastName: true,
   phone: true,
+  jobTitle: true,
+  preferredTimezone: true,
+  displayMode: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -96,20 +98,27 @@ export async function createRegistrationRecords(
               data.user.firstName,
             lastName:
               data.user.lastName,
-            phone: data.user.phone,
-            isActive: true,
+            phone:
+              data.user.phone,
+            isActive:
+              true,
           },
-          select: authenticationUserSelect,
+          select:
+            authenticationUserSelect,
         });
 
-      let membership = null;
+      let membership =
+        null;
 
-      if (data.organization) {
+      if (
+        data.organization
+      ) {
         const organization =
           await transaction.organization.create({
             data: {
               name:
                 data.organization.name,
+
               slug:
                 data.organization.slug,
 
@@ -134,14 +143,19 @@ export async function createRegistrationRecords(
         membership =
           await transaction.membership.create({
             data: {
-              userId: user.id,
+              userId:
+                user.id,
+
               organizationId:
                 organization.id,
+
               role:
                 MembershipRole.OWNER,
+
               status:
                 MembershipStatus.ACTIVE,
             },
+
             select:
               authenticationMembershipSelect,
           });
@@ -150,38 +164,49 @@ export async function createRegistrationRecords(
       const session =
         await transaction.session.create({
           data: {
-            id: data.session.id,
-            userId: user.id,
+            id:
+              data.session.id,
+
+            userId:
+              user.id,
+
             tokenHash:
               data.session.tokenHash,
+
             userAgent:
               data.session.userAgent,
+
             ipAddress:
               data.session.ipAddress,
+
             expiresAt:
               data.session.expiresAt,
           },
         });
 
-        const emailVerificationToken =
-  await transaction.authToken.create({
-    data: {
-      userId: user.id,
-      type:
-        AuthTokenType.EMAIL_VERIFICATION,
-      tokenHash:
-        data.emailVerificationToken.tokenHash,
-      expiresAt:
-        data.emailVerificationToken.expiresAt,
-    },
-  });
+      const emailVerificationToken =
+        await transaction.authToken.create({
+          data: {
+            userId:
+              user.id,
+
+            type:
+              AuthTokenType.EMAIL_VERIFICATION,
+
+            tokenHash:
+              data.emailVerificationToken.tokenHash,
+
+            expiresAt:
+              data.emailVerificationToken.expiresAt,
+          },
+        });
 
       return {
-  user,
-  membership,
-  session,
-  emailVerificationToken,
-};
+        user,
+        membership,
+        session,
+        emailVerificationToken,
+      };
     },
   );
 }

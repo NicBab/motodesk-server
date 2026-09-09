@@ -28,6 +28,24 @@ export async function updateProfile(
           phone: input.phone,
         }
       : {}),
+
+    ...(input.jobTitle !== undefined
+      ? {
+          jobTitle: input.jobTitle,
+        }
+      : {}),
+
+    ...(input.preferredTimezone !== undefined
+      ? {
+          preferredTimezone: input.preferredTimezone,
+        }
+      : {}),
+
+    ...(input.displayMode !== undefined
+      ? {
+          displayMode: input.displayMode,
+        }
+      : {}),
   });
 
   return {
@@ -36,6 +54,11 @@ export async function updateProfile(
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,
+    jobTitle: user.jobTitle,
+    preferredTimezone: user.preferredTimezone,
+    displayMode: user.displayMode,
     isActive: user.isActive,
   };
 }
+
+//************************************************************** */

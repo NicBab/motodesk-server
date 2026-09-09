@@ -87,14 +87,17 @@ model Session {
 //************************************************************** */
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  passwordHash    String
-  firstName       String
-  lastName        String
-  phone           String?
-  isActive        Boolean   @default(true)
-  emailVerifiedAt DateTime?
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  phone             String?
+  jobTitle          String?
+  preferredTimezone String    @default("America/Chicago")
+  isActive          Boolean   @default(true)
+  emailVerifiedAt   DateTime?
+  displayMode       String    @default("SYSTEM")
 
   memberships Membership[]
   sessions    Session[]

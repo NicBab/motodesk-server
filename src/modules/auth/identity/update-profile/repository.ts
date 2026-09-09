@@ -8,6 +8,9 @@ export interface UpdateUserProfileData {
   firstName?: string;
   lastName?: string;
   phone?: string | null;
+  jobTitle?: string | null;
+  preferredTimezone?: string;
+  displayMode?: string;
 }
 
 //************************************************************** */
@@ -20,6 +23,7 @@ export async function updateUserProfileRecord(
     where: {
       id: userId,
     },
+
     data: {
       ...(data.firstName !== undefined
         ? {
@@ -38,7 +42,26 @@ export async function updateUserProfileRecord(
             phone: data.phone,
           }
         : {}),
+
+      ...(data.jobTitle !== undefined
+        ? {
+            jobTitle: data.jobTitle,
+          }
+        : {}),
+
+      ...(data.preferredTimezone !== undefined
+        ? {
+            preferredTimezone: data.preferredTimezone,
+          }
+        : {}),
+
+      ...(data.displayMode !== undefined
+        ? {
+            displayMode: data.displayMode,
+          }
+        : {}),
     },
+
     select: authenticationUserSelect,
   });
 }

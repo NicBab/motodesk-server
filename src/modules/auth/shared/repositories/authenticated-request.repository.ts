@@ -10,12 +10,17 @@ export const authenticatedRequestUserSelect = {
   firstName: true,
   lastName: true,
   phone: true,
+  jobTitle: true,
+  preferredTimezone: true,
+  displayMode: true,
   isActive: true,
 } satisfies Prisma.UserSelect;
 
 //************************************************************** */
 
-export async function findAuthenticatedUserById(userId: string) {
+export async function findAuthenticatedUserById(
+  userId: string,
+) {
   return prisma.user.findUnique({
     where: {
       id: userId,

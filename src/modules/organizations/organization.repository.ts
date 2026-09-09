@@ -104,6 +104,12 @@ export async function updateOrganizationRecord(
             phone: data.phone,
           }
         : {}),
+
+      ...(data.applicationTheme !== undefined
+        ? {
+            applicationTheme: data.applicationTheme,
+          }
+        : {}),
     },
   });
 }
@@ -153,6 +159,7 @@ export async function findOrganizationsForUser(userId: string) {
           slug: true,
           email: true,
           phone: true,
+          applicationTheme: true,
           status: true,
           createdAt: true,
           updatedAt: true,

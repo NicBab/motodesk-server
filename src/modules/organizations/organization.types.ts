@@ -16,6 +16,7 @@ export interface UpdateOrganizationInput {
   name?: string;
   phone?: string;
   email?: string;
+  applicationTheme?: string;
 }
 
 //************************************************************** */

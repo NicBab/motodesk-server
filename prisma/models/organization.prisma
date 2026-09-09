@@ -8,12 +8,13 @@ enum OrganizationStatus {
 //************************************************************** */
 
 model Organization {
-  id     String             @id @default(cuid())
-  name   String
-  slug   String             @unique
-  email  String?
-  phone  String?
-  status OrganizationStatus @default(ACTIVE)
+  id               String             @id @default(cuid())
+  name             String
+  slug             String             @unique
+  email            String?
+  phone            String?
+  applicationTheme String             @default("default")
+  status           OrganizationStatus @default(ACTIVE)
 
   memberships                   Membership[]
   membershipInvitations         MembershipInvitation[]

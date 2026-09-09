@@ -29,18 +29,14 @@ import {
   ok,
 } from "../../platform/http/api-response.js";
 
-import type {
-  TransferOrganizationOwnershipInput,
-} from "./organization-ownership.schemas.js";
-
-
+import type { TransferOrganizationOwnershipInput } from "./organization-ownership.schemas.js";
 
 //************************************************************** */
 // function requireAuthenticatedUserId(
 //   request: AuthenticatedRequest,
 // ): string {
 //   const userId = request.authenticatedUser?.id;
-
+//
 //   if (!userId) {
 //     throw new AppError(
 //       401,
@@ -50,7 +46,7 @@ import type {
 //       },
 //     );
 //   }
-
+//
 //   return userId;
 // }
 
@@ -79,25 +75,17 @@ export async function createOrganizationHandler(
 ): Promise<void> {
   const context = getRequestContext();
 
-  const body =
-    requireValidatedBody<CreateOrganizationRequest>(
-      request,
-    );
+  const body = requireValidatedBody<CreateOrganizationRequest>(request);
 
-  const organization =
-    await createOrganization({
-      name: body.name,
-      slug: body.slug,
-      ownerUserId: context.user.id,
+  const organization = await createOrganization({
+    name: body.name,
+    slug: body.slug,
+    ownerUserId: context.user.id,
 
-      ...(body.email !== undefined
-        ? { email: body.email }
-        : {}),
+    ...(body.email !== undefined ? { email: body.email } : {}),
 
-      ...(body.phone !== undefined
-        ? { phone: body.phone }
-        : {}),
-    });
+    ...(body.phone !== undefined ? { phone: body.phone } : {}),
+  });
 
   created(response, organization);
 }
@@ -121,15 +109,9 @@ export async function getOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const params =
-    requireValidatedParams<OrganizationIdInput>(
-      request,
-    );
+  const params = requireValidatedParams<OrganizationIdInput>(request);
 
-  const organization =
-    await getOrganizationById(
-      params.organizationId,
-    );
+  const organization = await getOrganizationById(params.organizationId);
 
   ok(response, organization);
 }
@@ -142,34 +124,27 @@ export async function updateOrganizationHandler(
 ): Promise<void> {
   const context = getRequestContext();
 
-  const params =
-    requireValidatedParams<OrganizationIdInput>(
-      request,
-    );
+  const params = requireValidatedParams<OrganizationIdInput>(request);
 
-  const body =
-    requireValidatedBody<UpdateOrganizationRequest>(
-      request,
-    );
+  const body = requireValidatedBody<UpdateOrganizationRequest>(request);
 
-  const organization =
-    await updateOrganization(
-      params.organizationId,
-      {
-        ...(body.name !== undefined
-          ? { name: body.name }
-          : {}),
+  const organization = await updateOrganization(
+    params.organizationId,
+    {
+      ...(body.name !== undefined ? { name: body.name } : {}),
 
-        ...(body.email !== undefined
-          ? { email: body.email }
-          : {}),
+      ...(body.email !== undefined ? { email: body.email } : {}),
 
-        ...(body.phone !== undefined
-          ? { phone: body.phone }
-          : {}),
-      },
-      context.user.id,
-    );
+      ...(body.phone !== undefined ? { phone: body.phone } : {}),
+
+      ...(body.applicationTheme !== undefined
+        ? {
+            applicationTheme: body.applicationTheme,
+          }
+        : {}),
+    },
+    context.user.id,
+  );
 
   ok(response, organization);
 }
@@ -180,35 +155,19 @@ export async function archiveOrganizationHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(
-      request,
-    );
+  const organizationId = requireOrganizationId(request);
 
-  const user =
-    request.authenticatedUser;
+  const user = request.authenticatedUser;
 
   if (!user) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code:
-          "AUTHENTICATION_REQUIRED",
-      },
-    );
+    throw new AppError(401, "Authentication required.", {
+      code: "AUTHENTICATION_REQUIRED",
+    });
   }
 
-  const organization =
-    await archiveOrganization(
-      organizationId,
-      user.id,
-    );
+  const organization = await archiveOrganization(organizationId, user.id);
 
-  ok(
-    response,
-    organization,
-  );
+  ok(response, organization);
 }
 
 //************************************************************** */
@@ -217,65 +176,41 @@ export async function transferOrganizationOwnershipHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const organizationId =
-    requireOrganizationId(
-      request,
-    );
+  const organizationId = requireOrganizationId(request);
 
   const input =
-    requireValidatedBody<TransferOrganizationOwnershipInput>(
-      request,
-    );
+    requireValidatedBody<TransferOrganizationOwnershipInput>(request);
 
-  const user =
-    request.authenticatedUser;
+  const user = request.authenticatedUser;
 
   if (!user) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code:
-          "AUTHENTICATION_REQUIRED",
-      },
-    );
+    throw new AppError(401, "Authentication required.", {
+      code: "AUTHENTICATION_REQUIRED",
+    });
   }
 
-  const context =
-    getRequestContext();
+  const context = getRequestContext();
 
   if (!context.membership) {
-    throw new AppError(
-      403,
-      "Organization membership is required.",
-      {
-        code:
-          "ORGANIZATION_MEMBERSHIP_REQUIRED",
-      },
-    );
+    throw new AppError(403, "Organization membership is required.", {
+      code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+    });
   }
 
-  const result =
-    await transferOrganizationOwnership(
-      organizationId,
-      input.membershipId,
-      {
-        organizationId:
-          context.membership.organizationId,
+  const result = await transferOrganizationOwnership(
+    organizationId,
+    input.membershipId,
+    {
+      organizationId: context.membership.organizationId,
 
-        membershipId:
-          context.membership.id,
+      membershipId: context.membership.id,
 
-        role:
-          context.membership.role,
-      },
-      user.id,
-    );
-
-  ok(
-    response,
-    result,
+      role: context.membership.role,
+    },
+    user.id,
   );
+
+  ok(response, result);
 }
 
 //************************************************************** */

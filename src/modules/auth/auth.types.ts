@@ -4,6 +4,7 @@ import type {
 } from "../../generated/prisma/client.js";
 
 //************************************************************** */
+
 export interface AccessTokenPayload {
   sub: string;
   email: string;
@@ -14,16 +15,21 @@ export interface AccessTokenPayload {
 }
 
 //************************************************************** */
+
 export interface AuthenticatedUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   phone: string | null;
+  jobTitle: string | null;
+  preferredTimezone: string;
+  displayMode: string;
   isActive: boolean;
 }
 
 //************************************************************** */
+
 export interface AuthenticatedMembership {
   id: string;
   organizationId: string;
@@ -33,6 +39,7 @@ export interface AuthenticatedMembership {
 }
 
 //************************************************************** */
+
 export interface AuthenticationResult {
   user: AuthenticatedUser;
   membership: AuthenticatedMembership | null;
@@ -45,12 +52,14 @@ export interface AuthenticationResult {
 }
 
 //************************************************************** */
+
 export interface RequestMetadata {
   ipAddress: string | null;
   userAgent: string | null;
 }
 
 //************************************************************** */
+
 export interface RefreshTokenParts {
   sessionId: string;
   secret: string;
