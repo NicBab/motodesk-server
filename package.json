@@ -83,7 +83,9 @@
     "test:time-clock-report":"tsx --test tests/integration/time-clock/time-clock-report.test.ts",
     "test:membership-invite-link":"tsx --test tests/integration/membership-invitations/employee-membership-invitation-link.test.ts",
 
-    "test:service-appointments":"tsx --test tests/integration/service-appointments/*.test.ts"
+    "test:service-appointments":"tsx --test tests/integration/service-appointments/*.test.ts",
+
+    "test:dashboard": "tsx --test tests/integration/dashboard/*.test.ts"
 
   },
   "keywords": [],
