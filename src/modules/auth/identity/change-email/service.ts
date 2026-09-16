@@ -41,6 +41,21 @@ export async function changeEmail(
     });
   }
 
+  //************************************************************** */
+  // Changing the primary MotoDesk email currently requires
+  // password re-authentication. OAuth-only accounts do not have
+  // a local password, so they cannot use this flow.
+
+  if (!user.passwordHash) {
+    throw new AppError(
+      400,
+      "This account does not have a password configured.",
+      {
+        code: "PASSWORD_NOT_CONFIGURED",
+      },
+    );
+  }
+
   const passwordMatches = await verifyPassword(
     input.currentPassword,
     user.passwordHash,
@@ -90,6 +105,7 @@ export async function changeEmail(
             ipAddress: context.ipAddress,
           }
         : {}),
+
       ...(context.userAgent !== null
         ? {
             userAgent: context.userAgent,

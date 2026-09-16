@@ -42,10 +42,7 @@ const envSchema = z.object({
     .max(65_535, "PORT cannot be greater than 65535.")
     .default(5001),
 
-  DATABASE_URL: z
-    .string()
-    .trim()
-    .min(1, "DATABASE_URL is required."),
+  DATABASE_URL: z.string().trim().min(1, "DATABASE_URL is required."),
 
   CLIENT_URL: z
     .url("CLIENT_URL must be a valid URL.")
@@ -57,38 +54,26 @@ const envSchema = z.object({
 
   JWT_ACCESS_SECRET: z
     .string()
-    .min(
-      64,
-      "JWT_ACCESS_SECRET must contain at least 64 characters.",
-    ),
+    .min(64, "JWT_ACCESS_SECRET must contain at least 64 characters."),
 
   ACCESS_TOKEN_TTL_MINUTES: z.coerce
     .number()
     .int("ACCESS_TOKEN_TTL_MINUTES must be a whole number.")
     .min(1, "Access tokens must remain valid for at least 1 minute.")
-    .max(
-      60,
-      "Access tokens cannot remain valid for more than 60 minutes.",
-    )
+    .max(60, "Access tokens cannot remain valid for more than 60 minutes.")
     .default(15),
 
   REFRESH_TOKEN_TTL_DAYS: z.coerce
     .number()
     .int("REFRESH_TOKEN_TTL_DAYS must be a whole number.")
     .min(1, "Refresh sessions must remain valid for at least 1 day.")
-    .max(
-      90,
-      "Refresh sessions cannot remain valid for more than 90 days.",
-    )
+    .max(90, "Refresh sessions cannot remain valid for more than 90 days.")
     .default(30),
 
   EMAIL_VERIFICATION_TTL_HOURS: z.coerce
     .number()
     .int("EMAIL_VERIFICATION_TTL_HOURS must be a whole number.")
-    .min(
-      1,
-      "Email-verification tokens must remain valid for at least 1 hour.",
-    )
+    .min(1, "Email-verification tokens must remain valid for at least 1 hour.")
     .max(
       72,
       "Email-verification tokens cannot remain valid for more than 72 hours.",
@@ -98,23 +83,26 @@ const envSchema = z.object({
   PASSWORD_RESET_TTL_MINUTES: z.coerce
     .number()
     .int("PASSWORD_RESET_TTL_MINUTES must be a whole number.")
-    .min(
-      5,
-      "Password-reset tokens must remain valid for at least 5 minutes.",
-    )
+    .min(5, "Password-reset tokens must remain valid for at least 5 minutes.")
     .max(
       120,
       "Password-reset tokens cannot remain valid for more than 120 minutes.",
     )
     .default(30),
 
+  GOOGLE_OAUTH_CLIENT_ID: optionalEnvironmentString,
+
+  GOOGLE_OAUTH_CLIENT_SECRET: optionalEnvironmentString,
+
+  GOOGLE_OAUTH_REDIRECT_URI: z
+    .url("GOOGLE_OAUTH_REDIRECT_URI must be a valid URL.")
+    .optional(),
+
   COOKIE_DOMAIN: optionalEnvironmentString,
 
   COOKIE_SECURE: booleanFromEnvironment.default(false),
 
-  COOKIE_SAME_SITE: z
-    .enum(["lax", "strict", "none"])
-    .default("lax"),
+  COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
 });
 
 const parsedEnvironment = envSchema.safeParse(process.env);

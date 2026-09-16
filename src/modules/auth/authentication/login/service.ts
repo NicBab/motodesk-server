@@ -33,6 +33,19 @@ export async function loginUser(
     });
   }
 
+  //************************************************************** */
+  // OAuth-only accounts do not have a local password.
+  //
+  // Keep the response identical to an incorrect password so the
+  // endpoint does not disclose which authentication methods are
+  // configured for an account.
+
+  if (!user.passwordHash) {
+    throw new AppError(401, "Invalid email address or password.", {
+      code: "INVALID_CREDENTIALS",
+    });
+  }
+
   const passwordMatches = await verifyPassword(
     input.password,
     user.passwordHash,
@@ -46,7 +59,9 @@ export async function loginUser(
 
   const membership = user.memberships[0] ?? null;
 
-  return createAuthenticationResult(user, membership, context);
+  return createAuthenticationResult(
+    user,
+    membership,
+    context,
+  );
 }
-
-//************************************************************** */

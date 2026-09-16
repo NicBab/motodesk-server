@@ -6,6 +6,7 @@ import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } from "../../../audit/audit.constants.js";
+
 import { createAuditLog } from "../../../audit/audit.service.js";
 
 import type {
@@ -46,6 +47,22 @@ export async function changePassword(
     throw new AppError(403, "This account is currently inactive.", {
       code: "ACCOUNT_INACTIVE",
     });
+  }
+
+  //************************************************************** */
+  // This endpoint changes an existing password and therefore
+  // requires the account to already have one.
+  //
+  // OAuth-only users will receive a separate set-password flow.
+
+  if (!user.passwordHash) {
+    throw new AppError(
+      400,
+      "This account does not have a password configured.",
+      {
+        code: "PASSWORD_NOT_CONFIGURED",
+      },
+    );
   }
 
   const currentPasswordMatches = await verifyPassword(
@@ -98,6 +115,7 @@ export async function changePassword(
             ipAddress: context.ipAddress,
           }
         : {}),
+
       ...(context.userAgent !== null
         ? {
             userAgent: context.userAgent,

@@ -64,6 +64,14 @@ import { acceptMembershipInvitationSchema } from "../membership-invitations/memb
 
 import { acceptMembershipInvitationHandler } from "../membership-invitations/membership-invitation.controller.js";
 
+import {
+  startGoogleOAuth,
+} from "./oauth/google-oauth.controller.js";
+
+import {
+  googleOAuthCallback,
+} from "./oauth/google-oauth-callback.controller.js";
+
 //*********************************************************************** */
 
 const router = Router();
@@ -73,6 +81,21 @@ router.post("/register", validateBody(registerSchema), register);
 router.post("/login", validateBody(loginSchema), login);
 
 router.post("/refresh", refresh);
+
+//************************************************************** */
+// Google OAuth
+
+router.get(
+  "/oauth/google",
+  startGoogleOAuth,
+);
+
+router.get(
+  "/oauth/google/callback",
+  googleOAuthCallback,
+);
+
+//************************************************************** */
 
 router.post(
   "/accept-membership-invitation",

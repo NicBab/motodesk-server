@@ -7,6 +7,13 @@ enum AuthTokenType {
 
 //************************************************************** */
 
+enum ExternalAuthProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+//************************************************************** */
+
 enum SessionRevocationReason {
   LOGOUT
   LOGOUT_ALL
@@ -59,6 +66,32 @@ model AuthToken {
 
 //************************************************************** */
 
+model ExternalAuthAccount {
+  id String @id @default(cuid())
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider ExternalAuthProvider
+
+  providerAccountId String
+
+  providerEmail String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+
+  @@index([userId])
+
+  @@index([provider, providerEmail])
+}
+
+//************************************************************** */
+
 model Session {
   id String @id @default(cuid())
 
@@ -89,7 +122,7 @@ model Session {
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
-  passwordHash      String
+  passwordHash      String?
   firstName         String
   lastName          String
   phone             String?
@@ -102,6 +135,7 @@ model User {
   memberships Membership[]
   sessions    Session[]
   authTokens  AuthToken[]
+  externalAuthAccounts ExternalAuthAccount[]
 
   createdAuditEvents AuditLog[] @relation("AuditActor")
 

@@ -18,8 +18,6 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-
-
     "test": "tsx --test --test-concurrency=1",
     "test:customers": "tsx --test tests/integration/customers/*.test.ts",
     "test:vehicles": "tsx --test tests/integration/vehicles/*.test.ts",
@@ -28,19 +26,17 @@
     "test:scheduling": "tsx --test tests/integration/scheduling/*.test.ts",
     "test:technician-assignments": "tsx --test tests/integration/technician-assignments/*.test.ts",
     "test:service-bays": "tsx --test tests/integration/service-bays/*.test.ts",
-
     "test:customer-crud": "tsx --test tests/integration/customers/customer-crud.test.ts",
     "test:vehicle-crud": "tsx --test tests/integration/vehicles/vehicle-crud.test.ts",
     "test:part-crud": "tsx --test tests/integration/parts/part-crud.test.ts",
     "test:part-inventory": "tsx --test tests/integration/parts/part-inventory.test.ts",
     "test:vendor-crud": "tsx --test tests/integration/vendors/vendor-crud.test.ts",
-
     "test:repair-orders": "tsx --test tests/integration/repair-orders/*.test.ts",
     "test:repair-order-crud": "tsx --test tests/integration/repair-orders/repair-order-crud.test.ts",
     "test:repair-order-labor": "tsx --test tests/integration/repair-orders/repair-order-labor.test.ts",
     "test:repair-order-parts": "tsx --test tests/integration/repair-orders/repair-order-parts.test.ts",
     "test:repair-order-readiness": "tsx --test tests/integration/repair-orders/repair-order-readiness.test.ts",
-    "test:repair-order-parts-review":"tsx --test tests/integration/repair-orders/repair-order-parts-review.test.ts",
+    "test:repair-order-parts-review": "tsx --test tests/integration/repair-orders/repair-order-parts-review.test.ts",
     "test:repair-order-work-status": "tsx --test tests/integration/repair-order-work-status/*.test.ts",
     "test:repair-order-quality-check": "tsx --test tests/integration/repair-order-quality-check/*.test.ts",
     "test:repair-order-cashier": "tsx --test tests/integration/repair-order-cashier/*.test.ts",
@@ -48,13 +44,11 @@
     "test:repair-order-additional-work": "tsx --test tests/integration/repair-order-additional-work/*.test.ts",
     "test:repair-order-additional-approval": "tsx --test tests/integration/repair-order-additional-approval/*.test.ts",
     "test:repair-order-labor-cancel": "tsx --test tests/integration/repair-order-labor-cancel/*.test.ts",
-
     "test:purchase-orders": "tsx --test tests/integration/purchase-orders/*.test.ts",
     "test:purchase-order-crud": "tsx --test tests/integration/purchase-orders/purchase-order-crud.test.ts",
     "test:purchase-order-ordering": "tsx --test tests/integration/purchase-orders/purchase-order-ordering.test.ts",
     "test:purchase-order-receiving": "tsx --test tests/integration/purchase-orders/purchase-order-receiving.test.ts",
     "test:purchase-order-cancellation": "tsx --test tests/integration/purchase-orders/purchase-order-cancellation.test.ts",
-
     "test:membership-permissions": "tsx --test tests/integration/membership-permissions/*.test.ts",
     "test:effective-membership-authorization": "tsx --test tests/integration/effective-membership-authorization/*.test.ts",
     "test:membership-role-permissions": "tsx --test tests/integration/membership-role-permissions/*.test.ts",
@@ -65,7 +59,6 @@
     "test:membership-removal": "tsx --test tests/integration/membership-removal/*.test.ts",
     "test:membership-invitation-listing": "tsx --test tests/integration/membership-invitation-listing/*.test.ts",
     "test:membership-invitation-refresh": "tsx --test tests/integration/membership-invitation-refresh/*.test.ts",
-
     "test:organization-archive": "tsx --test tests/integration/organization-archive/*.test.ts",
     "test:audit-listing": "tsx --test tests/integration/audit-listing/*.test.ts",
     "test:organization-ownership-transfer": "tsx --test tests/integration/organization-ownership-transfer/*.test.ts",
@@ -73,20 +66,17 @@
     "test:permission-catalog": "tsx --test tests/integration/permission-catalog/*.test.ts",
     "test:part-returns": "tsx --test tests/integration/parts/part-returns/*.test.ts",
     "test:part-order-demand": "tsx --test tests/integration/parts/part-order-demand.test.ts",
-    "test:purchase-order-receipt-history":"tsx --test tests/integration/purchase-orders/purchase-order-receipt-history.test.ts",
-    "test:purchase-order-draft-edit":"tsx --test tests/integration/purchase-orders/purchase-order-draft-editing.test.ts",
-    "test:pos-checkout":"tsx --test tests/integration/sales/pos-checkout.test.ts",
-    "test:pos-returns":"tsx --test tests/integration/sales/pos-returns.test.ts",
-    "test:employee-crud":"tsx --test tests/integration/employees/employee-crud.test.ts",
-    "test:time-clock-kiosk":"tsx --test tests/integration/time-clock/time-clock-kiosk.test.ts",
-    "test:time-clock-manager":"tsx --test tests/integration/time-clock/time-clock-manager.test.ts",
-    "test:time-clock-report":"tsx --test tests/integration/time-clock/time-clock-report.test.ts",
-    "test:membership-invite-link":"tsx --test tests/integration/membership-invitations/employee-membership-invitation-link.test.ts",
-
-    "test:service-appointments":"tsx --test tests/integration/service-appointments/*.test.ts",
-
+    "test:purchase-order-receipt-history": "tsx --test tests/integration/purchase-orders/purchase-order-receipt-history.test.ts",
+    "test:purchase-order-draft-edit": "tsx --test tests/integration/purchase-orders/purchase-order-draft-editing.test.ts",
+    "test:pos-checkout": "tsx --test tests/integration/sales/pos-checkout.test.ts",
+    "test:pos-returns": "tsx --test tests/integration/sales/pos-returns.test.ts",
+    "test:employee-crud": "tsx --test tests/integration/employees/employee-crud.test.ts",
+    "test:time-clock-kiosk": "tsx --test tests/integration/time-clock/time-clock-kiosk.test.ts",
+    "test:time-clock-manager": "tsx --test tests/integration/time-clock/time-clock-manager.test.ts",
+    "test:time-clock-report": "tsx --test tests/integration/time-clock/time-clock-report.test.ts",
+    "test:membership-invite-link": "tsx --test tests/integration/membership-invitations/employee-membership-invitation-link.test.ts",
+    "test:service-appointments": "tsx --test tests/integration/service-appointments/*.test.ts",
     "test:dashboard": "tsx --test tests/integration/dashboard/*.test.ts"
-
   },
   "keywords": [],
   "author": "",
@@ -102,6 +92,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
+    "openid-client": "^6.8.8",
     "pg": "^8.22.0",
     "zod": "^4.4.3"
   },
