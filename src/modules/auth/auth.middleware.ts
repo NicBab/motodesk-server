@@ -31,6 +31,8 @@ export interface AuthenticatedRequest extends Request {
   authenticatedMembership?: AuthenticatedMembership | null;
 
   authenticationSessionId?: string;
+
+  accessTokenExpiresAt?: Date;
 }
 
 type RequestWithCookies = Request & {
@@ -98,6 +100,8 @@ export async function authenticateRequest(
 
     request.authenticationSessionId = validatedSession.session.id;
 
+    request.accessTokenExpiresAt = new Date(tokenPayload.exp * 1_000);
+
     request.authenticatedMembership = null;
 
     if (tokenPayload.membershipId) {
@@ -147,5 +151,3 @@ export async function authenticateRequest(
     );
   }
 }
-
-//************************************************************** */

@@ -18,7 +18,7 @@ import { login, loginSchema } from "./authentication/login/index.js";
 
 import {
   refresh,
-  refreshSessionSchema,
+  // refreshSessionSchema,
 } from "./authentication/refresh/index.js";
 
 import { logout, logoutSchema } from "./authentication/logout/index.js";
@@ -72,7 +72,7 @@ router.post("/register", validateBody(registerSchema), register);
 
 router.post("/login", validateBody(loginSchema), login);
 
-router.post("/refresh", validateBody(refreshSessionSchema), refresh);
+router.post("/refresh", refresh);
 
 router.post(
   "/accept-membership-invitation",

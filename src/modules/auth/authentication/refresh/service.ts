@@ -15,7 +15,7 @@ import { toAuthenticatedMembership } from "../../shared/mappers/membership.mappe
 
 import { toAuthenticatedUser } from "../../shared/mappers/auth.mapper.js";
 
-import type { RefreshSessionInput } from "./schema.js";
+// import type { RefreshSessionInput } from "./schema.js";
 
 import type {
   AuthenticationResult,
@@ -25,10 +25,13 @@ import type {
 //************************************************************** */
 
 export async function refreshSession(
-  input: RefreshSessionInput,
+  refreshToken: string,
   _context: RequestMetadata,
 ): Promise<AuthenticationResult> {
-  const parsedRefreshToken = parseRefreshToken(input.refreshToken);
+  const parsedRefreshToken =
+    parseRefreshToken(
+      refreshToken,
+    );
 
   const validatedSession = await validateSession(
     parsedRefreshToken.sessionId,

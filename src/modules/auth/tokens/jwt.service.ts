@@ -24,6 +24,13 @@ export interface GeneratedAccessToken {
 
 //************************************************************** */
 
+export type VerifiedAccessToken = JwtPayload &
+  AccessTokenPayload & {
+    exp: number;
+  };
+
+//************************************************************** */
+
 export function generateAccessToken(
   payload: AccessTokenPayload,
 ): GeneratedAccessToken {
@@ -43,7 +50,7 @@ export function generateAccessToken(
 
 //************************************************************** */
 
-export function verifyAccessToken(token: string): AccessTokenPayload {
+export function verifyAccessToken(token: string): VerifiedAccessToken {
   const decodedToken = jwt.verify(token, env.JWT_ACCESS_SECRET, {
     algorithms: ["HS256"],
   });
@@ -56,20 +63,23 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 //************************************************************** */
+
 function isAccessTokenPayload(
   payload: JwtPayload,
-): payload is JwtPayload & AccessTokenPayload {
+): payload is VerifiedAccessToken {
   return (
     typeof payload.sub === "string" &&
     typeof payload.email === "string" &&
     typeof payload.sessionId === "string" &&
     isNullableString(payload.organizationId) &&
     isNullableString(payload.membershipId) &&
-    isNullableString(payload.role)
+    isNullableString(payload.role) &&
+    typeof payload.exp === "number"
   );
 }
 
 //************************************************************** */
+
 function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
 }
