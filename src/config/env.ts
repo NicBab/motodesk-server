@@ -70,15 +70,18 @@ const envSchema = z.object({
     .max(90, "Refresh sessions cannot remain valid for more than 90 days.")
     .default(30),
 
-  EMAIL_VERIFICATION_TTL_HOURS: z.coerce
+  EMAIL_VERIFICATION_TTL_MINUTES: z.coerce
     .number()
-    .int("EMAIL_VERIFICATION_TTL_HOURS must be a whole number.")
-    .min(1, "Email-verification tokens must remain valid for at least 1 hour.")
-    .max(
-      72,
-      "Email-verification tokens cannot remain valid for more than 72 hours.",
+    .int("EMAIL_VERIFICATION_TTL_MINUTES must be a whole number.")
+    .min(
+      5,
+      "Email-verification codes must remain valid for at least 5 minutes.",
     )
-    .default(24),
+    .max(
+      30,
+      "Email-verification codes cannot remain valid for more than 30 minutes.",
+    )
+    .default(15),
 
   PASSWORD_RESET_TTL_MINUTES: z.coerce
     .number()
@@ -89,6 +92,20 @@ const envSchema = z.object({
       "Password-reset tokens cannot remain valid for more than 120 minutes.",
     )
     .default(30),
+
+  RESEND_API_KEY: optionalEnvironmentString,
+
+  EMAIL_FROM_NAME: z
+    .string()
+    .trim()
+    .min(1, "EMAIL_FROM_NAME is required.")
+    .default("MotoDesk"),
+
+  EMAIL_FROM_ADDRESS: z
+    .string()
+    .trim()
+    .email("EMAIL_FROM_ADDRESS must be a valid email address.")
+    .default("noreply@mail.novaristechus.com"),
 
   GOOGLE_OAUTH_CLIENT_ID: optionalEnvironmentString,
 

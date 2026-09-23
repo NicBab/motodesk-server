@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-import { env } from "../../../../config/env.js";
-
 import { AppError } from "../../../../platform/errors/app-error.js";
 
 import { hashPassword } from "../../security/password.service.js";
@@ -22,6 +20,10 @@ import type {
 import { findUserIdByEmail } from "../../shared/repositories/user-auth.repository.js";
 
 import { createRegistrationRecords } from "./repository.js";
+
+import {
+  sendEmailVerificationCode,
+} from "../../../../platform/email/auth-email.service.js";
 
 //************************************************************** */
 
@@ -93,22 +95,53 @@ export async function registerUser(
       : {}),
   });
 
-  const authenticationResult = buildAuthenticationResult(
+  // const authenticationResult = buildAuthenticationResult(
+  //   records.user,
+  //   records.membership,
+  //   records.session.id,
+  //   refreshToken,
+  // );
+
+  // return {
+  //   ...authenticationResult,
+
+  //   ...(env.NODE_ENV === "development"
+  //     ? {
+  //         emailVerificationToken: emailVerificationToken.token,
+  //         emailVerificationExpiresAt: emailVerificationToken.expiresAt,
+  //       }
+  //     : {}),
+  // };
+
+    const authenticationResult = buildAuthenticationResult(
     records.user,
     records.membership,
     records.session.id,
     refreshToken,
   );
 
-  return {
-    ...authenticationResult,
+  //************************************************************** */
+  // Persist registration before contacting the external email
+  // provider. If delivery fails, the account remains unverified
+  // and the user can request a replacement verification code.
 
-    ...(env.NODE_ENV === "development"
-      ? {
-          emailVerificationToken: emailVerificationToken.token,
-          emailVerificationExpiresAt: emailVerificationToken.expiresAt,
-        }
-      : {}),
-  };
+  await sendEmailVerificationCode({
+    email:
+      records.user.email,
+
+    firstName:
+      records.user.firstName,
+
+    verificationCode:
+      emailVerificationToken.token,
+  });
+
+  //************************************************************** */
+  // Verification codes must never be returned to normal clients.
+  //
+  // The previous development-only token response is intentionally
+  // removed now that MotoDesk has real transactional delivery.
+
+  return authenticationResult;
 }
 //************************************************************** */

@@ -1,5 +1,3 @@
-import { env } from "../../../../config/env.js";
-
 import {
   findUserForLogin,
 } from "../../shared/repositories/user-auth.repository.js";
@@ -12,12 +10,14 @@ import type {
   ResendEmailVerificationInput,
 } from "./schema.js";
 
+import {
+  sendEmailVerificationCode,
+} from "../../../../platform/email/auth-email.service.js";
+
 //************************************************************** */
 
 export interface ResendEmailVerificationResult {
   message: string;
-  emailVerificationToken?: string;
-  emailVerificationExpiresAt?: Date;
 }
 
 //************************************************************** */
@@ -33,33 +33,61 @@ export async function resendEmailVerification(
       input.email,
     );
 
-  if (!user || !user.isActive) {
+  //************************************************************** */
+  // Always return the same response for unknown, inactive, or
+  // already-verified accounts to avoid exposing account state.
+
+  if (
+    !user ||
+    !user.isActive
+  ) {
     return {
-      message: genericMessage,
+      message:
+        genericMessage,
     };
   }
 
-  if (user.emailVerifiedAt) {
+  if (
+    user.emailVerifiedAt
+  ) {
     return {
-      message: genericMessage,
+      message:
+        genericMessage,
     };
   }
+
+  //************************************************************** */
+  // Creating the replacement token invalidates the previous
+  // verification token and persists only the hash of the new code.
 
   const verificationToken =
     await createEmailVerificationAuthToken(
       user.id,
     );
 
-  return {
-    message: genericMessage,
+  //************************************************************** */
+  // Deliver the plaintext six-digit code only after its hashed
+  // representation has been persisted.
 
-    ...(env.NODE_ENV === "development"
-      ? {
-          emailVerificationToken:
-            verificationToken.token,
-          emailVerificationExpiresAt:
-            verificationToken.expiresAt,
-        }
-      : {}),
+  await sendEmailVerificationCode({
+    email:
+      user.email,
+
+    firstName:
+      user.firstName,
+
+    verificationCode:
+      verificationToken.token,
+  });
+
+  //************************************************************** */
+  // Never return the verification code through the HTTP API,
+  // including in development.
+
+  return {
+    message:
+      genericMessage,
   };
 }
+
+//************************************************************** */
