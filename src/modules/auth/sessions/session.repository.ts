@@ -48,6 +48,37 @@ export async function findSessionById(
 
 //************************************************************** */
 
+export async function findActiveSessionsForUser(
+  userId: string,
+) {
+  return prisma.session.findMany({
+    where: {
+      userId,
+
+      revokedAt: null,
+
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+
+    select: {
+      id: true,
+      userAgent: true,
+      ipAddress: true,
+      expiresAt: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+
+    orderBy: {
+      lastUsedAt: "desc",
+    },
+  });
+}
+
+//************************************************************** */
+
 export async function touchSession(
   sessionId: string,
 ) {

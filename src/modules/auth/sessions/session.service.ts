@@ -18,11 +18,14 @@ import {
   createSessionRecord,
   deleteExpiredSessionRecords,
   findSessionById,
+  findActiveSessionsForUser,
   revokeSessionRecord,
   revokeUserSessionRecords,
   rotateSessionRecord,
   touchSession,
 } from "./session.repository.js";
+
+import { AppError } from "../../../platform/errors/app-error.js";
 
 //************************************************************** */
 
@@ -190,6 +193,74 @@ export async function revokeAllUserSessions(
   const result = await revokeUserSessionRecords(userId, reason);
 
   return result.count;
+}
+
+//************************************************************** */
+
+export async function getActiveSessionsForUser(
+  userId: string,
+  currentSessionId: string,
+) {
+  const sessions = await findActiveSessionsForUser(userId);
+
+  return sessions.map((session) => ({
+    id: session.id,
+
+    userAgent: session.userAgent,
+
+    ipAddress: session.ipAddress,
+
+    createdAt: session.createdAt,
+
+    lastUsedAt: session.lastUsedAt,
+
+    expiresAt: session.expiresAt,
+
+    isCurrent: session.id === currentSessionId,
+  }));
+}
+
+//************************************************************** */
+
+export async function revokeUserSession(
+  userId: string,
+  sessionId: string,
+  currentSessionId: string,
+): Promise<void> {
+  if (sessionId === currentSessionId) {
+    throw new AppError(
+      400,
+      "The current session cannot be revoked from this action.",
+      {
+        code: "CURRENT_SESSION_REVOKE_NOT_ALLOWED",
+      },
+    );
+  }
+
+  const sessions = await findActiveSessionsForUser(userId);
+
+  const session = sessions.find((candidate) => candidate.id === sessionId);
+
+  if (!session) {
+    throw new AppError(404, "Session not found.", {
+      code: "SESSION_NOT_FOUND",
+    });
+  }
+
+  await revokeSession(session.id, SessionRevocationReason.LOGOUT);
+}
+
+//************************************************************** */
+
+export async function revokeOtherUserSessions(
+  userId: string,
+  currentSessionId: string,
+): Promise<RevokeUserSessionsResult> {
+  return revokeUserSessions(
+    userId,
+    SessionRevocationReason.LOGOUT_ALL,
+    currentSessionId,
+  );
 }
 
 //************************************************************** */

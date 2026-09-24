@@ -119,7 +119,49 @@ const envSchema = z.object({
 
   COOKIE_SECURE: booleanFromEnvironment.default(false),
 
-  COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+COOKIE_SAME_SITE: z
+  .enum(["lax", "strict", "none"])
+  .default("lax"),
+
+TRUST_PROXY: z.coerce
+  .number()
+  .int("TRUST_PROXY must be a whole number.")
+  .min(0, "TRUST_PROXY cannot be negative.")
+  .max(10, "TRUST_PROXY cannot be greater than 10.")
+  .default(0),
+})
+.superRefine((environment, context) => {
+  if (
+    environment.NODE_ENV === "production" &&
+    !environment.COOKIE_SECURE
+  ) {
+    context.addIssue({
+      code: "custom",
+
+      path: [
+        "COOKIE_SECURE",
+      ],
+
+      message:
+        "COOKIE_SECURE must be true in production.",
+    });
+  }
+
+  if (
+    environment.COOKIE_SAME_SITE === "none" &&
+    !environment.COOKIE_SECURE
+  ) {
+    context.addIssue({
+      code: "custom",
+
+      path: [
+        "COOKIE_SAME_SITE",
+      ],
+
+      message:
+        'COOKIE_SAME_SITE="none" requires COOKIE_SECURE=true.',
+    });
+  }
 });
 
 const parsedEnvironment = envSchema.safeParse(process.env);

@@ -65,6 +65,12 @@ import { acceptMembershipInvitationSchema } from "../membership-invitations/memb
 import { acceptMembershipInvitationHandler } from "../membership-invitations/membership-invitation.controller.js";
 
 import {
+  getActiveSessionsHandler,
+  revokeOtherSessionsHandler,
+  revokeSessionHandler,
+} from "./sessions/session.controller.js";
+
+import {
   startGoogleOAuth,
 } from "./oauth/google-oauth.controller.js";
 
@@ -160,6 +166,32 @@ router.patch(
   validateBody(updateProfileSchema),
   updateProfileHandler,
 );
+
+//************************************************************** */
+// Session management
+
+router.get(
+  "/sessions",
+  authenticateRequest,
+  initializeRequestContext,
+  getActiveSessionsHandler,
+);
+
+router.delete(
+  "/sessions/others",
+  authenticateRequest,
+  initializeRequestContext,
+  revokeOtherSessionsHandler,
+);
+
+router.delete(
+  "/sessions/:sessionId",
+  authenticateRequest,
+  initializeRequestContext,
+  revokeSessionHandler,
+);
+
+//************************************************************** */
 
 router.post("/logout", validateBody(logoutSchema), logout);
 
