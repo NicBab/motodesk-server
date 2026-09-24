@@ -8,6 +8,7 @@ export type UserWithPassword = Pick<
   User,
   | "id"
   | "email"
+  | "emailVerifiedAt"
   | "passwordHash"
   | "firstName"
   | "lastName"
@@ -21,17 +22,18 @@ export type UserWithPassword = Pick<
 //************************************************************** */
 
 export function toAuthenticatedUser(user: UserWithPassword): AuthenticatedUser {
-return {
-  id: user.id,
-  email: user.email,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  phone: user.phone,
-  jobTitle: user.jobTitle,
-  preferredTimezone: user.preferredTimezone,
-  displayMode: user.displayMode,
-  isActive: user.isActive,
-};
+  return {
+    id: user.id,
+    email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
+    jobTitle: user.jobTitle,
+    preferredTimezone: user.preferredTimezone,
+    displayMode: user.displayMode,
+    isActive: user.isActive,
+  };
 }
 
 //************************************************************** */

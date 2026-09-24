@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateBody } from "../../platform/validation/validate-body.js";
-import { authenticateRequest } from "../auth/index.js";
+import { authenticateRequest, requireVerifiedEmail, } from "../auth/index.js";
 import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
@@ -58,6 +58,7 @@ const router = Router();
 router.post(
   "/",
   authenticateRequest,
+  requireVerifiedEmail,
   initializeRequestContext,
   validateBody(createOrganizationSchema),
   createOrganizationHandler,
@@ -77,12 +78,23 @@ router.get(
 router.post(
   "/:organizationId/transfer-ownership",
   authenticateRequest,
+  requireVerifiedEmail,
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),
   validateParams(organizationIdSchema),
   validateBody(transferOrganizationOwnershipSchema),
   transferOrganizationOwnershipHandler,
+);
+
+//************************************************************** */
+// All organization-scoped business modules below this boundary
+// require a verified email address.
+
+router.use(
+  "/:organizationId",
+  authenticateRequest,
+  requireVerifiedEmail,
 );
 
 //************************************************************** */
@@ -216,6 +228,7 @@ router.use("/:organizationId/dashboard", dashboardRouter);
 router.get(
   "/:organizationId",
   authenticateRequest,
+  requireVerifiedEmail,
   initializeRequestContext,
   requireOrganizationAccess,
   validateParams(organizationIdSchema),
@@ -227,6 +240,7 @@ router.get(
 router.patch(
   "/:organizationId",
   authenticateRequest,
+  requireVerifiedEmail,
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_UPDATE),
@@ -240,6 +254,7 @@ router.patch(
 router.delete(
   "/:organizationId",
   authenticateRequest,
+  requireVerifiedEmail,
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),

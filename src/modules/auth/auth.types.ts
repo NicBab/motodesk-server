@@ -19,6 +19,7 @@ export interface AccessTokenPayload {
 export interface AuthenticatedUser {
   id: string;
   email: string;
+  emailVerifiedAt: Date | null;
   firstName: string;
   lastName: string;
   phone: string | null;

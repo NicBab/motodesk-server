@@ -7,6 +7,7 @@ import { prisma } from "../../../../config/prisma.js";
 export const authenticatedRequestUserSelect = {
   id: true,
   email: true,
+  emailVerifiedAt: true,
   firstName: true,
   lastName: true,
   phone: true,

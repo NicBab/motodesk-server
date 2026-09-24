@@ -51,6 +51,7 @@ export async function updateProfile(
   return {
     id: user.id,
     email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt,
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,

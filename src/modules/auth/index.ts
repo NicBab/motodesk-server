@@ -6,6 +6,10 @@ export {
   authenticateRequest,
 } from "./auth.middleware.js";
 
+export {
+  requireVerifiedEmail,
+} from "./email-verification.middleware.js";
+
 export type {
   AuthenticatedRequest,
 } from "./auth.middleware.js";
