@@ -1,3 +1,5 @@
+import { logger } from "../../../../config/logger.js";
+
 import { AppError } from "../../../../platform/errors/app-error.js";
 
 import { findUserForLogin } from "../../shared/repositories/user-auth.repository.js";
@@ -22,12 +24,30 @@ export async function loginUser(
   const user = await findUserForLogin(input.email);
 
   if (!user) {
+    logger.warn("Authentication failed", {
+      reason: "USER_NOT_FOUND",
+
+      ipAddress: context.ipAddress,
+
+      userAgent: context.userAgent,
+    });
+
     throw new AppError(401, "Invalid email address or password.", {
       code: "INVALID_CREDENTIALS",
     });
   }
 
   if (!user.isActive) {
+    logger.warn("Authentication failed", {
+      reason: "ACCOUNT_INACTIVE",
+
+      userId: user.id,
+
+      ipAddress: context.ipAddress,
+
+      userAgent: context.userAgent,
+    });
+
     throw new AppError(403, "This account is currently inactive.", {
       code: "ACCOUNT_INACTIVE",
     });
@@ -41,6 +61,16 @@ export async function loginUser(
   // configured for an account.
 
   if (!user.passwordHash) {
+    logger.warn("Authentication failed", {
+      reason: "LOCAL_PASSWORD_UNAVAILABLE",
+
+      userId: user.id,
+
+      ipAddress: context.ipAddress,
+
+      userAgent: context.userAgent,
+    });
+
     throw new AppError(401, "Invalid email address or password.", {
       code: "INVALID_CREDENTIALS",
     });
@@ -52,6 +82,16 @@ export async function loginUser(
   );
 
   if (!passwordMatches) {
+    logger.warn("Authentication failed", {
+      reason: "INVALID_PASSWORD",
+
+      userId: user.id,
+
+      ipAddress: context.ipAddress,
+
+      userAgent: context.userAgent,
+    });
+
     throw new AppError(401, "Invalid email address or password.", {
       code: "INVALID_CREDENTIALS",
     });
@@ -59,9 +99,7 @@ export async function loginUser(
 
   const membership = user.memberships[0] ?? null;
 
-  return createAuthenticationResult(
-    user,
-    membership,
-    context,
-  );
+  return createAuthenticationResult(user, membership, context);
 }
+
+//************************************************************** */

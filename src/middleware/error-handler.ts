@@ -1,75 +1,68 @@
-import type {
-  ErrorRequestHandler,
-} from "express";
+import type { ErrorRequestHandler } from "express";
 
-import {
-  env,
-} from "../config/env.js";
+import { env } from "../config/env.js";
 
-import {
-  AppError,
-} from "../platform/errors/app-error.js";
+import { logger } from "../config/logger.js";
 
-import {
-  createErrorResponse,
-} from "../platform/http/api-error.js";
+import { AppError } from "../platform/errors/app-error.js";
+
+import { createErrorResponse } from "../platform/http/api-error.js";
 
 //************************************************************** */
 
 export const errorHandler: ErrorRequestHandler = (
   error,
-  _request,
+  request,
   response,
   _next,
 ): void => {
   const normalizedError =
-    error instanceof Error
-      ? error
-      : new Error(
-          "An unknown error occurred.",
-        );
+    error instanceof Error ? error : new Error("An unknown error occurred.");
 
-  const isOperationalError =
-    error instanceof AppError;
+  const isOperationalError = error instanceof AppError;
 
-  const statusCode =
-    isOperationalError
-      ? error.statusCode
-      : 500;
+  const statusCode = isOperationalError ? error.statusCode : 500;
 
-  const responseBody =
-    createErrorResponse(
-      isOperationalError
-        ? normalizedError.message
-        : "An unexpected server error occurred.",
+  //************************************************************** */
+  // Unexpected failures are logged internally with request context.
+  // The client still receives only the generic production-safe
+  // server-error response below.
 
-      isOperationalError
-        ? error.code
-        : undefined,
+  if (!isOperationalError) {
+    logger.error("Unhandled application error", {
+      error: normalizedError,
 
-      isOperationalError
-        ? error.details
-        : undefined,
-    );
+      method: request.method,
 
-  response
-    .status(
-      statusCode,
-    )
-    .json({
-      ...responseBody,
+      path: request.originalUrl,
 
-      ...(env.NODE_ENV ===
-      "development"
-        ? {
-            error:
-              normalizedError.message,
+      ipAddress: request.ip ?? request.socket.remoteAddress ?? "unknown",
 
-            stack:
-              normalizedError.stack,
-          }
-        : {}),
+      requestId: response.getHeader("X-Request-Id"),
     });
+  }
+
+  const responseBody = createErrorResponse(
+    isOperationalError
+      ? normalizedError.message
+      : "An unexpected server error occurred.",
+
+    isOperationalError ? error.code : undefined,
+
+    isOperationalError ? error.details : undefined,
+  );
+
+  response.status(statusCode).json({
+    ...responseBody,
+
+    ...(env.NODE_ENV === "development"
+      ? {
+          error: normalizedError.message,
+
+          stack: normalizedError.stack,
+        }
+      : {}),
+  });
 };
 
 //************************************************************** */
