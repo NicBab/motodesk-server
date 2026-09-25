@@ -27,6 +27,8 @@ import {
 
 import { AppError } from "../../../platform/errors/app-error.js";
 
+import { logger } from "../../../config/logger.js";
+
 //************************************************************** */
 
 export interface CreatedSession {
@@ -78,44 +80,29 @@ export async function validateSession(
   sessionId: string,
   refreshTokenSecret: string,
 ): Promise<ValidatedSession | null> {
-  const session =
-    await findSessionById(
-      sessionId,
-    );
+  const session = await findSessionById(sessionId);
 
   if (!session) {
     return null;
   }
 
-  if (
-    session.revokedAt !==
-    null
-  ) {
+  if (session.revokedAt !== null) {
     return null;
   }
 
-  if (
-    session.expiresAt.getTime() <=
-    Date.now()
-  ) {
-    await revokeSession(
-      session.id,
-      SessionRevocationReason.EXPIRED,
-    );
+  if (session.expiresAt.getTime() <= Date.now()) {
+    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
 
     return null;
   }
 
-  const currentTokenMatches =
-    verifyTokenHash(
-      refreshTokenSecret,
-      session.tokenHash,
-    );
+  const currentTokenMatches = verifyTokenHash(
+    refreshTokenSecret,
+    session.tokenHash,
+  );
 
   if (currentTokenMatches) {
-    await touchSession(
-      session.id,
-    );
+    await touchSession(session.id);
 
     return {
       session,
@@ -131,20 +118,22 @@ export async function validateSession(
   // again indicates replay/reuse rather than an ordinary invalid
   // token.
 
-  if (
-    session.previousTokenHash
-  ) {
-    const previousTokenMatches =
-      verifyTokenHash(
-        refreshTokenSecret,
-        session.previousTokenHash,
-      );
+  if (session.previousTokenHash) {
+    const previousTokenMatches = verifyTokenHash(
+      refreshTokenSecret,
+      session.previousTokenHash,
+    );
 
     if (previousTokenMatches) {
-      await revokeSession(
-        session.id,
-        SessionRevocationReason.TOKEN_REUSE,
-      );
+      await revokeSession(session.id, SessionRevocationReason.TOKEN_REUSE);
+
+      logger.warn("Refresh token reuse detected", {
+        securityEvent: "REFRESH_TOKEN_REUSE",
+
+        userId: session.userId,
+
+        sessionId: session.id,
+      });
 
       return null;
     }
