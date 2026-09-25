@@ -99,6 +99,7 @@ model Session {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   tokenHash String @unique
+  previousTokenHash String?
 
   userAgent String?
   ipAddress String?

@@ -78,34 +78,82 @@ export async function validateSession(
   sessionId: string,
   refreshTokenSecret: string,
 ): Promise<ValidatedSession | null> {
-  const session = await findSessionById(sessionId);
+  const session =
+    await findSessionById(
+      sessionId,
+    );
 
   if (!session) {
     return null;
   }
 
-  if (session.revokedAt !== null) {
+  if (
+    session.revokedAt !==
+    null
+  ) {
     return null;
   }
 
-  if (session.expiresAt.getTime() <= Date.now()) {
-    await revokeSession(session.id, SessionRevocationReason.EXPIRED);
+  if (
+    session.expiresAt.getTime() <=
+    Date.now()
+  ) {
+    await revokeSession(
+      session.id,
+      SessionRevocationReason.EXPIRED,
+    );
 
     return null;
   }
 
-  const tokenMatches = verifyTokenHash(refreshTokenSecret, session.tokenHash);
+  const currentTokenMatches =
+    verifyTokenHash(
+      refreshTokenSecret,
+      session.tokenHash,
+    );
 
-  if (!tokenMatches) {
-    return null;
+  if (currentTokenMatches) {
+    await touchSession(
+      session.id,
+    );
+
+    return {
+      session,
+      refreshTokenSecret,
+    };
   }
 
-  await touchSession(session.id);
+  //************************************************************** */
+  // Refresh tokens are rotated after every successful refresh.
+  //
+  // If the presented secret matches the immediately previous token,
+  // that token has already been successfully used once. Seeing it
+  // again indicates replay/reuse rather than an ordinary invalid
+  // token.
 
-  return {
-    session,
-    refreshTokenSecret,
-  };
+  if (
+    session.previousTokenHash
+  ) {
+    const previousTokenMatches =
+      verifyTokenHash(
+        refreshTokenSecret,
+        session.previousTokenHash,
+      );
+
+    if (previousTokenMatches) {
+      await revokeSession(
+        session.id,
+        SessionRevocationReason.TOKEN_REUSE,
+      );
+
+      return null;
+    }
+  }
+
+  // Unknown token. Do not classify arbitrary invalid credentials
+  // as confirmed refresh-token reuse.
+
+  return null;
 }
 
 //************************************************************** */

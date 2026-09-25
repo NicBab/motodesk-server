@@ -1,34 +1,38 @@
-import {
-  SessionRevocationReason,
-} from "../../../generated/prisma/client.js";
+import { SessionRevocationReason } from "../../../generated/prisma/client.js";
 
-import {
-  prisma,
-} from "../../../config/prisma.js";
+import { prisma } from "../../../config/prisma.js";
 
 //************************************************************** */
 
 export interface CreateSessionRecordData {
   id: string;
+
   userId: string;
+
   tokenHash: string;
+
   userAgent: string | null;
+
   ipAddress: string | null;
+
   expiresAt: Date;
 }
 
 //************************************************************** */
 
-export async function createSessionRecord(
-  data: CreateSessionRecordData,
-) {
+export async function createSessionRecord(data: CreateSessionRecordData) {
   return prisma.session.create({
     data: {
       id: data.id,
+
       userId: data.userId,
+
       tokenHash: data.tokenHash,
+
       userAgent: data.userAgent,
+
       ipAddress: data.ipAddress,
+
       expiresAt: data.expiresAt,
     },
   });
@@ -36,9 +40,7 @@ export async function createSessionRecord(
 
 //************************************************************** */
 
-export async function findSessionById(
-  sessionId: string,
-) {
+export async function findSessionById(sessionId: string) {
   return prisma.session.findUnique({
     where: {
       id: sessionId,
@@ -48,9 +50,7 @@ export async function findSessionById(
 
 //************************************************************** */
 
-export async function findActiveSessionsForUser(
-  userId: string,
-) {
+export async function findActiveSessionsForUser(userId: string) {
   return prisma.session.findMany({
     where: {
       userId,
@@ -64,10 +64,15 @@ export async function findActiveSessionsForUser(
 
     select: {
       id: true,
+
       userAgent: true,
+
       ipAddress: true,
+
       expiresAt: true,
+
       lastUsedAt: true,
+
       createdAt: true,
     },
 
@@ -79,13 +84,12 @@ export async function findActiveSessionsForUser(
 
 //************************************************************** */
 
-export async function touchSession(
-  sessionId: string,
-) {
+export async function touchSession(sessionId: string) {
   return prisma.session.update({
     where: {
       id: sessionId,
     },
+
     data: {
       lastUsedAt: new Date(),
     },
@@ -99,15 +103,36 @@ export async function rotateSessionRecord(
   tokenHash: string,
   expiresAt: Date,
 ) {
-  return prisma.session.update({
-    where: {
-      id: sessionId,
-    },
-    data: {
-      tokenHash,
-      expiresAt,
-      lastUsedAt: new Date(),
-    },
+  return prisma.$transaction(async (transaction) => {
+    const session = await transaction.session.findUnique({
+      where: {
+        id: sessionId,
+      },
+
+      select: {
+        tokenHash: true,
+      },
+    });
+
+    if (!session) {
+      return null;
+    }
+
+    return transaction.session.update({
+      where: {
+        id: sessionId,
+      },
+
+      data: {
+        previousTokenHash: session.tokenHash,
+
+        tokenHash,
+
+        expiresAt,
+
+        lastUsedAt: new Date(),
+      },
+    });
   });
 }
 
@@ -120,10 +145,13 @@ export async function revokeSessionRecord(
   return prisma.session.updateMany({
     where: {
       id: sessionId,
+
       revokedAt: null,
     },
+
     data: {
       revokedAt: new Date(),
+
       revokedReason: reason,
     },
   });
@@ -139,6 +167,7 @@ export async function revokeUserSessionRecords(
   return prisma.session.updateMany({
     where: {
       userId,
+
       revokedAt: null,
 
       ...(excludedSessionId !== undefined
@@ -149,8 +178,10 @@ export async function revokeUserSessionRecords(
           }
         : {}),
     },
+
     data: {
       revokedAt: new Date(),
+
       revokedReason: reason,
     },
   });
@@ -167,3 +198,5 @@ export async function deleteExpiredSessionRecords() {
     },
   });
 }
+
+//************************************************************** */
