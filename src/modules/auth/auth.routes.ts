@@ -1,29 +1,43 @@
 // Endpoint declarations
 
 import { Router } from "express";
+
 import { authenticateRequest } from "./auth.middleware.js";
+
 import { validateBody } from "../../platform/validation/validate-body.js";
+
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
 import { me } from "./authentication/me/index.js";
 
-import { register, registerSchema } from "./authentication/register/index.js";
+import {
+  register,
+  registerSchema,
+} from "./authentication/register/index.js";
 
 import {
   switchOrganizationHandler,
   switchOrganizationSchema,
 } from "./authentication/switch-organization/index.js";
 
-import { login, loginSchema } from "./authentication/login/index.js";
+import {
+  login,
+  loginSchema,
+} from "./authentication/login/index.js";
 
 import {
   refresh,
   // refreshSessionSchema,
 } from "./authentication/refresh/index.js";
 
-import { logout, logoutSchema } from "./authentication/logout/index.js";
+import {
+  logout,
+  logoutSchema,
+} from "./authentication/logout/index.js";
 
-import { logoutAll } from "./authentication/logout-all/index.js";
+import {
+  logoutAll,
+} from "./authentication/logout-all/index.js";
 
 import {
   updateProfileHandler,
@@ -60,9 +74,13 @@ import {
   resendEmailVerificationSchema,
 } from "./identity/resend-email-verification/index.js";
 
-import { acceptMembershipInvitationSchema } from "../membership-invitations/membership-invitation.schemas.js";
+import {
+  acceptMembershipInvitationSchema,
+} from "../membership-invitations/membership-invitation.schemas.js";
 
-import { acceptMembershipInvitationHandler } from "../membership-invitations/membership-invitation.controller.js";
+import {
+  acceptMembershipInvitationHandler,
+} from "../membership-invitations/membership-invitation.controller.js";
 
 import {
   getActiveSessionsHandler,
@@ -78,17 +96,44 @@ import {
   googleOAuthCallback,
 } from "./oauth/google-oauth-callback.controller.js";
 
-//*********************************************************************** */
+import {
+  emailVerificationRateLimit,
+  emailVerificationResendRateLimit,
+  loginRateLimit,
+  passwordResetRateLimit,
+  passwordResetRequestRateLimit,
+  refreshRateLimit,
+  registrationRateLimit,
+} from "./auth-rate-limit.js";
+
+//****************************************************************************** */
 
 const router = Router();
 
-router.post("/register", validateBody(registerSchema), register);
+//****************************************************************************** */
+// Registration / login / refresh
 
-router.post("/login", validateBody(loginSchema), login);
+router.post(
+  "/register",
+  registrationRateLimit,
+  validateBody(registerSchema),
+  register,
+);
 
-router.post("/refresh", refresh);
+router.post(
+  "/login",
+  loginRateLimit,
+  validateBody(loginSchema),
+  login,
+);
 
-//************************************************************** */
+router.post(
+  "/refresh",
+  refreshRateLimit,
+  refresh,
+);
+
+//****************************************************************************** */
 // Google OAuth
 
 router.get(
@@ -101,13 +146,16 @@ router.get(
   googleOAuthCallback,
 );
 
-//************************************************************** */
+//****************************************************************************** */
+// Membership / organization
 
 router.post(
   "/accept-membership-invitation",
   authenticateRequest,
   initializeRequestContext,
-  validateBody(acceptMembershipInvitationSchema),
+  validateBody(
+    acceptMembershipInvitationSchema,
+  ),
   acceptMembershipInvitationHandler,
 );
 
@@ -115,39 +163,58 @@ router.post(
   "/switch-organization",
   authenticateRequest,
   initializeRequestContext,
-  validateBody(switchOrganizationSchema),
+  validateBody(
+    switchOrganizationSchema,
+  ),
   switchOrganizationHandler,
 );
+
+//****************************************************************************** */
+// Password / email identity
 
 router.post(
   "/change-password",
   authenticateRequest,
   initializeRequestContext,
-  validateBody(changePasswordSchema),
+  validateBody(
+    changePasswordSchema,
+  ),
   changePasswordHandler,
 );
 
 router.post(
   "/request-password-reset",
-  validateBody(requestPasswordResetSchema),
+  passwordResetRequestRateLimit,
+  validateBody(
+    requestPasswordResetSchema,
+  ),
   requestPasswordResetHandler,
 );
 
 router.post(
   "/reset-password",
-  validateBody(resetPasswordSchema),
+  passwordResetRateLimit,
+  validateBody(
+    resetPasswordSchema,
+  ),
   resetPasswordHandler,
 );
 
 router.post(
   "/verify-email",
-  validateBody(verifyEmailSchema),
+  emailVerificationRateLimit,
+  validateBody(
+    verifyEmailSchema,
+  ),
   verifyEmailHandler,
 );
 
 router.post(
   "/resend-email-verification",
-  validateBody(resendEmailVerificationSchema),
+  emailVerificationResendRateLimit,
+  validateBody(
+    resendEmailVerificationSchema,
+  ),
   resendEmailVerificationHandler,
 );
 
@@ -155,7 +222,9 @@ router.post(
   "/change-email",
   authenticateRequest,
   initializeRequestContext,
-  validateBody(changeEmailSchema),
+  validateBody(
+    changeEmailSchema,
+  ),
   changeEmailHandler,
 );
 
@@ -163,11 +232,13 @@ router.patch(
   "/profile",
   authenticateRequest,
   initializeRequestContext,
-  validateBody(updateProfileSchema),
+  validateBody(
+    updateProfileSchema,
+  ),
   updateProfileHandler,
 );
 
-//************************************************************** */
+//****************************************************************************** */
 // Session management
 
 router.get(
@@ -191,9 +262,16 @@ router.delete(
   revokeSessionHandler,
 );
 
-//************************************************************** */
+//****************************************************************************** */
+// Logout / current session
 
-router.post("/logout", validateBody(logoutSchema), logout);
+router.post(
+  "/logout",
+  validateBody(
+    logoutSchema,
+  ),
+  logout,
+);
 
 router.post(
   "/logout-all",
@@ -202,6 +280,222 @@ router.post(
   logoutAll,
 );
 
-router.get("/me", authenticateRequest, initializeRequestContext, me);
+router.get(
+  "/me",
+  authenticateRequest,
+  initializeRequestContext,
+  me,
+);
 
 export default router;
+
+//****************************************************************************** */
+
+
+// // Endpoint declarations
+
+// import { Router } from "express";
+// import { authenticateRequest } from "./auth.middleware.js";
+// import { validateBody } from "../../platform/validation/validate-body.js";
+// import { initializeRequestContext } from "../../platform/request/request.middleware.js";
+
+// import { me } from "./authentication/me/index.js";
+
+// import { register, registerSchema } from "./authentication/register/index.js";
+
+// import {
+//   switchOrganizationHandler,
+//   switchOrganizationSchema,
+// } from "./authentication/switch-organization/index.js";
+
+// import { login, loginSchema } from "./authentication/login/index.js";
+
+// import {
+//   refresh,
+//   // refreshSessionSchema,
+// } from "./authentication/refresh/index.js";
+
+// import { logout, logoutSchema } from "./authentication/logout/index.js";
+
+// import { logoutAll } from "./authentication/logout-all/index.js";
+
+// import {
+//   updateProfileHandler,
+//   updateProfileSchema,
+// } from "./identity/update-profile/index.js";
+
+// import {
+//   changePasswordHandler,
+//   changePasswordSchema,
+// } from "./identity/change-password/index.js";
+
+// import {
+//   changeEmailHandler,
+//   changeEmailSchema,
+// } from "./identity/change-email/index.js";
+
+// import {
+//   requestPasswordResetHandler,
+//   requestPasswordResetSchema,
+// } from "./identity/request-password-reset/index.js";
+
+// import {
+//   resetPasswordHandler,
+//   resetPasswordSchema,
+// } from "./identity/reset-password/index.js";
+
+// import {
+//   verifyEmailHandler,
+//   verifyEmailSchema,
+// } from "./identity/verify-email/index.js";
+
+// import {
+//   resendEmailVerificationHandler,
+//   resendEmailVerificationSchema,
+// } from "./identity/resend-email-verification/index.js";
+
+// import { acceptMembershipInvitationSchema } from "../membership-invitations/membership-invitation.schemas.js";
+
+// import { acceptMembershipInvitationHandler } from "../membership-invitations/membership-invitation.controller.js";
+
+// import {
+//   getActiveSessionsHandler,
+//   revokeOtherSessionsHandler,
+//   revokeSessionHandler,
+// } from "./sessions/session.controller.js";
+
+// import {
+//   startGoogleOAuth,
+// } from "./oauth/google-oauth.controller.js";
+
+// import {
+//   googleOAuthCallback,
+// } from "./oauth/google-oauth-callback.controller.js";
+
+// //*********************************************************************** */
+
+// const router = Router();
+
+// router.post("/register", validateBody(registerSchema), register);
+
+// router.post("/login", validateBody(loginSchema), login);
+
+// router.post("/refresh", refresh);
+
+// //************************************************************** */
+// // Google OAuth
+
+// router.get(
+//   "/oauth/google",
+//   startGoogleOAuth,
+// );
+
+// router.get(
+//   "/oauth/google/callback",
+//   googleOAuthCallback,
+// );
+
+// //************************************************************** */
+
+// router.post(
+//   "/accept-membership-invitation",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   validateBody(acceptMembershipInvitationSchema),
+//   acceptMembershipInvitationHandler,
+// );
+
+// router.post(
+//   "/switch-organization",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   validateBody(switchOrganizationSchema),
+//   switchOrganizationHandler,
+// );
+
+// router.post(
+//   "/change-password",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   validateBody(changePasswordSchema),
+//   changePasswordHandler,
+// );
+
+// router.post(
+//   "/request-password-reset",
+//   validateBody(requestPasswordResetSchema),
+//   requestPasswordResetHandler,
+// );
+
+// router.post(
+//   "/reset-password",
+//   validateBody(resetPasswordSchema),
+//   resetPasswordHandler,
+// );
+
+// router.post(
+//   "/verify-email",
+//   validateBody(verifyEmailSchema),
+//   verifyEmailHandler,
+// );
+
+// router.post(
+//   "/resend-email-verification",
+//   validateBody(resendEmailVerificationSchema),
+//   resendEmailVerificationHandler,
+// );
+
+// router.post(
+//   "/change-email",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   validateBody(changeEmailSchema),
+//   changeEmailHandler,
+// );
+
+// router.patch(
+//   "/profile",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   validateBody(updateProfileSchema),
+//   updateProfileHandler,
+// );
+
+// //************************************************************** */
+// // Session management
+
+// router.get(
+//   "/sessions",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   getActiveSessionsHandler,
+// );
+
+// router.delete(
+//   "/sessions/others",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   revokeOtherSessionsHandler,
+// );
+
+// router.delete(
+//   "/sessions/:sessionId",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   revokeSessionHandler,
+// );
+
+// //************************************************************** */
+
+// router.post("/logout", validateBody(logoutSchema), logout);
+
+// router.post(
+//   "/logout-all",
+//   authenticateRequest,
+//   initializeRequestContext,
+//   logoutAll,
+// );
+
+// router.get("/me", authenticateRequest, initializeRequestContext, me);
+
+// export default router;
