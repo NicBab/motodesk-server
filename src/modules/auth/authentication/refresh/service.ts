@@ -58,9 +58,22 @@ export async function refreshSession(
     });
   }
 
-  const rotatedRefreshToken = await rotateSessionToken(
+const rotatedRefreshToken =
+  await rotateSessionToken(
     validatedSession.session.id,
+    validatedSession.session.tokenHash,
   );
+
+if (!rotatedRefreshToken) {
+  throw new AppError(
+    401,
+    "Session has expired or is invalid.",
+    {
+      code:
+        "SESSION_INVALID",
+    },
+  );
+}
 
   const membership = user.memberships[0] ?? null;
 

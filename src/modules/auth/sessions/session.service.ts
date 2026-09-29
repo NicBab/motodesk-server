@@ -182,14 +182,20 @@ export async function validateAccessSession(
 
 export async function rotateSessionToken(
   sessionId: string,
-): Promise<GeneratedRefreshToken> {
+  expectedTokenHash: string,
+): Promise<GeneratedRefreshToken | null> {
   const refreshToken = generateRefreshToken(sessionId);
 
-  await rotateSessionRecord(
+  const rotationResult = await rotateSessionRecord(
     sessionId,
+    expectedTokenHash,
     refreshToken.tokenHash,
     refreshToken.expiresAt,
   );
+
+  if (!rotationResult.rotated) {
+    return null;
+  }
 
   return refreshToken;
 }

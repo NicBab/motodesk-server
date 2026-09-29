@@ -100,40 +100,37 @@ export async function touchSession(sessionId: string) {
 
 export async function rotateSessionRecord(
   sessionId: string,
+  expectedTokenHash: string,
   tokenHash: string,
   expiresAt: Date,
 ) {
-  return prisma.$transaction(async (transaction) => {
-    const session = await transaction.session.findUnique({
-      where: {
-        id: sessionId,
+  const result = await prisma.session.updateMany({
+    where: {
+      id: sessionId,
+
+      tokenHash: expectedTokenHash,
+
+      revokedAt: null,
+
+      expiresAt: {
+        gt: new Date(),
       },
+    },
 
-      select: {
-        tokenHash: true,
-      },
-    });
+    data: {
+      previousTokenHash: expectedTokenHash,
 
-    if (!session) {
-      return null;
-    }
+      tokenHash,
 
-    return transaction.session.update({
-      where: {
-        id: sessionId,
-      },
+      expiresAt,
 
-      data: {
-        previousTokenHash: session.tokenHash,
-
-        tokenHash,
-
-        expiresAt,
-
-        lastUsedAt: new Date(),
-      },
-    });
+      lastUsedAt: new Date(),
+    },
   });
+
+  return {
+    rotated: result.count === 1,
+  };
 }
 
 //************************************************************** */
