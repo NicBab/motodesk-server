@@ -182,31 +182,22 @@ describe("Membership role permission sync integration", () => {
     //************************************************************** */
     // Make the owner's most recent credential authentication stale.
 
-    const ownerMembership = await prisma.membership.findUniqueOrThrow({
-      where: {
-        id: ownerMembershipId,
-      },
+    const sessionsResponse = await agent.get("/api/v1/auth/sessions");
 
-      select: {
-        userId: true,
-      },
-    });
+    assert.equal(sessionsResponse.status, 200);
 
-    const ownerSession = await prisma.session.findFirstOrThrow({
-      where: {
-        userId: ownerMembership.userId,
+    assert.equal(sessionsResponse.body?.success, true);
 
-        revokedAt: null,
-      },
+    const currentSession = sessionsResponse.body?.data?.sessions?.find(
+      (session: { id: string; isCurrent: boolean }) =>
+        session.isCurrent === true,
+    );
 
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    assert.ok(currentSession);
 
     await prisma.session.update({
       where: {
-        id: ownerSession.id,
+        id: currentSession.id,
       },
 
       data: {

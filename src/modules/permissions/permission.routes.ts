@@ -1,6 +1,9 @@
 import { Router } from "express";
 
-import { authenticateRequest } from "../auth/index.js";
+import {
+  authenticateRequest,
+  requireRecentAuthentication,
+} from "../auth/index.js";
 
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
@@ -44,6 +47,7 @@ router.put(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireRecentAuthentication,
   validateParams(membershipIdSchema),
   validateBody(updateMembershipPermissionsSchema),
   updateMembershipPermissionsHandler,

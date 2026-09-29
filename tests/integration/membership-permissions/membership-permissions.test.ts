@@ -213,6 +213,100 @@ describe("Membership permissions integration", () => {
 
   //************************************************************** */
 
+  it("requires recent authentication before changing membership permissions", async () => {
+    const {
+      agent,
+      organizationId,
+      membershipId: ownerMembershipId,
+    } = await createAuthenticatedAgent();
+
+    const employee = await createEmployeeMembership(organizationId);
+
+    //************************************************************** */
+    // Seed an existing permission so we can prove the rejected
+    // request does not alter the current permission set.
+
+    await prisma.membershipPermission.create({
+      data: {
+        organizationId,
+
+        membershipId: employee.id,
+
+        permission: Permissions.PARTS_VIEW,
+
+        grantedByMembershipId: ownerMembershipId,
+      },
+    });
+
+    //************************************************************** */
+    // Make the owner's credential authentication stale.
+
+    const sessionsResponse = await agent.get("/api/v1/auth/sessions");
+
+    assert.equal(sessionsResponse.status, 200);
+
+    assert.equal(sessionsResponse.body?.success, true);
+
+    const currentSession = sessionsResponse.body?.data?.sessions?.find(
+      (session: { id: string; isCurrent: boolean }) =>
+        session.isCurrent === true,
+    );
+
+    assert.ok(currentSession);
+
+    await prisma.session.update({
+      where: {
+        id: currentSession.id,
+      },
+
+      data: {
+        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    //************************************************************** */
+    // Direct permission mutation is security-sensitive.
+
+    const response = await agent
+      .put(
+        `/api/v1/organizations/${organizationId}/memberships/${employee.id}/permissions`,
+      )
+      .send({
+        permissions: [
+          Permissions.REPAIR_ORDERS_VIEW,
+          Permissions.REPAIR_ORDERS_UPDATE,
+        ],
+      });
+
+    assert.equal(response.status, 403);
+
+    assert.equal(response.body?.success, false);
+
+    assert.equal(response.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // The stale request must not replace the existing permissions.
+
+    const storedPermissions = await prisma.membershipPermission.findMany({
+      where: {
+        organizationId,
+
+        membershipId: employee.id,
+      },
+
+      orderBy: {
+        permission: "asc",
+      },
+    });
+
+    assert.deepEqual(
+      storedPermissions.map((permission) => permission.permission),
+      [Permissions.PARTS_VIEW],
+    );
+  });
+
+  //************************************************************** */
+
   it("rejects modification of owner permissions", async () => {
     const { agent, organizationId, membershipId } =
       await createAuthenticatedAgent();

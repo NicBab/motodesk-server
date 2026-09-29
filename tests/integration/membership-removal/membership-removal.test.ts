@@ -217,34 +217,26 @@ describe("Membership removal integration", () => {
     );
 
     //************************************************************** */
-    // Resolve the owner's authenticated session and intentionally
-    // make its most recent credential authentication stale.
+    // Resolve the exact session belonging to this authenticated
+    // agent. Multiple integration suites can authenticate the seeded
+    // owner concurrently, so "newest session" is not deterministic.
 
-    const ownerMembership = await prisma.membership.findUniqueOrThrow({
-      where: {
-        id: ownerMembershipId,
-      },
+    const sessionsResponse = await ownerAgent.get("/api/v1/auth/sessions");
 
-      select: {
-        userId: true,
-      },
-    });
+    assert.equal(sessionsResponse.status, 200);
 
-    const ownerSession = await prisma.session.findFirstOrThrow({
-      where: {
-        userId: ownerMembership.userId,
+    assert.equal(sessionsResponse.body?.success, true);
 
-        revokedAt: null,
-      },
+    const currentSession = sessionsResponse.body?.data?.sessions?.find(
+      (session: { id: string; isCurrent: boolean }) =>
+        session.isCurrent === true,
+    );
 
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    assert.ok(currentSession);
 
     await prisma.session.update({
       where: {
-        id: ownerSession.id,
+        id: currentSession.id,
       },
 
       data: {
