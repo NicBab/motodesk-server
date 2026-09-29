@@ -23,6 +23,7 @@ import {
   revokeUserSessionRecords,
   rotateSessionRecord,
   touchSession,
+  updateSessionLastAuthenticatedAt,
 } from "./session.repository.js";
 
 import { AppError } from "../../../platform/errors/app-error.js";
@@ -48,6 +49,13 @@ export interface ValidatedAccessSession {
 export interface RevokeUserSessionsResult {
   revokedSessionCount: number;
 }
+
+//************************************************************** */
+
+export const RECENT_AUTHENTICATION_WINDOW_MINUTES = 15;
+
+const RECENT_AUTHENTICATION_WINDOW_MILLISECONDS =
+  RECENT_AUTHENTICATION_WINDOW_MINUTES * 60 * 1_000;
 
 //************************************************************** */
 
@@ -176,6 +184,46 @@ export async function validateAccessSession(
   return {
     session,
   };
+}
+
+//************************************************************** */
+
+export async function assertRecentAuthentication(
+  sessionId: string,
+): Promise<void> {
+  const session = await findSessionById(sessionId);
+
+  if (
+    !session ||
+    session.revokedAt !== null ||
+    session.expiresAt.getTime() <= Date.now()
+  ) {
+    throw new AppError(401, "Authentication session is unavailable.", {
+      code: "AUTHENTICATION_SESSION_INVALID",
+    });
+  }
+
+  const authenticationAge = Date.now() - session.lastAuthenticatedAt.getTime();
+
+  if (authenticationAge > RECENT_AUTHENTICATION_WINDOW_MILLISECONDS) {
+    throw new AppError(403, "Recent authentication is required to continue.", {
+      code: "RECENT_AUTHENTICATION_REQUIRED",
+    });
+  }
+}
+
+//************************************************************** */
+
+export async function markSessionReauthenticated(
+  sessionId: string,
+): Promise<void> {
+  const result = await updateSessionLastAuthenticatedAt(sessionId);
+
+  if (result.count !== 1) {
+    throw new AppError(401, "Authentication session is unavailable.", {
+      code: "AUTHENTICATION_SESSION_INVALID",
+    });
+  }
 }
 
 //************************************************************** */

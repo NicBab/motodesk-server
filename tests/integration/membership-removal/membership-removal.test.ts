@@ -44,10 +44,16 @@ async function createMember(
   const user = await prisma.user.create({
     data: {
       email,
+
       passwordHash,
+
       firstName: "Removal",
+
       lastName: "Employee",
+
       isActive: true,
+
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -193,6 +199,118 @@ describe("Membership removal integration", () => {
     assert.ok(metadata.before);
 
     assert.ok(metadata.after);
+  });
+
+  //************************************************************** */
+
+  it("requires recent authentication before removing a membership", async () => {
+    const {
+      agent: ownerAgent,
+      organizationId,
+      membershipId: ownerMembershipId,
+    } = await createAuthenticatedAgent();
+
+    const { membership } = await createMember(
+      organizationId,
+      ownerMembershipId,
+      MembershipRole.TECHNICIAN,
+    );
+
+    //************************************************************** */
+    // Resolve the owner's authenticated session and intentionally
+    // make its most recent credential authentication stale.
+
+    const ownerMembership = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: ownerMembershipId,
+      },
+
+      select: {
+        userId: true,
+      },
+    });
+
+    const ownerSession = await prisma.session.findFirstOrThrow({
+      where: {
+        userId: ownerMembership.userId,
+
+        revokedAt: null,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    await prisma.session.update({
+      where: {
+        id: ownerSession.id,
+      },
+
+      data: {
+        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    //************************************************************** */
+    // Membership removal is security-sensitive and must require a
+    // recent credential challenge even for an authorized owner.
+
+    const response = await ownerAgent.delete(
+      `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
+    );
+
+    assert.equal(response.status, 403);
+
+    assert.equal(response.body?.success, false);
+
+    assert.equal(response.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // The rejected operation must not mutate the membership.
+
+    const storedMembership = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: membership.id,
+      },
+    });
+
+    assert.equal(storedMembership.status, MembershipStatus.ACTIVE);
+
+    //************************************************************** */
+    // Permissions must also remain intact. This proves the request
+    // was stopped before the removal service performed its cleanup.
+
+    const permissionCount = await prisma.membershipPermission.count({
+      where: {
+        organizationId,
+
+        membershipId: membership.id,
+      },
+    });
+
+    assert.equal(
+      permissionCount,
+      getPermissionsForRole(MembershipRole.TECHNICIAN).length,
+    );
+
+    //************************************************************** */
+    // A blocked security operation must not produce a false
+    // membership-removal audit event.
+
+    const auditLog = await prisma.auditLog.findFirst({
+      where: {
+        organizationId,
+
+        action: AUDIT_ACTIONS.MEMBERSHIP_REMOVED,
+
+        resourceType: AUDIT_ENTITY_TYPES.MEMBERSHIP,
+
+        resourceId: membership.id,
+      },
+    });
+
+    assert.equal(auditLog, null);
   });
 
   //************************************************************** */

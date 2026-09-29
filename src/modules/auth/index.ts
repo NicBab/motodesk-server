@@ -19,3 +19,7 @@ export type {
   AuthenticatedUser,
   AuthenticationResult,
 } from "./auth.types.js";
+
+export {
+  requireRecentAuthentication,
+} from "./recent-authentication.middleware.js";

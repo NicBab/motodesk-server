@@ -52,17 +52,37 @@ async function createOwnershipTestOrganization() {
   const ownerMembership = await prisma.membership.findFirstOrThrow({
     where: {
       organizationId,
+
       role: MembershipRole.OWNER,
+    },
+  });
+
+  //************************************************************** */
+  // Resolve the authenticated session used by this agent so tests
+  // can explicitly control its recent-authentication timestamp.
+
+  const session = await prisma.session.findFirstOrThrow({
+    where: {
+      userId: ownerMembership.userId,
+
+      revokedAt: null,
+    },
+
+    orderBy: {
+      createdAt: "desc",
     },
   });
 
   return {
     agent,
+
     organizationId,
 
     ownerMembershipId: ownerMembership.id,
 
     ownerUserId: ownerMembership.userId,
+
+    sessionId: session.id,
   };
 }
 
@@ -120,6 +140,7 @@ async function createTransferTarget(
 
   return {
     user,
+
     membership,
   };
 }
@@ -184,6 +205,7 @@ describe("Organization ownership transfer integration", () => {
 
     assert.deepEqual(
       [...actualNewOwnerPermissions].sort(),
+
       [...expectedNewOwnerPermissions].sort(),
     );
 
@@ -209,6 +231,7 @@ describe("Organization ownership transfer integration", () => {
 
     assert.deepEqual(
       [...actualPreviousOwnerPermissions].sort(),
+
       [...expectedPreviousOwnerPermissions].sort(),
     );
 
@@ -256,6 +279,64 @@ describe("Organization ownership transfer integration", () => {
     assert.equal(metadata.newOwnerPreviousRole, MembershipRole.MANAGER);
 
     assert.equal(metadata.newOwnerRole, MembershipRole.OWNER);
+  });
+
+  //************************************************************** */
+
+  it("requires recent authentication before transferring organization ownership", async () => {
+    const { agent, organizationId, ownerMembershipId, sessionId } =
+      await createOwnershipTestOrganization();
+
+    const { membership: targetMembership } = await createTransferTarget(
+      organizationId,
+      ownerMembershipId,
+      MembershipRole.MANAGER,
+    );
+
+    //************************************************************** */
+    // Simulate a valid authenticated session whose most recent
+    // credential challenge is no longer recent.
+
+    await prisma.session.update({
+      where: {
+        id: sessionId,
+      },
+
+      data: {
+        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    const response = await agent
+      .post(`/api/v1/organizations/${organizationId}/transfer-ownership`)
+      .send({
+        membershipId: targetMembership.id,
+      });
+
+    assert.equal(response.status, 403);
+
+    assert.equal(response.body?.success, false);
+
+    assert.equal(response.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // The protected operation must not have occurred.
+
+    const unchangedOwner = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: ownerMembershipId,
+      },
+    });
+
+    const unchangedTarget = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: targetMembership.id,
+      },
+    });
+
+    assert.equal(unchangedOwner.role, MembershipRole.OWNER);
+
+    assert.equal(unchangedTarget.role, MembershipRole.MANAGER);
   });
 
   //************************************************************** */

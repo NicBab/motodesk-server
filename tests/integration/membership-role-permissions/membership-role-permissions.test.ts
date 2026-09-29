@@ -168,6 +168,100 @@ describe("Membership role permission sync integration", () => {
 
     assert.equal(storedPermissions[0]?.permission, Permissions.PARTS_VIEW);
   });
+  //************************************************************** */
+
+  it("requires recent authentication before changing membership role or status", async () => {
+    const {
+      agent,
+      organizationId,
+      membershipId: ownerMembershipId,
+    } = await createAuthenticatedAgent();
+
+    const employee = await createEmployeeMembership(organizationId);
+
+    //************************************************************** */
+    // Make the owner's most recent credential authentication stale.
+
+    const ownerMembership = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: ownerMembershipId,
+      },
+
+      select: {
+        userId: true,
+      },
+    });
+
+    const ownerSession = await prisma.session.findFirstOrThrow({
+      where: {
+        userId: ownerMembership.userId,
+
+        revokedAt: null,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    await prisma.session.update({
+      where: {
+        id: ownerSession.id,
+      },
+
+      data: {
+        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    //************************************************************** */
+    // Role mutation must be blocked.
+
+    const roleResponse = await agent
+      .patch(
+        `/api/v1/organizations/${organizationId}/memberships/${employee.id}`,
+      )
+      .send({
+        role: MembershipRole.SERVICE_ADVISOR,
+      });
+
+    assert.equal(roleResponse.status, 403);
+
+    assert.equal(roleResponse.body?.success, false);
+
+    assert.equal(roleResponse.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // Status mutation uses the same protected PATCH boundary and
+    // must also be blocked.
+
+    const statusResponse = await agent
+      .patch(
+        `/api/v1/organizations/${organizationId}/memberships/${employee.id}`,
+      )
+      .send({
+        status: "SUSPENDED",
+      });
+
+    assert.equal(statusResponse.status, 403);
+
+    assert.equal(statusResponse.body?.success, false);
+
+    assert.equal(statusResponse.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // Neither rejected request may mutate the membership.
+
+    const storedMembership = await prisma.membership.findUniqueOrThrow({
+      where: {
+        id: employee.id,
+      },
+    });
+
+    assert.equal(storedMembership.role, MembershipRole.TECHNICIAN);
+
+    assert.equal(storedMembership.status, "ACTIVE");
+  });
 });
 
 //************************************************************** */

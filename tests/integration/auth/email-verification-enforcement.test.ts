@@ -8,6 +8,8 @@ import { app } from "../../../src/app.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
+import { prisma } from "../../../src/config/prisma.js";
+
 //************************************************************** */
 
 function createUniqueEmail(): string {
@@ -102,6 +104,126 @@ describe("Email verification enforcement integration", () => {
     assert.equal(response.status, 200);
 
     assert.equal(response.body?.success, true);
+  });
+  it("blocks organization access immediately after a verified user changes their email", async () => {
+    const agent = request.agent(app);
+
+    const originalEmail = createUniqueEmail();
+
+    const newEmail = createUniqueEmail();
+
+    const organizationSlug = createUniqueSlug();
+
+    const password = "MotoDeskTest123!";
+
+    //************************************************************** */
+    // Register a dedicated account for this lifecycle test.
+
+    const registerResponse = await agent.post("/api/v1/auth/register").send({
+      email: originalEmail,
+
+      password,
+
+      firstName: "Email",
+
+      lastName: "Change",
+
+      organization: {
+        name: "Email Change Verification Test",
+
+        slug: organizationSlug,
+      },
+    });
+
+    assert.equal(registerResponse.status, 201);
+
+    const organizationId =
+      registerResponse.body?.data?.membership?.organizationId;
+
+    assert.equal(typeof organizationId, "string");
+
+    //************************************************************** */
+    // Registration intentionally starts unverified. For this test we
+    // need the opposite starting condition: a legitimately verified
+    // account that subsequently replaces its email.
+    //
+    // Mark this test user's ORIGINAL address verified directly. This
+    // isolates the email-change transition from the already-covered
+    // verification-code lifecycle.
+
+    const userId = registerResponse.body?.data?.user?.id;
+
+    assert.equal(typeof userId, "string");
+
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+
+      data: {
+        emailVerifiedAt: new Date(),
+      },
+    });
+
+    //************************************************************** */
+    // Prove the account has organization access before changing its
+    // verified email.
+
+    const beforeChangeResponse = await agent.get(
+      `/api/v1/organizations/${organizationId}`,
+    );
+
+    assert.equal(beforeChangeResponse.status, 200);
+
+    assert.equal(beforeChangeResponse.body?.success, true);
+
+    //************************************************************** */
+    // Replace the verified email address.
+
+    const changeEmailResponse = await agent
+      .post("/api/v1/auth/change-email")
+      .send({
+        newEmail,
+
+        currentPassword: password,
+      });
+
+    assert.equal(changeEmailResponse.status, 200);
+
+    assert.equal(changeEmailResponse.body?.success, true);
+
+    assert.equal(changeEmailResponse.body?.data?.user?.email, newEmail);
+
+    assert.equal(changeEmailResponse.body?.data?.user?.emailVerifiedAt, null);
+
+    //************************************************************** */
+    // Authentication/bootstrap remains available so the client can
+    // send the user through email verification.
+
+    const meResponse = await agent.get("/api/v1/auth/me");
+
+    assert.equal(meResponse.status, 200);
+
+    assert.equal(meResponse.body?.data?.user?.email, newEmail);
+
+    assert.equal(meResponse.body?.data?.user?.emailVerifiedAt, null);
+
+    //************************************************************** */
+    // Business access must disappear immediately after the verified
+    // address is replaced.
+
+    const afterChangeResponse = await agent.get(
+      `/api/v1/organizations/${organizationId}`,
+    );
+
+    assert.equal(afterChangeResponse.status, 403);
+
+    assert.equal(afterChangeResponse.body?.success, false);
+
+    assert.equal(
+      afterChangeResponse.body?.message,
+      "Verify your email address to continue.",
+    );
   });
 });
 

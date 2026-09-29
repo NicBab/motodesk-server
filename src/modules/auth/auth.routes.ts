@@ -106,6 +106,11 @@ import {
   registrationRateLimit,
 } from "./auth-rate-limit.js";
 
+import {
+  reauthenticateHandler,
+  reauthenticateSchema,
+} from "./authentication/reauthenticate/index.js";
+
 //****************************************************************************** */
 
 const router = Router();
@@ -226,6 +231,14 @@ router.post(
     changeEmailSchema,
   ),
   changeEmailHandler,
+);
+
+router.post(
+  "/reauthenticate",
+  authenticateRequest,
+  initializeRequestContext,
+  validateBody(reauthenticateSchema),
+  reauthenticateHandler,
 );
 
 router.patch(

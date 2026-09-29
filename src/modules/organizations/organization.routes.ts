@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateBody } from "../../platform/validation/validate-body.js";
-import { authenticateRequest, requireVerifiedEmail, } from "../auth/index.js";
+
 import { Permissions } from "../permissions/permission.constants.js";
 import { requirePermissions } from "../permissions/permission.middleware.js";
 import { requireOrganizationAccess } from "./organization.middleware.js";
@@ -51,6 +51,12 @@ import {
 
 import { transferOrganizationOwnershipSchema } from "./organization-ownership.schemas.js";
 
+import {
+  authenticateRequest,
+  requireRecentAuthentication,
+  requireVerifiedEmail,
+} from "../auth/index.js";
+
 //************************************************************** */
 
 const router = Router();
@@ -82,6 +88,7 @@ router.post(
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),
+  requireRecentAuthentication,
   validateParams(organizationIdSchema),
   validateBody(transferOrganizationOwnershipSchema),
   transferOrganizationOwnershipHandler,
@@ -217,10 +224,6 @@ router.use("/:organizationId/reports", reportRouter);
 
 //************************************************************** */
 
-router.use("/:organizationId/reports", reportRouter);
-
-//************************************************************** */
-
 router.use("/:organizationId/dashboard", dashboardRouter);
 
 //************************************************************** */
@@ -258,6 +261,7 @@ router.delete(
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),
+  requireRecentAuthentication,
   validateParams(organizationIdSchema),
   archiveOrganizationHandler,
 );

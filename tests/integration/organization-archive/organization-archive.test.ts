@@ -44,9 +44,36 @@ async function createArchiveTestOrganization() {
 
   assert.equal(switchResponse.status, 200);
 
+  //************************************************************** */
+  // Resolve the owner and the authenticated session used by this
+  // agent so recent-authentication state can be controlled directly.
+
+  const ownerMembership = await prisma.membership.findFirstOrThrow({
+    where: {
+      organizationId,
+
+      role: "OWNER",
+    },
+  });
+
+  const session = await prisma.session.findFirstOrThrow({
+    where: {
+      userId: ownerMembership.userId,
+
+      revokedAt: null,
+    },
+
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
   return {
     agent,
+
     organizationId,
+
+    sessionId: session.id,
   };
 }
 
@@ -93,6 +120,65 @@ describe("Organization archive integration", () => {
     });
 
     assert.ok(auditLog);
+  });
+
+  //************************************************************** */
+
+  it("requires recent authentication before archiving an organization", async () => {
+    const { agent, organizationId, sessionId } =
+      await createArchiveTestOrganization();
+
+    //************************************************************** */
+    // Keep the session itself valid while making its most recent
+    // credential authentication intentionally stale.
+
+    await prisma.session.update({
+      where: {
+        id: sessionId,
+      },
+
+      data: {
+        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    const response = await agent.delete(
+      `/api/v1/organizations/${organizationId}`,
+    );
+
+    assert.equal(response.status, 403);
+
+    assert.equal(response.body?.success, false);
+
+    assert.equal(response.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
+
+    //************************************************************** */
+    // The rejected request must not have archived the organization.
+
+    const organization = await prisma.organization.findUniqueOrThrow({
+      where: {
+        id: organizationId,
+      },
+    });
+
+    assert.equal(organization.status, OrganizationStatus.ACTIVE);
+
+    //************************************************************** */
+    // A rejected archive must not produce an archive audit event.
+
+    const auditLog = await prisma.auditLog.findFirst({
+      where: {
+        organizationId,
+
+        action: AUDIT_ACTIONS.ORGANIZATION_ARCHIVED,
+
+        resourceType: AUDIT_ENTITY_TYPES.ORGANIZATION,
+
+        resourceId: organizationId,
+      },
+    });
+
+    assert.equal(auditLog, null);
   });
 
   //************************************************************** */

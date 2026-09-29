@@ -93,19 +93,20 @@ model ExternalAuthAccount {
 //************************************************************** */
 
 model Session {
-  id String @id @default(cuid())
+  id     String @id @default(cuid())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash String @unique
+  tokenHash         String @unique
   previousTokenHash String?
 
   userAgent String?
   ipAddress String?
 
-  expiresAt  DateTime
-  lastUsedAt DateTime @default(now())
+  expiresAt          DateTime
+  lastUsedAt         DateTime @default(now())
+  lastAuthenticatedAt DateTime @default(now())
 
   revokedAt     DateTime?
   revokedReason SessionRevocationReason?

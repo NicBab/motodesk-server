@@ -19,6 +19,14 @@ import { verifyPassword } from "../../security/password.service.js";
 
 import { toAuthenticatedUser } from "../../shared/mappers/auth.mapper.js";
 
+import {
+  createEmailVerificationAuthToken,
+} from "../../tokens/one-time-token.service.js";
+
+import {
+  sendEmailVerificationCode,
+} from "../../../../platform/email/auth-email.service.js";
+
 //************************************************************** */
 
 export async function changeEmail(
@@ -90,6 +98,29 @@ export async function changeEmail(
   }
 
   const updatedUser = await updateUserEmailRecord(userId, input.newEmail);
+
+  //************************************************************** */
+// Verification belongs to the newly assigned email address.
+//
+// Changing the primary email clears emailVerifiedAt in the
+// repository. Issue a fresh one-time verification credential and
+// deliver it directly to the replacement address.
+
+const verificationToken =
+  await createEmailVerificationAuthToken(
+    userId,
+  );
+
+await sendEmailVerificationCode({
+  email:
+    updatedUser.email,
+
+  firstName:
+    updatedUser.firstName,
+
+  verificationCode:
+    verificationToken.token,
+});
 
   await createAuditLog({
     action: AUDIT_ACTIONS.AUTH_EMAIL_CHANGED,

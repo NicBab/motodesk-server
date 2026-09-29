@@ -73,6 +73,8 @@ export async function findActiveSessionsForUser(userId: string) {
 
       lastUsedAt: true,
 
+      lastAuthenticatedAt: true,
+
       createdAt: true,
     },
 
@@ -92,6 +94,32 @@ export async function touchSession(sessionId: string) {
 
     data: {
       lastUsedAt: new Date(),
+    },
+  });
+}
+
+//************************************************************** */
+
+export async function updateSessionLastAuthenticatedAt(
+  sessionId: string,
+) {
+  return prisma.session.updateMany({
+    where: {
+      id:
+        sessionId,
+
+      revokedAt:
+        null,
+
+      expiresAt: {
+        gt:
+          new Date(),
+      },
+    },
+
+    data: {
+      lastAuthenticatedAt:
+        new Date(),
     },
   });
 }

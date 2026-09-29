@@ -1,6 +1,9 @@
 import { Router } from "express";
 
-import { authenticateRequest } from "../auth/index.js";
+import {
+  authenticateRequest,
+  requireRecentAuthentication,
+} from "../auth/index.js";
 
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
@@ -81,6 +84,7 @@ router.patch(
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.MEMBERSHIPS_UPDATE),
+  requireRecentAuthentication,
   validateParams(membershipIdSchema),
   validateBody(updateMembershipSchema),
   updateMembershipHandler,
@@ -94,6 +98,7 @@ router.delete(
   initializeRequestContext,
   requireOrganizationAccess,
   requirePermissions(Permissions.MEMBERSHIPS_DELETE),
+  requireRecentAuthentication,
   validateParams(membershipIdSchema),
   removeMembershipHandler,
 );
