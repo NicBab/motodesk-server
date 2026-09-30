@@ -44,8 +44,16 @@ import {
 
 //************************************************************** */
 
+// const READY_PART_STATUSES = new Set([
+//   "RECEIVED",
+//   "PULLED",
+//   "STAGED",
+//   "ISSUED",
+//   "INSTALLED",
+//   "WAIVED",
+// ]);
+
 const READY_PART_STATUSES = new Set([
-  "RECEIVED",
   "PULLED",
   "STAGED",
   "ISSUED",

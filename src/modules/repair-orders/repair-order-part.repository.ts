@@ -254,43 +254,79 @@ export async function updateRepairOrderPartLineWorkflowRecord(
 export async function allocateRepairOrderPartLineRecord(
   repairOrderId: string,
   partLineId: string,
-  partId: string,
+  partId: string | null,
   quantity: number,
   currentAllocatedQty: number,
   createdByMembershipId: string | null,
   notes?: string,
 ) {
   return prisma.$transaction(async (transaction) => {
-    const inventoryResult = await applyInventoryMutationWithTransaction(
-      transaction,
-      {
-        partId,
+    const allocatedQty = currentAllocatedQty + quantity;
 
-        type: PartInventoryTransactionType.ALLOCATION,
+    //************************************************************** */
+    // Inventory-backed RO part.
+    //
+    // Reserve physical shop inventory and record the allocation
+    // transaction before updating the RO part tracking state.
 
-        quantity,
+    if (partId) {
+      const inventoryResult = await applyInventoryMutationWithTransaction(
+        transaction,
+        {
+          partId,
 
-        allocatedDelta: quantity,
+          type: PartInventoryTransactionType.ALLOCATION,
 
-        referenceType: "REPAIR_ORDER",
+          quantity,
 
-        referenceId: repairOrderId,
+          allocatedDelta: quantity,
 
-        ...(notes !== undefined
-          ? {
-              notes,
-            }
-          : {}),
+          referenceType: "REPAIR_ORDER",
 
-        createdByMembershipId,
-      },
-    );
+          referenceId: repairOrderId,
 
-    if (!inventoryResult) {
-      return null;
+          ...(notes !== undefined
+            ? {
+                notes,
+              }
+            : {}),
+
+          createdByMembershipId,
+        },
+      );
+
+      if (!inventoryResult) {
+        return null;
+      }
+
+      await transaction.repairOrderPartLine.update({
+        where: {
+          id: partLineId,
+        },
+
+        data: {
+          allocatedQty,
+
+          status: "ALLOCATED",
+        },
+      });
+
+      return {
+        part: inventoryResult.part,
+
+        inventoryTransaction: inventoryResult.transaction,
+
+        allocatedQty,
+      };
     }
 
-    const allocatedQty = currentAllocatedQty + quantity;
+    //************************************************************** */
+    // Special-order RO part.
+    //
+    // Special-order PO lines intentionally remain non-inventory.
+    // Allocation here represents assigning received material to the
+    // repair order and therefore must not create an inventory
+    // transaction.
 
     await transaction.repairOrderPartLine.update({
       where: {
@@ -305,9 +341,9 @@ export async function allocateRepairOrderPartLineRecord(
     });
 
     return {
-      part: inventoryResult.part,
+      part: null,
 
-      inventoryTransaction: inventoryResult.transaction,
+      inventoryTransaction: null,
 
       allocatedQty,
     };

@@ -6,7 +6,7 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 //************************************************************** */
 
 describe("Repair Order readiness integration", () => {
-  it("keeps an RO waiting while blocking parts are unresolved and automatically moves it to READY_TO_WORK when all blocking parts are received", async () => {
+  it("keeps an RO waiting after receipt and automatically moves it to READY_TO_WORK when all blocking parts are allocated and pulled", async () => {
     const { agent, organizationId } = await createAuthenticatedAgent();
 
     const uniqueSuffix = Date.now().toString();
@@ -322,11 +322,14 @@ describe("Repair Order readiness integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/receive`,
       )
-      .send({
-        purchaseOrderLineId: firstPurchaseOrderLineId,
-
-        quantity: 1,
-      });
+   .send({
+  lines: [
+    {
+      purchaseOrderLineId: firstPurchaseOrderLineId,
+      quantity: 1,
+    },
+  ],
+});
 
     assert.equal(firstReceiveResponse.status, 200);
 
@@ -348,16 +351,127 @@ describe("Repair Order readiness integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/purchase-orders/${purchaseOrderId}/receive`,
       )
-      .send({
-        purchaseOrderLineId: secondPurchaseOrderLineId,
-
-        quantity: 1,
-      });
+   .send({
+  lines: [
+    {
+      purchaseOrderLineId: secondPurchaseOrderLineId,
+      quantity: 1,
+    },
+  ],
+});
 
     assert.equal(secondReceiveResponse.status, 200);
 
     //************************************************************** */
-    // RO automatically releases
+    // Receiving all blocking parts does NOT release the RO.
+    //
+    // Received means the parts have arrived at the dealership.
+    // They must still be allocated and pulled for this RO.
+
+    const afterFinalReceipt = await agent.get(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    );
+
+    assert.equal(afterFinalReceipt.status, 200);
+
+    assert.equal(afterFinalReceipt.body.data.status, "WAITING_ON_PARTS");
+
+    //************************************************************** */
+    // Allocate first received blocking part
+
+    const firstAllocateResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/allocate`,
+      )
+      .send({
+        quantity: 1,
+      });
+
+    assert.equal(firstAllocateResponse.status, 200);
+
+    assert.equal(
+      Number(firstAllocateResponse.body.data.allocatedQty),
+      1,
+    );
+
+    //************************************************************** */
+    // Allocate second received blocking part
+
+    const secondAllocateResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/allocate`,
+      )
+      .send({
+        quantity: 1,
+      });
+
+    assert.equal(secondAllocateResponse.status, 200);
+
+    assert.equal(
+      Number(secondAllocateResponse.body.data.allocatedQty),
+      1,
+    );
+
+    //************************************************************** */
+    // Allocation alone does NOT release the RO.
+
+    const afterAllocation = await agent.get(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    );
+
+    assert.equal(afterAllocation.status, 200);
+
+    assert.equal(afterAllocation.body.data.status, "WAITING_ON_PARTS");
+
+    //************************************************************** */
+    // Pull first blocking part
+
+    const firstPullResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/pull`,
+      )
+      .send({
+        quantity: 1,
+      });
+
+    assert.equal(firstPullResponse.status, 200);
+
+    assert.equal(
+      Number(firstPullResponse.body.data.pulledQty),
+      1,
+    );
+
+    //************************************************************** */
+    // One unresolved blocking part remains.
+
+    const afterFirstPull = await agent.get(
+      `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
+    );
+
+    assert.equal(afterFirstPull.status, 200);
+
+    assert.equal(afterFirstPull.body.data.status, "WAITING_ON_PARTS");
+
+    //************************************************************** */
+    // Pull final blocking part
+
+    const secondPullResponse = await agent
+      .post(
+        `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/pull`,
+      )
+      .send({
+        quantity: 1,
+      });
+
+    assert.equal(secondPullResponse.status, 200);
+
+    assert.equal(
+      Number(secondPullResponse.body.data.pulledQty),
+      1,
+    );
+
+    //************************************************************** */
+    // All blocking parts are now fulfilled for the RO.
 
     const readyRepairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
@@ -365,7 +479,10 @@ describe("Repair Order readiness integration", () => {
 
     assert.equal(readyRepairOrderResponse.status, 200);
 
-    assert.equal(readyRepairOrderResponse.body.data.status, "READY_TO_WORK");
+    assert.equal(
+      readyRepairOrderResponse.body.data.status,
+      "READY_TO_WORK",
+    );
 
     //************************************************************** */
     // Verify automatic status-history event
