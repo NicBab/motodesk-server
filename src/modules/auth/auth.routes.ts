@@ -104,6 +104,7 @@ import {
   passwordResetRequestRateLimit,
   refreshRateLimit,
   registrationRateLimit,
+  reauthenticationRateLimit
 } from "./auth-rate-limit.js";
 
 import {
@@ -235,6 +236,7 @@ router.post(
 
 router.post(
   "/reauthenticate",
+  reauthenticationRateLimit,
   authenticateRequest,
   initializeRequestContext,
   validateBody(reauthenticateSchema),
