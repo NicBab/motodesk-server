@@ -37,6 +37,18 @@ export const updateOrganizationSchema = createOrganizationSchema
   .partial()
   .extend({
     applicationTheme: applicationThemeSchema.optional(),
+
+    taxRate: z
+      .number()
+      .min(0, "Tax percentage cannot be less than 0.")
+      .max(100, "Tax percentage cannot exceed 100.")
+      .optional(),
+
+    shopSuppliesRate: z
+      .number()
+      .min(0, "Shop supplies percentage cannot be less than 0.")
+      .max(100, "Shop supplies percentage cannot exceed 100.")
+      .optional(),
   });
 
 //************************************************************** */

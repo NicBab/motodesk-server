@@ -86,7 +86,7 @@ const repairOrderSchema = z.object({
 
   taxRate: z.number().min(0).max(100).optional(),
 
-  shopSuppliesRate: z.number().min(0).max(100).default(6),
+  shopSuppliesRate: z.number().min(0).max(100).optional(),
 
   discount: z.number().nonnegative().default(0),
 

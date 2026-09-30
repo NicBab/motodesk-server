@@ -1,4 +1,4 @@
-import type { MembershipRole } from "../../generated/prisma/client.js";
+// import type { MembershipRole } from "../../generated/prisma/client.js";
 
 //************************************************************** */
 
@@ -17,6 +17,10 @@ export interface UpdateOrganizationInput {
   phone?: string;
   email?: string;
   applicationTheme?: string;
+
+  taxRate?: number;
+
+  shopSuppliesRate?: number;
 }
 
 //************************************************************** */

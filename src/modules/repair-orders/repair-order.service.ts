@@ -7,6 +7,8 @@ import { AppError } from "../../platform/errors/app-error.js";
 
 import { findMembershipById } from "../memberships/membership.repository.js";
 
+import { findOrganizationById } from "../organizations/organization.repository.js";
+
 import {
   createRepairOrderRecord,
   findRepairOrderById,
@@ -235,7 +237,43 @@ export async function createRepairOrder(
     );
   }
 
-  return createRepairOrderRecord(organizationId, input, membershipId);
+  //************************************************************** */
+  // Company Financial Defaults
+  //
+  // Tax and shop-supplies percentages are organization-level
+  // defaults. They are copied onto the repair order when the RO is
+  // created so future Company Settings changes do not alter the
+  // financial values of existing repair orders.
+
+  const organization = await findOrganizationById(organizationId);
+
+  if (!organization) {
+    throw new AppError(404, "Organization not found.", {
+      code: "ORGANIZATION_NOT_FOUND",
+    });
+  }
+
+  const taxRate =
+    input.taxRate !== undefined
+      ? input.taxRate
+      : Number(organization.taxRate.toString());
+
+  const shopSuppliesRate =
+    input.shopSuppliesRate !== undefined
+      ? input.shopSuppliesRate
+      : Number(organization.shopSuppliesRate.toString());
+
+  return createRepairOrderRecord(
+    organizationId,
+    {
+      ...input,
+
+      taxRate,
+
+      shopSuppliesRate,
+    },
+    membershipId,
+  );
 }
 
 //************************************************************** */

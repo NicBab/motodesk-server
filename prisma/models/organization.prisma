@@ -14,6 +14,8 @@ model Organization {
   email            String?
   phone            String?
   applicationTheme String             @default("default")
+  taxRate          Decimal            @default(0) @db.Decimal(5, 2)
+  shopSuppliesRate Decimal            @default(6) @db.Decimal(5, 2)
   status           OrganizationStatus @default(ACTIVE)
 
   memberships                   Membership[]

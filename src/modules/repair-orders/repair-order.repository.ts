@@ -14,9 +14,16 @@ import type {
 
 //************************************************************** */
 
+type CreateRepairOrderRecordInput = CreateRepairOrderInput & {
+  taxRate: number;
+  shopSuppliesRate: number;
+};
+
+//************************************************************** */
+
 export async function createRepairOrderRecord(
   organizationId: string,
-  input: CreateRepairOrderInput,
+  input: CreateRepairOrderRecordInput,
   changedByMembershipId: string | null,
 ) {
   return prisma.$transaction(async (transaction) => {
@@ -64,7 +71,7 @@ export async function createRepairOrderRecord(
 
         notes: input.notes ?? null,
 
-        taxRate: input.taxRate ?? null,
+        taxRate: input.taxRate,
 
         shopSuppliesRate: input.shopSuppliesRate,
 

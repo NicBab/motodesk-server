@@ -142,6 +142,18 @@ export async function updateOrganizationHandler(
             applicationTheme: body.applicationTheme,
           }
         : {}),
+        
+      ...(body.taxRate !== undefined
+        ? {
+            taxRate: body.taxRate,
+          }
+        : {}),
+
+      ...(body.shopSuppliesRate !== undefined
+        ? {
+            shopSuppliesRate: body.shopSuppliesRate,
+          }
+        : {}),
     },
     context.user.id,
   );

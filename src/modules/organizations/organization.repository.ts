@@ -110,6 +110,18 @@ export async function updateOrganizationRecord(
             applicationTheme: data.applicationTheme,
           }
         : {}),
+
+      ...(data.taxRate !== undefined
+        ? {
+            taxRate: data.taxRate,
+          }
+        : {}),
+
+      ...(data.shopSuppliesRate !== undefined
+        ? {
+            shopSuppliesRate: data.shopSuppliesRate,
+          }
+        : {}),
     },
   });
 }
@@ -160,6 +172,8 @@ export async function findOrganizationsForUser(userId: string) {
           email: true,
           phone: true,
           applicationTheme: true,
+          taxRate: true,
+          shopSuppliesRate: true,
           status: true,
           createdAt: true,
           updatedAt: true,

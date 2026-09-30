@@ -84,28 +84,26 @@ model ExternalAuthAccount {
   updatedAt DateTime @updatedAt
 
   @@unique([provider, providerAccountId])
-
   @@index([userId])
-
   @@index([provider, providerEmail])
 }
 
 //************************************************************** */
 
 model Session {
-  id     String @id @default(cuid())
+  id String @id @default(cuid())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash         String @unique
+  tokenHash         String  @unique
   previousTokenHash String?
 
   userAgent String?
   ipAddress String?
 
-  expiresAt          DateTime
-  lastUsedAt         DateTime @default(now())
+  expiresAt           DateTime
+  lastUsedAt          DateTime @default(now())
   lastAuthenticatedAt DateTime @default(now())
 
   revokedAt     DateTime?
@@ -134,9 +132,9 @@ model User {
   emailVerifiedAt   DateTime?
   displayMode       String    @default("SYSTEM")
 
-  memberships Membership[]
-  sessions    Session[]
-  authTokens  AuthToken[]
+  memberships          Membership[]
+  sessions             Session[]
+  authTokens           AuthToken[]
   externalAuthAccounts ExternalAuthAccount[]
 
   createdAuditEvents AuditLog[] @relation("AuditActor")
