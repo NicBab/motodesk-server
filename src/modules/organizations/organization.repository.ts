@@ -81,48 +81,103 @@ export async function updateOrganizationRecord(
   organizationId: string,
   data: UpdateOrganizationInput,
 ) {
-  return prisma.organization.update({
-    where: {
-      id: organizationId,
-    },
+  return runTransaction(async (transaction) => {
+    //************************************************************** */
+    // Update Organization
 
-    data: {
-      ...(data.name !== undefined
-        ? {
-            name: data.name,
-          }
-        : {}),
+    const organization =
+      await transaction.organization.update({
+        where: {
+          id: organizationId,
+        },
 
-      ...(data.email !== undefined
-        ? {
-            email: data.email,
-          }
-        : {}),
+        data: {
+          ...(data.name !== undefined
+            ? {
+                name: data.name,
+              }
+            : {}),
 
-      ...(data.phone !== undefined
-        ? {
-            phone: data.phone,
-          }
-        : {}),
+          ...(data.email !== undefined
+            ? {
+                email: data.email,
+              }
+            : {}),
 
-      ...(data.applicationTheme !== undefined
-        ? {
-            applicationTheme: data.applicationTheme,
-          }
-        : {}),
+          ...(data.phone !== undefined
+            ? {
+                phone: data.phone,
+              }
+            : {}),
 
-      ...(data.taxRate !== undefined
-        ? {
-            taxRate: data.taxRate,
-          }
-        : {}),
+          ...(data.applicationTheme !== undefined
+            ? {
+                applicationTheme:
+                  data.applicationTheme,
+              }
+            : {}),
 
-      ...(data.shopSuppliesRate !== undefined
-        ? {
-            shopSuppliesRate: data.shopSuppliesRate,
-          }
-        : {}),
-    },
+          ...(data.taxRate !== undefined
+            ? {
+                taxRate: data.taxRate,
+              }
+            : {}),
+
+          ...(data.shopSuppliesRate !== undefined
+            ? {
+                shopSuppliesRate:
+                  data.shopSuppliesRate,
+              }
+            : {}),
+        },
+      });
+
+    //************************************************************** */
+    // Update Open Repair Order Financial Defaults
+    //
+    // Company financial settings remain live for open repair orders.
+    //
+    // Once an RO reaches a finalized financial/lifecycle state, its
+    // stored tax and shop-supplies rates become historical values and
+    // must never be changed by later Company Settings updates.
+
+    if (
+      data.taxRate !== undefined ||
+      data.shopSuppliesRate !== undefined
+    ) {
+      await transaction.repairOrder.updateMany({
+        where: {
+          organizationId,
+
+          status: {
+            notIn: [
+              "CASHIERED",
+              "COMPLETED",
+              "PICKED_UP",
+              "CLOSED",
+              "CANCELLED",
+            ],
+          },
+        },
+
+        data: {
+          ...(data.taxRate !== undefined
+            ? {
+                taxRate: data.taxRate,
+              }
+            : {}),
+
+          ...(data.shopSuppliesRate !== undefined
+            ? {
+                shopSuppliesRate:
+                  data.shopSuppliesRate,
+              }
+            : {}),
+        },
+      });
+    }
+
+    return organization;
   });
 }
 
