@@ -112,9 +112,22 @@ import {
   reauthenticateSchema,
 } from "./authentication/reauthenticate/index.js";
 
+import {
+  preventSensitiveResponseCaching,
+} from "../../middleware/sensitive-response-cache.js";
+
 //****************************************************************************** */
 
 const router = Router();
+
+//************************************************************** */
+// Authentication and account responses can contain user/session
+// information or establish credentials. They must never be stored
+// by browsers or intermediary shared caches.
+
+router.use(
+  preventSensitiveResponseCaching,
+);
 
 //****************************************************************************** */
 // Registration / login / refresh
