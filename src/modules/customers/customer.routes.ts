@@ -100,6 +100,9 @@ router.post(
 
 router.post(
   "/:customerId/restore",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
   validateParams(customerIdSchema),
   restoreCustomerHandler,
 );

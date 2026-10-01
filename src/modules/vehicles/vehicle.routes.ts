@@ -100,6 +100,9 @@ router.post(
 
 router.post(
   "/:vehicleId/restore",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
   validateParams(vehicleIdSchema),
   restoreVehicleHandler,
 );
