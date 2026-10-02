@@ -21,55 +21,104 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
 //************************************************************** */
 
-const EMPLOYEE_PASSWORD = "MotoDeskPermission123!";
+const EMPLOYEE_PASSWORD =
+  "MotoDeskPermission123!";
 
 //************************************************************** */
 
-async function createEmployeeAgent(organizationId: string) {
-  const suffix = `${Date.now()}-${Math.random()}`;
+async function createEmployeeAgent(
+  organizationId: string,
+) {
+  const suffix =
+    `${Date.now()}-${Math.random()}`;
 
-  const email = `effective-permissions-${suffix}@motodesk.local`;
+  const email =
+    `effective-permissions-${suffix}@motodesk.local`;
 
-  const passwordHash = await hashPassword(EMPLOYEE_PASSWORD);
+  const passwordHash =
+    await hashPassword(
+      EMPLOYEE_PASSWORD,
+    );
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      firstName: "Effective",
-      lastName: "Permissions",
-      isActive: true,
-    },
-  });
+  //************************************************************** */
+  // These tests exercise effective membership authorization, not
+  // email-verification enforcement.
+  //
+  // The employee therefore needs to represent an already-verified
+  // active account so requests reach the permission middleware.
 
-  const membership = await prisma.membership.create({
-    data: {
-      userId: user.id,
+  const user =
+    await prisma.user.create({
+      data: {
+        email,
 
-      organizationId,
+        passwordHash,
 
-      role: MembershipRole.TECHNICIAN,
+        firstName:
+          "Effective",
 
-      status: MembershipStatus.ACTIVE,
-    },
-  });
+        lastName:
+          "Permissions",
 
-  const agent = request.agent(app);
+        isActive:
+          true,
 
-  const loginResponse = await agent.post("/api/v1/auth/login").send({
-    email,
-    password: EMPLOYEE_PASSWORD,
-  });
-
-  assert.equal(loginResponse.status, 200);
-
-  const switchResponse = await agent
-    .post("/api/v1/auth/switch-organization")
-    .send({
-      organizationId,
+        emailVerifiedAt:
+          new Date(),
+      },
     });
 
-  assert.equal(switchResponse.status, 200);
+  const membership =
+    await prisma.membership.create({
+      data: {
+        userId:
+          user.id,
+
+        organizationId,
+
+        role:
+          MembershipRole.TECHNICIAN,
+
+        status:
+          MembershipStatus.ACTIVE,
+      },
+    });
+
+  const agent =
+    request.agent(
+      app,
+    );
+
+  const loginResponse =
+    await agent
+      .post(
+        "/api/v1/auth/login",
+      )
+      .send({
+        email,
+
+        password:
+          EMPLOYEE_PASSWORD,
+      });
+
+  assert.equal(
+    loginResponse.status,
+    200,
+  );
+
+  const switchResponse =
+    await agent
+      .post(
+        "/api/v1/auth/switch-organization",
+      )
+      .send({
+        organizationId,
+      });
+
+  assert.equal(
+    switchResponse.status,
+    200,
+  );
 
   return {
     agent,
@@ -79,153 +128,282 @@ async function createEmployeeAgent(organizationId: string) {
 
 //************************************************************** */
 
-describe("Effective membership authorization integration", () => {
-  it("returns stored membership permissions from auth me", async () => {
-    const { organizationId, membershipId: ownerMembershipId } =
-      await createAuthenticatedAgent();
-
-    const { agent, membership } = await createEmployeeAgent(organizationId);
-
-    await prisma.membershipPermission.createMany({
-      data: [
-        {
+describe(
+  "Effective membership authorization integration",
+  () => {
+    it(
+      "returns stored membership permissions from auth me",
+      async () => {
+        const {
           organizationId,
+          membershipId:
+            ownerMembershipId,
+        } =
+          await createAuthenticatedAgent();
 
-          membershipId: membership.id,
+        const {
+          agent,
+          membership,
+        } =
+          await createEmployeeAgent(
+            organizationId,
+          );
 
-          permission: Permissions.MEMBERSHIPS_VIEW,
+        await prisma.membershipPermission.createMany({
+          data: [
+            {
+              organizationId,
 
-          grantedByMembershipId: ownerMembershipId,
-        },
+              membershipId:
+                membership.id,
 
-        {
+              permission:
+                Permissions.MEMBERSHIPS_VIEW,
+
+              grantedByMembershipId:
+                ownerMembershipId,
+            },
+
+            {
+              organizationId,
+
+              membershipId:
+                membership.id,
+
+              permission:
+                Permissions.PARTS_VIEW,
+
+              grantedByMembershipId:
+                ownerMembershipId,
+            },
+          ],
+        });
+
+        const response =
+          await agent.get(
+            "/api/v1/auth/me",
+          );
+
+        assert.equal(
+          response.status,
+          200,
+        );
+
+        assert.equal(
+          response.body.success,
+          true,
+        );
+
+        assert.deepEqual(
+          [
+            ...response.body
+              .data
+              .permissions,
+          ].sort(),
+
+          [
+            Permissions.MEMBERSHIPS_VIEW,
+            Permissions.PARTS_VIEW,
+          ].sort(),
+        );
+      },
+    );
+
+    //************************************************************** */
+
+    it(
+      "allows a non-owner when the required membership permission is granted",
+      async () => {
+        const {
           organizationId,
+          membershipId:
+            ownerMembershipId,
+        } =
+          await createAuthenticatedAgent();
 
-          membershipId: membership.id,
+        const {
+          agent,
+          membership,
+        } =
+          await createEmployeeAgent(
+            organizationId,
+          );
 
-          permission: Permissions.PARTS_VIEW,
+        await prisma.membershipPermission.create({
+          data: {
+            organizationId,
 
-          grantedByMembershipId: ownerMembershipId,
-        },
-      ],
-    });
+            membershipId:
+              membership.id,
 
-    const response = await agent.get("/api/v1/auth/me");
+            permission:
+              Permissions.MEMBERSHIPS_VIEW,
 
-    assert.equal(response.status, 200);
+            grantedByMembershipId:
+              ownerMembershipId,
+          },
+        });
 
-    assert.equal(response.body.success, true);
+        const response =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/memberships`,
+          );
 
-    assert.deepEqual(
-      [...response.body.data.permissions].sort(),
-      [Permissions.MEMBERSHIPS_VIEW, Permissions.PARTS_VIEW].sort(),
-    );
-  });
+        assert.equal(
+          response.status,
+          200,
+        );
 
-  //************************************************************** */
-
-  it("allows a non-owner when the required membership permission is granted", async () => {
-    const { organizationId, membershipId: ownerMembershipId } =
-      await createAuthenticatedAgent();
-
-    const { agent, membership } = await createEmployeeAgent(organizationId);
-
-    await prisma.membershipPermission.create({
-      data: {
-        organizationId,
-
-        membershipId: membership.id,
-
-        permission: Permissions.MEMBERSHIPS_VIEW,
-
-        grantedByMembershipId: ownerMembershipId,
+        assert.equal(
+          response.body.success,
+          true,
+        );
       },
-    });
-
-    const response = await agent.get(
-      `/api/v1/organizations/${organizationId}/memberships`,
     );
 
-    assert.equal(response.status, 200);
+    //************************************************************** */
 
-    assert.equal(response.body.success, true);
-  });
+    it(
+      "denies a non-owner when the required membership permission is not granted",
+      async () => {
+        const {
+          organizationId,
+        } =
+          await createAuthenticatedAgent();
 
-  //************************************************************** */
+        const {
+          agent,
+        } =
+          await createEmployeeAgent(
+            organizationId,
+          );
 
-  it("denies a non-owner when the required membership permission is not granted", async () => {
-    const { organizationId } = await createAuthenticatedAgent();
+        const response =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/memberships`,
+          );
 
-    const { agent } = await createEmployeeAgent(organizationId);
+        assert.equal(
+          response.status,
+          403,
+        );
 
-    const response = await agent.get(
-      `/api/v1/organizations/${organizationId}/memberships`,
-    );
-
-    assert.equal(response.status, 403);
-
-    assert.equal(response.body.code, "INSUFFICIENT_PERMISSIONS");
-  });
-
-  //************************************************************** */
-
-  it("uses stored permissions instead of the role preset for non-owners", async () => {
-    const { organizationId, membershipId: ownerMembershipId } =
-      await createAuthenticatedAgent();
-
-    const { agent, membership } = await createEmployeeAgent(organizationId);
-
-    await prisma.membershipPermission.create({
-      data: {
-        organizationId,
-
-        membershipId: membership.id,
-
-        permission: Permissions.PARTS_VIEW,
-
-        grantedByMembershipId: ownerMembershipId,
+        assert.equal(
+          response.body.code,
+          "INSUFFICIENT_PERMISSIONS",
+        );
       },
-    });
-
-    const response = await agent.get(
-      `/api/v1/organizations/${organizationId}/memberships`,
     );
 
-    assert.equal(response.status, 403);
+    //************************************************************** */
 
-    assert.equal(response.body.code, "INSUFFICIENT_PERMISSIONS");
-  });
+    it(
+      "uses stored permissions instead of the role preset for non-owners",
+      async () => {
+        const {
+          organizationId,
+          membershipId:
+            ownerMembershipId,
+        } =
+          await createAuthenticatedAgent();
 
-  //************************************************************** */
+        const {
+          agent,
+          membership,
+        } =
+          await createEmployeeAgent(
+            organizationId,
+          );
 
-  it("continues to give an owner implicit full access", async () => {
-    const { agent, organizationId, membershipId } =
-      await createAuthenticatedAgent();
+        await prisma.membershipPermission.create({
+          data: {
+            organizationId,
 
-    await prisma.membershipPermission.deleteMany({
-      where: {
-        organizationId,
-        membershipId,
+            membershipId:
+              membership.id,
+
+            permission:
+              Permissions.PARTS_VIEW,
+
+            grantedByMembershipId:
+              ownerMembershipId,
+          },
+        });
+
+        const response =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/memberships`,
+          );
+
+        assert.equal(
+          response.status,
+          403,
+        );
+
+        assert.equal(
+          response.body.code,
+          "INSUFFICIENT_PERMISSIONS",
+        );
       },
-    });
-
-    const response = await agent.get(
-      `/api/v1/organizations/${organizationId}/memberships`,
     );
 
-    assert.equal(response.status, 200);
+    //************************************************************** */
 
-    const meResponse = await agent.get("/api/v1/auth/me");
+    it(
+      "continues to give an owner implicit full access",
+      async () => {
+        const {
+          agent,
+          organizationId,
+          membershipId,
+        } =
+          await createAuthenticatedAgent();
 
-    assert.equal(meResponse.status, 200);
+        await prisma.membershipPermission.deleteMany({
+          where: {
+            organizationId,
 
-    assert.equal(meResponse.body.success, true);
+            membershipId,
+          },
+        });
 
-    assert.equal(
-      meResponse.body.data.permissions.includes(Permissions.MEMBERSHIPS_VIEW),
-      true,
+        const response =
+          await agent.get(
+            `/api/v1/organizations/${organizationId}/memberships`,
+          );
+
+        assert.equal(
+          response.status,
+          200,
+        );
+
+        const meResponse =
+          await agent.get(
+            "/api/v1/auth/me",
+          );
+
+        assert.equal(
+          meResponse.status,
+          200,
+        );
+
+        assert.equal(
+          meResponse.body.success,
+          true,
+        );
+
+        assert.equal(
+          meResponse.body
+            .data
+            .permissions
+            .includes(
+              Permissions.MEMBERSHIPS_VIEW,
+            ),
+          true,
+        );
+      },
     );
-  });
-});
+  },
+);
 
 //************************************************************** */
