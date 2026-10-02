@@ -1,39 +1,23 @@
-import type {
-  Response,
-} from "express";
+import type { Response } from "express";
 
-import {
-  AppError,
-} from "../../../../platform/errors/app-error.js";
+import { AppError } from "../../../../platform/errors/app-error.js";
 
-import {
-  ok,
-} from "../../../../platform/http/api-response.js";
+import { ok } from "../../../../platform/http/api-response.js";
 
-import {
-  getRequestMetadata,
-} from "../../../../platform/request/request.metadata.js";
+import { getRequestMetadata } from "../../../../platform/request/request.metadata.js";
 
 import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } from "../../../audit/audit.constants.js";
 
-import {
-  createAuditLog,
-} from "../../../audit/audit.service.js";
+import { createAuditLog } from "../../../audit/audit.service.js";
 
-import type {
-  AuthenticatedRequest,
-} from "../../auth.middleware.js";
+import type { AuthenticatedRequest } from "../../auth.middleware.js";
 
-import {
-  clearAuthenticationCookies,
-} from "../../http/cookie.service.js";
+import { clearAuthenticationCookies } from "../../http/cookie.service.js";
 
-import {
-  logoutAllUserSessions,
-} from "./service.js";
+import { logoutAllUserSessions } from "./service.js";
 
 //************************************************************** */
 
@@ -41,40 +25,22 @@ export async function logoutAll(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
-  const userId =
-    request.authenticatedUser?.id;
+  const userId = request.authenticatedUser?.id;
 
-  const organizationId =
-    request.authenticatedMembership
-      ?.organizationId;
+  const organizationId = request.authenticatedMembership?.organizationId;
 
-  const currentSessionId =
-    request.authenticationSessionId;
+  const currentSessionId = request.authenticationSessionId;
 
-  if (
-    !userId
-  ) {
-    throw new AppError(
-      401,
-      "Authentication required.",
-      {
-        code:
-          "AUTHENTICATION_REQUIRED",
-      },
-    );
+  if (!userId) {
+    throw new AppError(401, "Authentication required.", {
+      code: "AUTHENTICATION_REQUIRED",
+    });
   }
 
-  if (
-    !currentSessionId
-  ) {
-    throw new AppError(
-      401,
-      "Authentication session is unavailable.",
-      {
-        code:
-          "AUTHENTICATION_SESSION_INVALID",
-      },
-    );
+  if (!currentSessionId) {
+    throw new AppError(401, "Authentication session is unavailable.", {
+      code: "AUTHENTICATION_SESSION_INVALID",
+    });
   }
 
   //************************************************************** */
@@ -84,33 +50,23 @@ export async function logoutAll(
   // succeeds so a failed revocation cannot produce a false success
   // event.
 
-  const revokedSessionCount =
-    await logoutAllUserSessions(
-      userId,
-    );
+  const revokedSessionCount = await logoutAllUserSessions(userId);
 
   //************************************************************** */
 
-  const requestMetadata =
-    getRequestMetadata(
-      request,
-    );
+  const requestMetadata = getRequestMetadata(request);
 
   await createAuditLog({
-    action:
-      AUDIT_ACTIONS.AUTH_LOGOUT_ALL,
+    action: AUDIT_ACTIONS.AUTH_LOGOUT_ALL,
 
-    entityType:
-      AUDIT_ENTITY_TYPES.SESSION,
+    entityType: AUDIT_ENTITY_TYPES.SESSION,
 
-    entityId:
-      currentSessionId,
+    entityId: currentSessionId,
 
     actor: {
       userId,
 
-      sessionId:
-        currentSessionId,
+      sessionId: currentSessionId,
 
       ...(organizationId
         ? {
@@ -122,22 +78,19 @@ export async function logoutAll(
     context: {
       ...(requestMetadata.ipAddress !== null
         ? {
-            ipAddress:
-              requestMetadata.ipAddress,
+            ipAddress: requestMetadata.ipAddress,
           }
         : {}),
 
       ...(requestMetadata.userAgent !== null
         ? {
-            userAgent:
-              requestMetadata.userAgent,
+            userAgent: requestMetadata.userAgent,
           }
         : {}),
     },
 
     metadata: {
-      scope:
-        "ALL_SESSIONS",
+      scope: "ALL_SESSIONS",
 
       revokedSessionCount,
     },
@@ -145,16 +98,11 @@ export async function logoutAll(
 
   //************************************************************** */
 
-  clearAuthenticationCookies(
-    response,
-  );
+  clearAuthenticationCookies(response);
 
-  ok(
-    response,
-    {
-      revokedSessionCount,
-    },
-  );
+  ok(response, {
+    revokedSessionCount,
+  });
 }
 
 //************************************************************** */
