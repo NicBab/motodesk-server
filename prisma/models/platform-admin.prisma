@@ -1,0 +1,25 @@
+//************************************************************** */
+
+enum PlatformAdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+//************************************************************** */
+
+model PlatformAdmin {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role     PlatformAdminRole @default(ADMIN)
+  isActive Boolean           @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, role])
+}
+
+//************************************************************** */

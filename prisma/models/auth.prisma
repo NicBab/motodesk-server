@@ -137,6 +137,8 @@ model User {
   authTokens           AuthToken[]
   externalAuthAccounts ExternalAuthAccount[]
 
+  platformAdmin PlatformAdmin?
+
   createdAuditEvents AuditLog[] @relation("AuditActor")
 
   createdAt DateTime @default(now())
@@ -234,3 +236,247 @@ model MembershipInvitation {
 }
 
 //************************************************************** */
+
+
+
+
+
+
+
+
+// //************************************************************** */
+
+// enum AuthTokenType {
+//   EMAIL_VERIFICATION
+//   PASSWORD_RESET
+// }
+
+// //************************************************************** */
+
+// enum ExternalAuthProvider {
+//   GOOGLE
+//   MICROSOFT
+// }
+
+// //************************************************************** */
+
+// enum SessionRevocationReason {
+//   LOGOUT
+//   LOGOUT_ALL
+//   PASSWORD_CHANGED
+//   PASSWORD_RESET
+//   TOKEN_REUSE
+//   ADMIN_REVOKED
+//   EXPIRED
+// }
+
+// //************************************************************** */
+
+// enum MembershipRole {
+//   OWNER
+//   ADMIN
+//   MANAGER
+//   SERVICE_ADVISOR
+//   TECHNICIAN
+//   PARTS
+// }
+
+// //************************************************************** */
+
+// enum MembershipStatus {
+//   INVITED
+//   ACTIVE
+//   SUSPENDED
+//   REMOVED
+// }
+
+// //************************************************************** */
+
+// model AuthToken {
+//   id String @id @default(cuid())
+
+//   userId String
+//   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   type      AuthTokenType
+//   tokenHash String        @unique
+
+//   expiresAt DateTime
+//   usedAt    DateTime?
+
+//   createdAt DateTime @default(now())
+
+//   @@index([userId, type])
+//   @@index([expiresAt])
+// }
+
+// //************************************************************** */
+
+// model ExternalAuthAccount {
+//   id String @id @default(cuid())
+
+//   userId String
+
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   provider ExternalAuthProvider
+
+//   providerAccountId String
+
+//   providerEmail String?
+
+//   createdAt DateTime @default(now())
+
+//   updatedAt DateTime @updatedAt
+
+//   @@unique([provider, providerAccountId])
+//   @@index([userId])
+//   @@index([provider, providerEmail])
+// }
+
+// //************************************************************** */
+
+// model Session {
+//   id String @id @default(cuid())
+
+//   userId String
+//   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   tokenHash         String  @unique
+//   previousTokenHash String?
+
+//   userAgent String?
+//   ipAddress String?
+
+//   expiresAt           DateTime
+//   lastUsedAt          DateTime @default(now())
+//   lastAuthenticatedAt DateTime @default(now())
+
+//   revokedAt     DateTime?
+//   revokedReason SessionRevocationReason?
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@index([userId])
+//   @@index([expiresAt])
+//   @@index([revokedAt])
+// }
+
+// //************************************************************** */
+
+// model User {
+//   id                String    @id @default(cuid())
+//   email             String    @unique
+//   passwordHash      String?
+//   firstName         String
+//   lastName          String
+//   phone             String?
+//   jobTitle          String?
+//   preferredTimezone String    @default("America/Chicago")
+//   isActive          Boolean   @default(true)
+//   emailVerifiedAt   DateTime?
+//   displayMode       String    @default("SYSTEM")
+
+//   memberships          Membership[]
+//   sessions             Session[]
+//   authTokens           AuthToken[]
+//   externalAuthAccounts ExternalAuthAccount[]
+
+//   createdAuditEvents AuditLog[] @relation("AuditActor")
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+// //************************************************************** */
+
+// model Membership {
+//   id             String           @id @default(cuid())
+//   role           MembershipRole   @default(TECHNICIAN)
+//   status         MembershipStatus @default(ACTIVE)
+//   userId         String
+//   organizationId String
+
+//   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+//   serviceAdvisorRepairOrders RepairOrder[] @relation("RepairOrderServiceAdvisor")
+
+//   technicianRepairOrders RepairOrder[] @relation("RepairOrderPrimaryTechnician")
+
+//   repairOrderStatusChanges RepairOrderStatusHistory[] @relation("RepairOrderStatusChangedBy")
+
+//   repairOrderLaborLines RepairOrderLaborLine[] @relation("RepairOrderLaborTechnician")
+
+//   partInventoryTransactions PartInventoryTransaction[] @relation("PartInventoryTransactionCreatedBy")
+
+//   technicianAssignments TechnicianAssignment[] @relation("TechnicianAssignmentTechnician")
+
+//   technicianAssignmentsCreated TechnicianAssignment[] @relation("TechnicianAssignmentAssignedBy")
+
+//   serviceBayAssignmentsCreated ServiceBayAssignment[] @relation("ServiceBayAssignmentAssignedBy")
+
+//   repairOrderLaborCancellationsCreated RepairOrderLaborCancellation[] @relation("RepairOrderLaborCancellationCancelledBy")
+
+//   permissions MembershipPermission[] @relation("MembershipPermissions")
+
+//   permissionsGranted MembershipPermission[] @relation("MembershipPermissionsGrantedBy")
+
+//   membershipInvitationsCreated MembershipInvitation[] @relation("MembershipInvitationInvitedBy")
+
+//   purchaseOrderReceiptsReceived PurchaseOrderReceipt[] @relation("PurchaseOrderReceiptReceivedBy")
+
+//   employeeTimeEntryCorrections EmployeeTimeEntryCorrection[] @relation("EmployeeTimeEntryCorrectionManager")
+
+//   employee Employee? @relation("EmployeeMembership")
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@unique([userId, organizationId])
+//   @@index([userId])
+//   @@index([organizationId])
+// }
+
+// //************************************************************** */
+
+// model MembershipInvitation {
+//   id String @id @default(cuid())
+
+//   organizationId        String
+//   invitedByMembershipId String
+
+//   /**
+//    * Optional because invitations can also be created outside
+//    * the Employees module.
+//    * When an invitation originates from an Employee record,
+//    * this preserves the exact Employee → future Membership link
+//    * without relying on email matching.
+//    */
+//   employeeId String?
+
+//   email String
+//   role  MembershipRole
+
+//   tokenHash String @unique
+
+//   expiresAt  DateTime
+//   acceptedAt DateTime?
+//   revokedAt  DateTime?
+
+//   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+//   invitedBy Membership @relation("MembershipInvitationInvitedBy", fields: [invitedByMembershipId], references: [id], onDelete: Cascade)
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@index([organizationId])
+//   @@index([employeeId])
+//   @@index([email])
+//   @@index([expiresAt])
+//   @@index([organizationId, email])
+// }
+
+// //************************************************************** */

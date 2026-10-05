@@ -1,6 +1,19 @@
 import { Router } from "express";
-import { healthRouter } from "./health.routes.js";
+
+import {
+  healthRouter,
+} from "./health.routes.js";
+
+import platformAdminRouter from "../modules/platform-admin/platform-admin.routes.js";
+
+//************************************************************** */
 
 export const apiRouter = Router();
 
+//************************************************************** */
+
 apiRouter.use("/health", healthRouter);
+
+apiRouter.use("/platform", platformAdminRouter);
+
+//************************************************************** */
