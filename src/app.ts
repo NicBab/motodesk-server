@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import type { Request } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { env } from "./config/env.js";
@@ -49,7 +50,20 @@ app.use(
   }),
 );
 
-app.use(morgan("dev"));
+// app.use(morgan("dev"));
+
+morgan.token("safe-path", (request) => {
+  const expressRequest = request as Request;
+
+  return expressRequest.path;
+});
+
+const requestLogFormat =
+  env.NODE_ENV === "production"
+    ? ":method :safe-path :status :response-time ms"
+    : "dev";
+
+app.use(morgan(requestLogFormat));
 app.use(express.json());
 app.use(helmet());
 app.use(express.urlencoded({ extended: true }));

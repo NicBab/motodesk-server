@@ -155,7 +155,7 @@ export const errorHandler:
             request.method,
 
           path:
-            request.originalUrl,
+            request.path,
 
           ipAddress:
             request.ip ??
