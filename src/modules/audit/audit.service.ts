@@ -1,14 +1,20 @@
 import { Prisma } from "../../generated/prisma/client.js";
 
-import { createAuditRecord } from "./audit.repository.js";
-import type { CreateAuditLogInput } from "./audit.types.js";
-import { sanitizeAuditValue } from "./audit.utils.js";
-
 import {
+  createAuditRecord,
   countAuditLogsByOrganization,
   findAuditLogsByOrganization,
+  findAuditFilterOptionsByOrganization,
   type AuditLogFilters,
 } from "./audit.repository.js";
+
+import type {
+  CreateAuditLogInput,
+} from "./audit.types.js";
+
+import {
+  sanitizeAuditValue,
+} from "./audit.utils.js";
 
 import {
   createPaginatedData,
@@ -18,10 +24,21 @@ import {
 
 //************************************************************** */
 
-function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+type AuditLogListItem = Awaited<
+  ReturnType<typeof findAuditLogsByOrganization>
+>[number];
+
+//************************************************************** */
+
+function toPrismaJson(
+  value: unknown,
+): Prisma.InputJsonValue {
   const sanitizedValue = sanitizeAuditValue(value);
 
-  if (sanitizedValue === null || sanitizedValue === undefined) {
+  if (
+    sanitizedValue === null ||
+    sanitizedValue === undefined
+  ) {
     return {};
   }
 
@@ -104,20 +121,187 @@ export async function createAuditLog(
 
 //************************************************************** */
 
+function sanitizeAuditLogForResponse(
+  auditLog: AuditLogListItem,
+): AuditLogListItem {
+  return {
+    ...auditLog,
+
+    // Apply the existing sanitizer again when reading. This protects
+    // historical metadata written before write-time redaction existed.
+    metadata:
+      auditLog.metadata === null
+        ? null
+        : (
+            sanitizeAuditValue(
+              auditLog.metadata,
+            ) as Prisma.JsonValue
+          ),
+  };
+}
+
+//************************************************************** */
+
 export async function listAuditLogs(
   organizationId: string,
   pagination: PaginationInput,
   filters: AuditLogFilters,
-): Promise<
-  PaginatedData<Awaited<ReturnType<typeof findAuditLogsByOrganization>>[number]>
-> {
+): Promise<PaginatedData<AuditLogListItem>> {
   const [auditLogs, totalItems] = await Promise.all([
-    findAuditLogsByOrganization(organizationId, pagination, filters),
+    findAuditLogsByOrganization(
+      organizationId,
+      pagination,
+      filters,
+    ),
 
-    countAuditLogsByOrganization(organizationId, filters),
+    countAuditLogsByOrganization(
+      organizationId,
+      filters,
+    ),
   ]);
 
-  return createPaginatedData(auditLogs, pagination, totalItems);
+  return createPaginatedData(
+    auditLogs.map(sanitizeAuditLogForResponse),
+    pagination,
+    totalItems,
+  );
 }
 
 //************************************************************** */
+
+export async function getAuditLogFilterOptions(
+  organizationId: string,
+) {
+  return findAuditFilterOptionsByOrganization(
+    organizationId,
+  );
+}
+
+//************************************************************** */
+
+
+
+
+// import { Prisma } from "../../generated/prisma/client.js";
+
+// import { createAuditRecord } from "./audit.repository.js";
+// import type { CreateAuditLogInput } from "./audit.types.js";
+// import { sanitizeAuditValue } from "./audit.utils.js";
+
+// import {
+//   countAuditLogsByOrganization,
+//   findAuditLogsByOrganization,
+//   type AuditLogFilters,
+// } from "./audit.repository.js";
+
+// import {
+//   createPaginatedData,
+//   type PaginatedData,
+//   type PaginationInput,
+// } from "../../platform/http/pagination.js";
+
+// //************************************************************** */
+
+// function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+//   const sanitizedValue = sanitizeAuditValue(value);
+
+//   if (sanitizedValue === null || sanitizedValue === undefined) {
+//     return {};
+//   }
+
+//   return sanitizedValue as Prisma.InputJsonValue;
+// }
+
+// //************************************************************** */
+
+// function buildAuditMetadata(
+//   input: CreateAuditLogInput,
+// ): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+//   const metadata: Record<string, unknown> = {
+//     ...(input.metadata ?? {}),
+//   };
+
+//   if (input.before !== undefined) {
+//     metadata.before = input.before;
+//   }
+
+//   if (input.after !== undefined) {
+//     metadata.after = input.after;
+//   }
+
+//   if (input.actor?.sessionId) {
+//     metadata.sessionId = input.actor.sessionId;
+//   }
+
+//   if (input.context?.requestId) {
+//     metadata.requestId = input.context.requestId;
+//   }
+
+//   if (Object.keys(metadata).length === 0) {
+//     return Prisma.JsonNull;
+//   }
+
+//   return toPrismaJson(metadata);
+// }
+
+// //************************************************************** */
+
+// export async function createAuditLog(
+//   input: CreateAuditLogInput,
+// ): Promise<void> {
+//   await createAuditRecord({
+//     action: input.action,
+//     resourceType: input.entityType,
+//     metadata: buildAuditMetadata(input),
+
+//     ...(input.entityId !== undefined
+//       ? {
+//           resourceId: input.entityId,
+//         }
+//       : {}),
+
+//     ...(input.actor?.userId !== undefined
+//       ? {
+//           actorUserId: input.actor.userId,
+//         }
+//       : {}),
+
+//     ...(input.actor?.organizationId !== undefined
+//       ? {
+//           organizationId: input.actor.organizationId,
+//         }
+//       : {}),
+
+//     ...(input.context?.ipAddress !== undefined
+//       ? {
+//           ipAddress: input.context.ipAddress,
+//         }
+//       : {}),
+
+//     ...(input.context?.userAgent !== undefined
+//       ? {
+//           userAgent: input.context.userAgent,
+//         }
+//       : {}),
+//   });
+// }
+
+// //************************************************************** */
+
+// export async function listAuditLogs(
+//   organizationId: string,
+//   pagination: PaginationInput,
+//   filters: AuditLogFilters,
+// ): Promise<
+//   PaginatedData<Awaited<ReturnType<typeof findAuditLogsByOrganization>>[number]>
+// > {
+//   const [auditLogs, totalItems] = await Promise.all([
+//     findAuditLogsByOrganization(organizationId, pagination, filters),
+
+//     countAuditLogsByOrganization(organizationId, filters),
+//   ]);
+
+//   return createPaginatedData(auditLogs, pagination, totalItems);
+// }
+
+// //************************************************************** */
