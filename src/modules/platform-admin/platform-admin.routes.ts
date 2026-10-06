@@ -32,14 +32,21 @@ import {
   listPlatformUsersHandler,
 } from "./platform-admin.controller.js";
 
+import {
+  platformAuditQuerySchema,
+} from "./platform-audit.schemas.js";
+
+import {
+  listPlatformAuditLogsHandler,
+} from "./platform-audit.controller.js";
+
 //************************************************************** */
 
 const router = Router();
 
 //************************************************************** */
 
-// All routes require a valid session and a live platform-admin grant.
-// Organization OWNER/ADMIN roles do not authorize these endpoints.
+// Every route requires a valid session and an active platform grant.
 router.use(
   authenticateRequest,
   requirePlatformAdmin(),
@@ -52,15 +59,11 @@ router.get(
   getPlatformSessionHandler,
 );
 
-//************************************************************** */
-
 router.get(
   "/overview",
   validateQuery(platformOverviewQuerySchema),
   getPlatformOverviewHandler,
 );
-
-//************************************************************** */
 
 router.get(
   "/growth",
@@ -76,15 +79,11 @@ router.get(
   listPlatformOrganizationsHandler,
 );
 
-//************************************************************** */
-
 router.get(
   "/organizations/:organizationId/memberships",
   validateQuery(platformMembershipsQuerySchema),
   listPlatformOrganizationMembershipsHandler,
 );
-
-//************************************************************** */
 
 router.get(
   "/organizations/:organizationId",
@@ -99,19 +98,23 @@ router.get(
   listPlatformUsersHandler,
 );
 
-//************************************************************** */
-
 router.get(
   "/users/:userId/memberships",
   validateQuery(platformMembershipsQuerySchema),
   listPlatformUserMembershipsHandler,
 );
 
-//************************************************************** */
-
 router.get(
   "/users/:userId",
   getPlatformUserHandler,
+);
+
+//************************************************************** */
+
+router.get(
+  "/audit",
+  validateQuery(platformAuditQuerySchema),
+  listPlatformAuditLogsHandler,
 );
 
 //************************************************************** */

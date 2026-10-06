@@ -5,8 +5,8 @@ import type {
 } from "express";
 
 import {
-  env,
-} from "../config/env.js";
+  isAllowedBrowserOrigin,
+} from "../config/browser-origins.js";
 
 import {
   AppError,
@@ -14,12 +14,11 @@ import {
 
 //************************************************************** */
 
-const SAFE_METHODS =
-  new Set([
-    "GET",
-    "HEAD",
-    "OPTIONS",
-  ]);
+const SAFE_METHODS = new Set([
+  "GET",
+  "HEAD",
+  "OPTIONS",
+]);
 
 //************************************************************** */
 
@@ -27,9 +26,7 @@ function getOriginFromReferer(
   referer: string,
 ): string | null {
   try {
-    return new URL(
-      referer,
-    ).origin;
+    return new URL(referer).origin;
   } catch {
     return null;
   }
@@ -42,58 +39,32 @@ export function verifyRequestOrigin(
   _response: Response,
   next: NextFunction,
 ): void {
-  if (
-    SAFE_METHODS.has(
-      request.method,
-    )
-  ) {
+  if (SAFE_METHODS.has(request.method)) {
     next();
-
     return;
   }
 
-  const origin =
-    request.get(
-      "origin",
-    );
+  const origin = request.get("origin");
+  const referer = request.get("referer");
 
-  const referer =
-    request.get(
-      "referer",
-    );
-
-  //************************************************************** */
-  // Browser mutation requests should contain Origin. Referer is
-  // retained as a fallback for compatible clients.
-
+  // Prefer Origin. Retain Referer as a browser compatibility fallback.
   const requestOrigin =
     origin ??
-    (
-      referer
-        ? getOriginFromReferer(
-            referer,
-          )
-        : null
-    );
+    (referer ? getOriginFromReferer(referer) : null);
 
-  //************************************************************** */
-  // Requests without browser-origin metadata are allowed here.
-  // This preserves integration tests, CLI/API clients and trusted
-  // server-to-server consumers. Authentication and authorization
-  // still apply normally to protected endpoints.
-
-  if (!requestOrigin) {
+  // Preserve requests without browser-origin metadata.
+  // Authentication and authorization still apply to protected routes.
+  if (origin === undefined && referer === undefined) {
     next();
-
     return;
   }
 
   if (
-    requestOrigin ===
-    env.CLIENT_URL
+    requestOrigin !== null &&
+    requestOrigin !== undefined &&
+    isAllowedBrowserOrigin(requestOrigin)
   ) {
     next();
-
     return;
   }
 
@@ -102,8 +73,7 @@ export function verifyRequestOrigin(
       403,
       "Request origin is not allowed.",
       {
-        code:
-          "REQUEST_ORIGIN_NOT_ALLOWED",
+        code: "REQUEST_ORIGIN_NOT_ALLOWED",
       },
     ),
   );

@@ -16,6 +16,8 @@ model PlatformAdmin {
   role     PlatformAdminRole @default(ADMIN)
   isActive Boolean           @default(true)
 
+  billingExempt Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
