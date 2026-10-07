@@ -156,20 +156,20 @@ describe("Platform audit integration", () => {
 
     eventIds.push(boundary.id);
 
-    const login = await agent.post("/api/v1/auth/login").send({
-      email: user.email,
-      password,
-    });
-
-    assert.equal(login.status, 200);
-
-    const switched = await agent
-      .post("/api/v1/auth/switch-organization")
+    const login = await agent
+      .post("/api/v1/platform/auth/login")
       .send({
-        organizationId: organizationAId,
+        email: user.email,
+        password,
       });
 
-    assert.equal(switched.status, 200);
+    assert.equal(
+      login.status,
+      200,
+      `Admin login failed: ${JSON.stringify(login.body)}`,
+    );
+
+    assert.equal(login.body.data.membership, null);
   });
 
   //************************************************************** */
@@ -425,8 +425,31 @@ describe("Platform audit integration", () => {
 
   //************************************************************** */
 
-  it("preserves the organization audit endpoint's tenant isolation", async () => {
-    const response = await agent
+   it("preserves the organization audit endpoint's tenant isolation", async () => {
+    const clientAgent = request.agent(app);
+
+    const login = await clientAgent
+      .post("/api/v1/auth/login")
+      .send({
+        email: `platform-audit-${suffix}@example.com`,
+        password: "MotoDeskAuditAdmin123!",
+      });
+
+    assert.equal(
+      login.status,
+      200,
+      `Client login failed: ${JSON.stringify(login.body)}`,
+    );
+
+    const switched = await clientAgent
+      .post("/api/v1/auth/switch-organization")
+      .send({
+        organizationId: organizationAId,
+      });
+
+    assert.equal(switched.status, 200);
+
+    const response = await clientAgent
       .get(`/api/v1/organizations/${organizationAId}/audit`)
       .query({ action, pageSize: 100 });
 

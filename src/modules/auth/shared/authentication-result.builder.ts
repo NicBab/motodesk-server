@@ -1,9 +1,14 @@
-import {
-  type GeneratedRefreshToken,
+//************************************************************** 
+// The added audience argument defaults to CLIENT, preserving existing callers. 
+// Admin authentication will pass PLATFORM_ADMIN and a null organization membership.*/
+
+import type {
+  GeneratedRefreshToken,
 } from "../tokens/refresh-token.service.js";
 
 import {
   MembershipStatus,
+  SessionAudience,
   type Membership,
   type Organization,
 } from "../../../generated/prisma/client.js";
@@ -36,7 +41,6 @@ type MembershipWithOrganization = Pick<
 > & {
   organization: Pick<Organization, "name">;
 };
-
 
 //************************************************************** */
 
@@ -78,11 +82,20 @@ export async function createAuthenticationResult(
   user: UserWithPassword,
   membership: MembershipWithOrganization | null,
   context: RequestMetadata,
+  audience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<AuthenticationResult> {
-  const { session, refreshToken } = await createSession(user.id, context);
+  const { session, refreshToken } = await createSession(
+    user.id,
+    context,
+    audience,
+  );
 
-  return buildAuthenticationResult(user, membership, session.id, refreshToken);
+  return buildAuthenticationResult(
+    user,
+    membership,
+    session.id,
+    refreshToken,
+  );
 }
 
 //************************************************************** */
-

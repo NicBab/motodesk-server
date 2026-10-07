@@ -1,6 +1,13 @@
+//************************************************************** 
+//Creation, validation, and rotation now accept an audience, defaulting to CLIENT. 
+// Validation rejects an audience mismatch before touching the session or checking for token reuse. 
+// Account-wide revocation remains unchanged.
+// */
+
 import { randomUUID } from "node:crypto";
 
 import {
+  SessionAudience,
   SessionRevocationReason,
   type Session,
 } from "../../../generated/prisma/client.js";
@@ -62,6 +69,7 @@ const RECENT_AUTHENTICATION_WINDOW_MILLISECONDS =
 export async function createSession(
   userId: string,
   context: RequestMetadata,
+  audience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<CreatedSession> {
   const sessionId = randomUUID();
 
@@ -70,6 +78,7 @@ export async function createSession(
   const session = await createSessionRecord({
     id: sessionId,
     userId,
+    audience,
     tokenHash: refreshToken.tokenHash,
     userAgent: context.userAgent,
     ipAddress: context.ipAddress,
@@ -87,10 +96,11 @@ export async function createSession(
 export async function validateSession(
   sessionId: string,
   refreshTokenSecret: string,
+  expectedAudience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<ValidatedSession | null> {
   const session = await findSessionById(sessionId);
 
-  if (!session) {
+  if (!session || session.audience !== expectedAudience) {
     return null;
   }
 
@@ -118,13 +128,10 @@ export async function validateSession(
     };
   }
 
-  //************************************************************** */
   // Refresh tokens are rotated after every successful refresh.
-  //
-  // If the presented secret matches the immediately previous token,
-  // that token has already been successfully used once. Seeing it
-  // again indicates replay/reuse rather than an ordinary invalid
-  // token.
+  // Matching the previous token confirms reuse of a consumed token.
+  // Audience validation above prevents another application's endpoint
+  // from triggering reuse revocation for this session.
 
   if (session.previousTokenHash) {
     const previousTokenMatches = verifyTokenHash(
@@ -147,9 +154,7 @@ export async function validateSession(
     }
   }
 
-  // Unknown token. Do not classify arbitrary invalid credentials
-  // as confirmed refresh-token reuse.
-
+  // Arbitrary invalid credentials do not establish token reuse.
   return null;
 }
 
@@ -158,10 +163,11 @@ export async function validateSession(
 export async function validateAccessSession(
   sessionId: string,
   userId: string,
+  expectedAudience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<ValidatedAccessSession | null> {
   const session = await findSessionById(sessionId);
 
-  if (!session) {
+  if (!session || session.audience !== expectedAudience) {
     return null;
   }
 
@@ -231,6 +237,7 @@ export async function markSessionReauthenticated(
 export async function rotateSessionToken(
   sessionId: string,
   expectedTokenHash: string,
+  audience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<GeneratedRefreshToken | null> {
   const refreshToken = generateRefreshToken(sessionId);
 
@@ -239,6 +246,7 @@ export async function rotateSessionToken(
     expectedTokenHash,
     refreshToken.tokenHash,
     refreshToken.expiresAt,
+    audience,
   );
 
   if (!rotationResult.rotated) {

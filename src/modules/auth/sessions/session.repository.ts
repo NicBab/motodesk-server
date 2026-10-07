@@ -1,4 +1,12 @@
-import { SessionRevocationReason } from "../../../generated/prisma/client.js";
+//**************************************************************
+// Existing callers default to CLIENT. Admin callers will explicitly pass PLATFORM_ADMIN, 
+// and rotation checks the audience atomically alongside the token hash. 
+// Account-wide revocation still covers both audiences. */
+
+import {
+  SessionAudience,
+  SessionRevocationReason,
+} from "../../../generated/prisma/client.js";
 
 import { prisma } from "../../../config/prisma.js";
 
@@ -8,6 +16,8 @@ export interface CreateSessionRecordData {
   id: string;
 
   userId: string;
+
+  audience?: SessionAudience;
 
   tokenHash: string;
 
@@ -26,6 +36,8 @@ export async function createSessionRecord(data: CreateSessionRecordData) {
       id: data.id,
 
       userId: data.userId,
+
+      audience: data.audience ?? SessionAudience.CLIENT,
 
       tokenHash: data.tokenHash,
 
@@ -105,21 +117,17 @@ export async function updateSessionLastAuthenticatedAt(
 ) {
   return prisma.session.updateMany({
     where: {
-      id:
-        sessionId,
+      id: sessionId,
 
-      revokedAt:
-        null,
+      revokedAt: null,
 
       expiresAt: {
-        gt:
-          new Date(),
+        gt: new Date(),
       },
     },
 
     data: {
-      lastAuthenticatedAt:
-        new Date(),
+      lastAuthenticatedAt: new Date(),
     },
   });
 }
@@ -131,10 +139,13 @@ export async function rotateSessionRecord(
   expectedTokenHash: string,
   tokenHash: string,
   expiresAt: Date,
+  audience: SessionAudience = SessionAudience.CLIENT,
 ) {
   const result = await prisma.session.updateMany({
     where: {
       id: sessionId,
+
+      audience,
 
       tokenHash: expectedTokenHash,
 

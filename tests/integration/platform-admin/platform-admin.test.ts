@@ -130,18 +130,20 @@ describe("Platform administration integration", () => {
       },
     });
 
-    const login = await agent.post("/api/v1/auth/login").send({
-      email: admin.email,
-      password,
-    });
+    const login = await agent
+      .post("/api/v1/platform/auth/login")
+      .send({
+        email: admin.email,
+        password,
+      });
 
-    assert.equal(login.status, 200);
+    assert.equal(
+      login.status,
+      200,
+      `Admin login failed: ${JSON.stringify(login.body)}`,
+    );
 
-    const switched = await agent
-      .post("/api/v1/auth/switch-organization")
-      .send({ organizationId });
-
-    assert.equal(switched.status, 200);
+    assert.equal(login.body.data.membership, null);
   });
 
   //************************************************************** */

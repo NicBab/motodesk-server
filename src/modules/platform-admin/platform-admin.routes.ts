@@ -1,12 +1,39 @@
 import { Router } from "express";
 
 import {
-  authenticateRequest,
-} from "../auth/index.js";
-
-import {
   validateQuery,
 } from "../../platform/validation/index.js";
+
+import {
+  validateBody,
+} from "../../platform/validation/validate-body.js";
+
+import {
+  preventSensitiveResponseCaching,
+} from "../../middleware/sensitive-response-cache.js";
+
+import {
+  loginRateLimit,
+  refreshRateLimit,
+} from "../auth/auth-rate-limit.js";
+
+import {
+  loginSchema,
+} from "../auth/authentication/login/index.js";
+
+import {
+  logoutSchema,
+} from "../auth/authentication/logout/index.js";
+
+import {
+  authenticatePlatformRequest,
+} from "./platform-auth.middleware.js";
+
+import {
+  loginPlatformAdminHandler,
+  logoutPlatformAdminHandler,
+  refreshPlatformSessionHandler,
+} from "./platform-auth.controller.js";
 
 import {
   requirePlatformAdmin,
@@ -44,11 +71,35 @@ import {
 
 const router = Router();
 
+router.use(preventSensitiveResponseCaching);
+
+//************************************************************** */
+// Authentication endpoints precede the protected platform routes.
+// Logout remains available without a valid access token or grant.
+
+router.post(
+  "/auth/login",
+  loginRateLimit,
+  validateBody(loginSchema),
+  loginPlatformAdminHandler,
+);
+
+router.post(
+  "/auth/refresh",
+  refreshRateLimit,
+  refreshPlatformSessionHandler,
+);
+
+router.post(
+  "/auth/logout",
+  validateBody(logoutSchema),
+  logoutPlatformAdminHandler,
+);
+
 //************************************************************** */
 
-// Every route requires a valid session and an active platform grant.
 router.use(
-  authenticateRequest,
+  authenticatePlatformRequest,
   requirePlatformAdmin(),
 );
 
