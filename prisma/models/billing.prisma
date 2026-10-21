@@ -1,0 +1,93 @@
+//************************************************************** */
+
+enum BillingSubscriptionStatus {
+  NOT_SUBSCRIBED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+//************************************************************** */
+
+model OrganizationBilling {
+  id String @id @default(cuid())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId        String?
+
+  // Validated against the server billing plan catalog.
+  // Nullable until a supported subscription is established.
+  planId String?
+
+  status BillingSubscriptionStatus @default(NOT_SUBSCRIBED)
+
+  // Snapshot of the subscription price, in minor currency units.
+  currency   String?
+  unitAmount Int?
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+
+  cancelAtPeriodEnd Boolean   @default(false)
+  cancelAt          DateTime?
+  canceledAt        DateTime?
+  endedAt           DateTime?
+
+  // Retained across subscription changes to prevent repeat trials.
+  trialStartedAt DateTime?
+  trialEndsAt    DateTime?
+
+  // Used to coordinate checkout creation and retain its outcome.
+  checkoutOperationId      String?   @unique
+  checkoutSessionId        String?   @unique
+  checkoutSessionExpiresAt DateTime?
+
+  lastSyncedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([planId, status])
+}
+
+//************************************************************** */
+
+model StripeWebhookEvent {
+  // Stripe event identifier, used for duplicate-event detection.
+  id String @id
+
+  type           String
+  livemode       Boolean
+  eventCreatedAt DateTime
+
+  // Store identifiers and processing state, not raw payloads.
+  stripeObjectId String?
+
+  // A claim can expire so interrupted processing can be retried.
+  processingToken      String?
+  processingLeaseUntil DateTime?
+  attemptCount         Int       @default(0)
+
+  processedAt DateTime?
+
+  // Application-defined failure code only; never raw error payloads.
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([processedAt, processingLeaseUntil])
+  @@index([type, eventCreatedAt])
+}
+
+//************************************************************** */

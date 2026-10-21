@@ -48,21 +48,18 @@ const optionalAdminOrigin = z.preprocess(
   },
   z
     .url("ADMIN_URL must be a valid URL.")
-    .refine(
-      (value) => {
-        const url = new URL(value);
+    .refine((value) => {
+      const url = new URL(value);
 
-        return (
-          (url.protocol === "http:" || url.protocol === "https:") &&
-          url.username === "" &&
-          url.password === "" &&
-          url.pathname === "/" &&
-          url.search === "" &&
-          url.hash === ""
-        );
-      },
-      "ADMIN_URL must be an HTTP(S) origin without credentials, a path, query, or fragment.",
-    )
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.username === "" &&
+        url.password === "" &&
+        url.pathname === "/" &&
+        url.search === "" &&
+        url.hash === ""
+      );
+    }, "ADMIN_URL must be an HTTP(S) origin without credentials, a path, query, or fragment.")
     .transform((value) => new URL(value).origin)
     .optional(),
 );
@@ -138,10 +135,7 @@ const envSchema = z
     PASSWORD_RESET_TTL_MINUTES: z.coerce
       .number()
       .int("PASSWORD_RESET_TTL_MINUTES must be a whole number.")
-      .min(
-        5,
-        "Password-reset tokens must remain valid for at least 5 minutes.",
-      )
+      .min(5, "Password-reset tokens must remain valid for at least 5 minutes.")
       .max(
         120,
         "Password-reset tokens cannot remain valid for more than 120 minutes.",
@@ -170,13 +164,17 @@ const envSchema = z
       .url("GOOGLE_OAUTH_REDIRECT_URI must be a valid URL.")
       .optional(),
 
+    STRIPE_MODE: z.enum(["test", "live"]).default("test"),
+
+    STRIPE_SECRET_KEY: optionalEnvironmentString,
+
+    STRIPE_WEBHOOK_SECRET: optionalEnvironmentString,
+
     COOKIE_DOMAIN: optionalEnvironmentString,
 
     COOKIE_SECURE: booleanFromEnvironment.default(false),
 
-    COOKIE_SAME_SITE: z
-      .enum(["lax", "strict", "none"])
-      .default("lax"),
+    COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
 
     TRUST_PROXY: z.coerce
       .number()
@@ -186,10 +184,7 @@ const envSchema = z
       .default(0),
   })
   .superRefine((environment, context) => {
-    if (
-      environment.NODE_ENV === "production" &&
-      !environment.COOKIE_SECURE
-    ) {
+    if (environment.NODE_ENV === "production" && !environment.COOKIE_SECURE) {
       context.addIssue({
         code: "custom",
         path: ["COOKIE_SECURE"],
@@ -197,10 +192,37 @@ const envSchema = z
       });
     }
 
+    if (environment.STRIPE_SECRET_KEY) {
+      const expectedPrefix =
+        environment.STRIPE_MODE === "live" ? "sk_live_" : "sk_test_";
+
+      if (
+        !environment.STRIPE_SECRET_KEY.startsWith(expectedPrefix) ||
+        environment.STRIPE_SECRET_KEY.length <= expectedPrefix.length
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["STRIPE_SECRET_KEY"],
+          message:
+            "STRIPE_SECRET_KEY must match STRIPE_MODE using a valid sk_test_ or sk_live_ key.",
+        });
+      }
+    }
+
     if (
-      environment.COOKIE_SAME_SITE === "none" &&
-      !environment.COOKIE_SECURE
+      environment.STRIPE_WEBHOOK_SECRET &&
+      (!environment.STRIPE_WEBHOOK_SECRET.startsWith("whsec_") ||
+        environment.STRIPE_WEBHOOK_SECRET.length <= "whsec_".length)
     ) {
+      context.addIssue({
+        code: "custom",
+        path: ["STRIPE_WEBHOOK_SECRET"],
+        message:
+          "STRIPE_WEBHOOK_SECRET must be a webhook signing secret beginning with whsec_.",
+      });
+    }
+
+    if (environment.COOKIE_SAME_SITE === "none" && !environment.COOKIE_SECURE) {
       context.addIssue({
         code: "custom",
         path: ["COOKIE_SAME_SITE"],
@@ -248,8 +270,9 @@ const envSchema = z
       environment.GOOGLE_OAUTH_REDIRECT_URI,
     ];
 
-    const configuredGoogleOAuthValues =
-      googleOAuthConfiguration.filter((value) => Boolean(value)).length;
+    const configuredGoogleOAuthValues = googleOAuthConfiguration.filter(
+      (value) => Boolean(value),
+    ).length;
 
     if (
       configuredGoogleOAuthValues > 0 &&

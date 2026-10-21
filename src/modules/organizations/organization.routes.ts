@@ -33,6 +33,7 @@ import timeClockRouter from "../time-clock/time-clock.routes.js";
 import serviceAppointmentRouter from "../service-appointments/service-appointment.routes.js";
 import reportRouter from "../reports/report.routes.js";
 import dashboardRouter from "../dashboard/dashboard.routes.js";
+import billingRouter from "../billing/billing.routes.js";
 
 import {
   createOrganizationSchema,
@@ -213,6 +214,10 @@ router.use(
 //************************************************************** */
 
 router.use("/:organizationId/audit", auditRouter);
+
+//************************************************************** */
+
+router.use("/:organizationId/billing", billingRouter);
 
 //************************************************************** */
 
