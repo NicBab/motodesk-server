@@ -1,9 +1,7 @@
 import type Stripe from "stripe";
 
 import { env } from "../../config/env.js";
-
 import { prisma } from "../../config/prisma.js";
-
 import { getStripeClient } from "../../config/stripe.js";
 
 import type {
@@ -19,14 +17,20 @@ import {
 
 //************************************************************** */
 
+interface CompletedCheckout {
+  operationId: string;
+  expectedSessionId: string | null;
+}
+
 export interface PreparedBillingSynchronization {
   organizationId: string;
   stripeCustomerId: string;
   expectedLastSyncedAt: Date | null;
 
   snapshot: BillingSubscriptionSnapshot;
-
   firstTrialStartedAt: Date | null;
+
+  completedCheckout?: CompletedCheckout;
 }
 
 //************************************************************** */
@@ -52,11 +56,98 @@ function isCurrentSubscription(
 
 //************************************************************** */
 
+async function prepareCompletedCheckout(
+  organizationId: string,
+  stripeCustomerId: string,
+  operationId: string | null,
+  sessionId: string | null,
+  subscription: Stripe.Subscription,
+): Promise<CompletedCheckout | undefined> {
+  // An older subscription must never clear a newer checkout claim.
+  if (
+    !operationId ||
+    subscription.metadata.checkoutOperationId !== operationId
+  ) {
+    return undefined;
+  }
+
+  const stripe = getStripeClient();
+
+  let session: Stripe.Checkout.Session;
+
+  if (sessionId) {
+    session = await stripe.checkout.sessions.retrieve(sessionId);
+  } else {
+    // Session creation may have succeeded before its ID was saved.
+    const sessions = await stripe.checkout.sessions.list({
+      customer: stripeCustomerId,
+      limit: 100,
+    });
+
+    if (sessions.has_more) {
+      throw synchronizationConflict();
+    }
+
+    const matches = sessions.data.filter(
+      (candidate) =>
+        candidate.metadata?.organizationId === organizationId &&
+        candidate.metadata?.checkoutOperationId === operationId,
+    );
+
+    if (matches.length === 0) {
+      // Do not infer completion from an absent session.
+      return undefined;
+    }
+
+    if (matches.length !== 1) {
+      throw synchronizationConflict();
+    }
+
+    session = matches[0]!;
+  }
+
+  const sessionCustomerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  if (
+    session.mode !== "subscription" ||
+    session.livemode !== (env.STRIPE_MODE === "live") ||
+    sessionCustomerId !== stripeCustomerId ||
+    session.client_reference_id !== organizationId ||
+    session.metadata?.organizationId !== organizationId ||
+    session.metadata?.checkoutOperationId !== operationId
+  ) {
+    throw synchronizationConflict();
+  }
+
+  // A subscription event can arrive before checkout completes.
+  if (session.status !== "complete") {
+    return undefined;
+  }
+
+  const sessionSubscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  if (sessionSubscriptionId !== subscription.id) {
+    throw synchronizationConflict();
+  }
+
+  return {
+    operationId,
+    expectedSessionId: sessionId,
+  };
+}
+
+//************************************************************** */
+
 export async function prepareBillingSynchronization(
   stripeCustomerId: string,
 ): Promise<PreparedBillingSynchronization | null> {
-  // Resolve organizations through the existing customer mapping.
-  // Never create or select an organization from event metadata alone.
+  // Resolve the tenant through its existing customer mapping.
   const billing = await prisma.organizationBilling.findUnique({
     where: {
       stripeCustomerId,
@@ -75,7 +166,6 @@ export async function prepareBillingSynchronization(
     limit: 100,
   });
 
-  // Do not synchronize from an incomplete view of customer history.
   if (subscriptions.has_more) {
     throw new AppError(
       409,
@@ -100,8 +190,6 @@ export async function prepareBillingSynchronization(
     );
   }
 
-  // Prefer the current subscription. If all subscriptions ended,
-  // retain the latest subscription's terminal state.
   const selected =
     current[0] ??
     [...subscriptions.data].sort(
@@ -111,8 +199,6 @@ export async function prepareBillingSynchronization(
     )[0];
 
   if (!selected) {
-    // An existing mapped customer without subscriptions has no
-    // subscription state to apply. Initial state stays unsubscribed.
     if (billing.stripeSubscriptionId !== null) {
       throw synchronizationConflict();
     }
@@ -127,7 +213,7 @@ export async function prepareBillingSynchronization(
     env.STRIPE_MODE === "live",
   );
 
-  // Preserve evidence of the first trial across resubscriptions.
+  // Preserve the first trial across subsequent subscriptions.
   let firstTrialStartedAt = billing.trialStartedAt;
 
   for (const subscription of subscriptions.data) {
@@ -161,12 +247,22 @@ export async function prepareBillingSynchronization(
     }
   }
 
+  const completedCheckout = await prepareCompletedCheckout(
+    billing.organizationId,
+    stripeCustomerId,
+    billing.checkoutOperationId,
+    billing.checkoutSessionId,
+    selected,
+  );
+
   return {
     organizationId: billing.organizationId,
     stripeCustomerId,
     expectedLastSyncedAt: billing.lastSyncedAt,
     snapshot,
     firstTrialStartedAt,
+
+    ...(completedCheckout ? { completedCheckout } : {}),
   };
 }
 
@@ -181,11 +277,8 @@ export async function applyBillingSynchronization(
     ...subscriptionFields
   } = prepared.snapshot;
 
-  // The historical first trial is preserved separately.
   void _selectedTrialStartedAt;
 
-  // Ensure every successful synchronization advances this value,
-  // including two updates occurring within the same millisecond.
   const lastSyncedAt = new Date(
     Math.max(
       Date.now(),
@@ -202,17 +295,40 @@ export async function applyBillingSynchronization(
 
     data: {
       ...subscriptionFields,
-
       trialStartedAt: prepared.firstTrialStartedAt,
-
       lastSyncedAt,
     },
   });
 
   if (result.count !== 1) {
-    // Throwing rolls back both billing changes and the webhook
-    // completion marker when called inside its transaction.
+    // Roll back the subscription update and webhook completion
+    // marker when the snapshot baseline is no longer current.
     throw synchronizationConflict();
+  }
+
+  const completedCheckout = prepared.completedCheckout;
+
+  if (completedCheckout) {
+    // Compare the exact claim observed before contacting Stripe.
+    // If another request changed it, preserve the changed claim.
+    await transaction.organizationBilling.updateMany({
+      where: {
+        organizationId: prepared.organizationId,
+        stripeCustomerId: prepared.stripeCustomerId,
+        stripeSubscriptionId:
+          prepared.snapshot.stripeSubscriptionId,
+        lastSyncedAt,
+
+        checkoutOperationId: completedCheckout.operationId,
+        checkoutSessionId: completedCheckout.expectedSessionId,
+      },
+
+      data: {
+        checkoutOperationId: null,
+        checkoutSessionId: null,
+        checkoutSessionExpiresAt: null,
+      },
+    });
   }
 }
 

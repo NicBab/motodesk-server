@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import Stripe from "stripe";
+
 import { env } from "../../config/env.js";
 import { getStripeClient } from "../../config/stripe.js";
 
@@ -37,6 +39,7 @@ import {
 import {
   claimOrganizationCheckout,
   clearExpiredOrganizationCheckout,
+  releaseRejectedOrganizationCheckout,
   saveOrganizationCheckoutSession,
 } from "./billing-checkout.repository.js";
 
@@ -55,6 +58,16 @@ function checkoutConflict(
   message: string,
 ): AppError {
   return new AppError(409, message, { code });
+}
+
+function checkoutUnconfirmed(): AppError {
+  return new AppError(
+    503,
+    "Checkout could not be confirmed. Refresh billing before trying again.",
+    {
+      code: "BILLING_CHECKOUT_UNCONFIRMED",
+    },
+  );
 }
 
 //************************************************************** */
@@ -103,8 +116,8 @@ export async function createOrganizationBillingCheckout(
     );
   }
 
-  // Recover a Stripe session whose creation response may have
-  // been interrupted before its ID was saved locally.
+  // Recover a session whose creation response may have been
+  // interrupted before its ID was saved locally.
   if (
     billing.checkoutOperationId &&
     !billing.checkoutSessionId
@@ -242,8 +255,7 @@ export async function createOrganizationBillingCheckout(
     }
   }
 
-  // Absence from Stripe's list is not proof that the original
-  // creation failed. Keep unresolved claims blocked.
+  // Absence from Stripe's list is not proof that creation failed.
   if (billing.checkoutOperationId) {
     throw checkoutConflict(
       "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
@@ -257,7 +269,19 @@ export async function createOrganizationBillingCheckout(
     billing.trialStartedAt === null &&
     subscriptions.data.length === 0;
 
+  const successUrl = new URL("/settings", env.CLIENT_URL);
+  successUrl.searchParams.set("billing", "success");
+
+  const cancelUrl = new URL("/settings", env.CLIENT_URL);
+  cancelUrl.searchParams.set("billing", "canceled");
+
   const operationId = randomUUID();
+
+  const metadata = {
+    organizationId,
+    planId: input.planId,
+    checkoutOperationId: operationId,
+  };
 
   const claimed = await claimOrganizationCheckout(
     organizationId,
@@ -272,20 +296,12 @@ export async function createOrganizationBillingCheckout(
     );
   }
 
-  const successUrl = new URL("/settings", env.CLIENT_URL);
-  successUrl.searchParams.set("billing", "success");
+  let session: Stripe.Checkout.Session;
 
-  const cancelUrl = new URL("/settings", env.CLIENT_URL);
-  cancelUrl.searchParams.set("billing", "canceled");
-
-  const metadata = {
-    organizationId,
-    planId: input.planId,
-    checkoutOperationId: operationId,
-  };
-
+  // Keep this catch scoped to Stripe session creation.
+  // A later database failure must never release the claim.
   try {
-    const session = await stripe.checkout.sessions.create(
+    session = await stripe.checkout.sessions.create(
       {
         mode: "subscription",
 
@@ -324,37 +340,72 @@ export async function createOrganizationBillingCheckout(
           `motodesk:${env.STRIPE_MODE}:checkout:${operationId}`,
       },
     );
+  } catch (error) {
+    const rejected =
+      error instanceof Stripe.errors.StripeInvalidRequestError &&
+      error.statusCode === 400;
 
-    const saved = await saveOrganizationCheckoutSession(
+    if (rejected) {
+      let released = false;
+
+      try {
+        released = await releaseRejectedOrganizationCheckout(
+          organizationId,
+          customerId,
+          operationId,
+        );
+      } catch {
+        // Preserve the reconciliation requirement when the
+        // database cannot confirm that this claim was released.
+        throw checkoutUnconfirmed();
+      }
+
+      if (!released) {
+        throw checkoutConflict(
+          "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
+          "Checkout requires reconciliation before continuing.",
+        );
+      }
+
+      // Do not expose Stripe's raw message or request details.
+      throw new AppError(
+        503,
+        "Checkout was rejected by the billing provider. Contact support before trying again.",
+        {
+          code: "BILLING_CHECKOUT_REJECTED",
+        },
+      );
+    }
+
+    // Connection errors, server errors, idempotency conflicts,
+    // and other uncertain outcomes retain their operation claim.
+    throw checkoutUnconfirmed();
+  }
+
+  let saved: boolean;
+
+  try {
+    saved = await saveOrganizationCheckoutSession(
       organizationId,
       operationId,
       customerId,
       session.id,
       new Date(session.expires_at * 1_000),
     );
+  } catch {
+    // Stripe has returned a session. Preserve its claim so the
+    // existing recovery service can recover it safely.
+    throw checkoutUnconfirmed();
+  }
 
-    if (!saved || !session.url) {
-      throw checkoutConflict(
-        "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
-        "Checkout requires reconciliation before continuing.",
-      );
-    }
-
-    return { url: session.url };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-
-    // Retain the claim because Stripe may have accepted the request.
-    throw new AppError(
-      503,
-      "Checkout could not be confirmed. Refresh billing before trying again.",
-      {
-        code: "BILLING_CHECKOUT_UNCONFIRMED",
-      },
+  if (!saved || !session.url) {
+    throw checkoutConflict(
+      "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
+      "Checkout requires reconciliation before continuing.",
     );
   }
+
+  return { url: session.url };
 }
 
 //************************************************************** */

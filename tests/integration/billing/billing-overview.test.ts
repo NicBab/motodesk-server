@@ -21,6 +21,11 @@ import {
   hashPassword,
 } from "../../../src/modules/auth/security/password.service.js";
 
+import {
+  getBillingPlan,
+  type BillingPlanId,
+} from "../../../src/modules/billing/billing.constants.js";
+
 //************************************************************** */
 
 function accessCookie(
@@ -105,6 +110,43 @@ describe("Organization billing overview HTTP API", () => {
     return request(app)
       .get(endpoint())
       .set("Cookie", cookie);
+  }
+
+  async function createBilling(
+    planId: BillingPlanId = "pro",
+    additionalUserQuantity = 0,
+  ) {
+    const suffix = randomUUID();
+    const plan = getBillingPlan(planId);
+
+    return prisma.organizationBilling.create({
+      data: {
+        organizationId,
+        stripeCustomerId: `cus_test_${suffix}`,
+        stripeSubscriptionId: `sub_test_${suffix}`,
+        stripePriceId: `price_base_${suffix}`,
+
+        planId,
+        status: "ACTIVE",
+        currency: "usd",
+        unitAmount: plan.unitAmount,
+
+        additionalUserQuantity,
+
+        additionalUserUnitAmount:
+          additionalUserQuantity > 0 ? 1_000 : null,
+
+        stripeAdditionalUserPriceId:
+          additionalUserQuantity > 0
+            ? `price_additional_${suffix}`
+            : null,
+
+        stripeAdditionalUserItemId:
+          additionalUserQuantity > 0
+            ? `si_additional_${suffix}`
+            : null,
+      },
+    });
   }
 
   beforeEach(async () => {
@@ -244,7 +286,14 @@ describe("Organization billing overview HTTP API", () => {
     assert.equal(data.subscription.status, "NOT_SUBSCRIBED");
     assert.equal(data.subscription.plan, null);
     assert.equal(data.subscription.trialStartedAt, null);
+
+    assert.equal(data.subscription.additionalUserQuantity, 0);
+    assert.equal(data.subscription.additionalUserUnitAmount, null);
+    assert.equal(data.subscription.additionalUserMonthlyAmount, 0);
+    assert.equal(data.subscription.monthlyTotalAmount, null);
+
     assert.equal(data.usage.assignedUsers, 2);
+    assert.equal(data.usage.userLimit, 0);
     assert.equal(data.checkoutPending, false);
     assert.equal(data.lastSyncedAt, null);
 
@@ -262,26 +311,16 @@ describe("Organization billing overview HTTP API", () => {
   });
 
   it("returns subscription fields without internal Stripe identifiers", async () => {
-    const suffix = randomUUID();
+    const billing = await createBilling("starter");
 
-    const customerId = `cus_test_${suffix}`;
-    const subscriptionId = `sub_test_${suffix}`;
-    const priceId = `price_test_${suffix}`;
     const operationId = randomUUID();
-
     const start = new Date("2026-01-01T00:00:00.000Z");
     const end = new Date("2026-01-15T00:00:00.000Z");
 
-    await prisma.organizationBilling.create({
+    await prisma.organizationBilling.update({
+      where: { organizationId },
       data: {
-        organizationId,
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        stripePriceId: priceId,
-        planId: "starter",
         status: "TRIALING",
-        currency: "usd",
-        unitAmount: 8_900,
         currentPeriodStart: start,
         currentPeriodEnd: end,
         trialStartedAt: start,
@@ -306,6 +345,7 @@ describe("Organization billing overview HTTP API", () => {
       interval: "month",
       unitAmount: 8_900,
       usersIncluded: 2,
+      additionalUserPricing: null,
     });
 
     assert.equal(
@@ -318,21 +358,24 @@ describe("Organization billing overview HTTP API", () => {
       end.toISOString(),
     );
 
+    assert.equal(data.subscription.monthlyTotalAmount, 8_900);
+    assert.equal(data.usage.userLimit, 2);
     assert.equal(data.checkoutPending, true);
 
     const body = JSON.stringify(response.body);
 
     for (const internalId of [
-      customerId,
-      subscriptionId,
-      priceId,
+      billing.stripeCustomerId,
+      billing.stripeSubscriptionId,
+      billing.stripePriceId,
       operationId,
     ]) {
+      assert.ok(internalId);
       assert.equal(body.includes(internalId), false);
     }
   });
 
-  it("shows exemption without pretending there is a paid subscription", async () => {
+  it("shows unlimited exempt capacity without inventing a subscription", async () => {
     await prisma.platformAdmin.create({
       data: {
         userId: ownerId,
@@ -344,16 +387,15 @@ describe("Organization billing overview HTTP API", () => {
     const response = await getOverview();
 
     assert.equal(response.status, 200);
-    assert.equal(response.body.data.billingExempt, true);
-    assert.equal(
-      response.body.data.subscription.status,
-      "NOT_SUBSCRIBED",
-    );
 
-    assert.equal(
-      response.body.data.subscription.plan,
-      null,
-    );
+    const data = response.body.data;
+
+    assert.equal(data.billingExempt, true);
+    assert.equal(data.subscription.status, "NOT_SUBSCRIBED");
+    assert.equal(data.subscription.plan, null);
+    assert.equal(data.subscription.monthlyTotalAmount, null);
+    assert.equal(data.usage.userLimit, null);
+    assert.equal(data.usage.assignedUsers, 2);
   });
 
   it("rejects an unsupported stored plan", async () => {
@@ -372,4 +414,172 @@ describe("Organization billing overview HTTP API", () => {
       "BILLING_PLAN_CONFIGURATION_INVALID",
     );
   });
+
+  it("publishes additional-user pricing only for Pro", async () => {
+    const response = await getOverview();
+
+    assert.equal(response.status, 200);
+
+    const plans = response.body.data.availablePlans;
+
+    assert.equal(plans.length, 3);
+    assert.equal(plans[0].id, "starter");
+    assert.equal(plans[0].additionalUserPricing, null);
+    assert.equal(plans[1].id, "business");
+    assert.equal(plans[1].additionalUserPricing, null);
+    assert.equal(plans[2].id, "pro");
+
+    assert.deepEqual(
+      plans[2].additionalUserPricing,
+      { unitAmount: 1_000 },
+    );
+
+    assert.equal(
+      JSON.stringify(response.body).includes(
+        "pro-additional-user-monthly",
+      ),
+      false,
+    );
+  });
+
+  it("returns twelve-user capacity and $319 monthly for Pro with two additional users", async () => {
+    const billing = await createBilling("pro", 2);
+    const response = await getOverview();
+
+    assert.equal(response.status, 200);
+
+    const data = response.body.data;
+
+    assert.equal(data.subscription.plan.unitAmount, 29_900);
+    assert.equal(data.subscription.plan.usersIncluded, 10);
+
+    assert.deepEqual(
+      data.subscription.plan.additionalUserPricing,
+      { unitAmount: 1_000 },
+    );
+
+    assert.equal(data.subscription.additionalUserQuantity, 2);
+    assert.equal(data.subscription.additionalUserUnitAmount, 1_000);
+    assert.equal(data.subscription.additionalUserMonthlyAmount, 2_000);
+    assert.equal(data.subscription.monthlyTotalAmount, 31_900);
+
+    assert.equal(data.usage.assignedUsers, 2);
+    assert.equal(data.usage.userLimit, 12);
+
+    const body = JSON.stringify(response.body);
+
+    assert.ok(billing.stripeAdditionalUserPriceId);
+    assert.ok(billing.stripeAdditionalUserItemId);
+
+    assert.equal(
+      body.includes(billing.stripeAdditionalUserPriceId),
+      false,
+    );
+
+    assert.equal(
+      body.includes(billing.stripeAdditionalUserItemId),
+      false,
+    );
+  });
+
+  for (const planId of ["starter", "business"] as const) {
+    it(`returns the included capacity for ${planId}`, async () => {
+      await createBilling(planId);
+
+      const response = await getOverview();
+      const plan = getBillingPlan(planId);
+
+      assert.equal(response.status, 200);
+      assert.equal(
+        response.body.data.usage.userLimit,
+        plan.usersIncluded,
+      );
+      assert.equal(
+        response.body.data.subscription.monthlyTotalAmount,
+        plan.unitAmount,
+      );
+    });
+
+    it(`rejects additional users stored against ${planId}`, async () => {
+      await createBilling(planId, 1);
+
+      const response = await getOverview();
+
+      assert.equal(response.status, 503);
+      assert.equal(
+        response.body.code,
+        "BILLING_PLAN_CONFIGURATION_INVALID",
+      );
+    });
+  }
+
+  it("rejects an incorrect stored additional-user amount", async () => {
+    await createBilling("pro", 2);
+
+    await prisma.organizationBilling.update({
+      where: { organizationId },
+      data: { additionalUserUnitAmount: 900 },
+    });
+
+    const response = await getOverview();
+
+    assert.equal(response.status, 503);
+    assert.equal(
+      response.body.code,
+      "BILLING_PLAN_CONFIGURATION_INVALID",
+    );
+  });
+
+  it("rejects stale add-on fields when quantity is zero", async () => {
+    await createBilling("pro", 2);
+
+    await prisma.organizationBilling.update({
+      where: { organizationId },
+      data: { additionalUserQuantity: 0 },
+    });
+
+    const response = await getOverview();
+
+    assert.equal(response.status, 503);
+    assert.equal(
+      response.body.code,
+      "BILLING_PLAN_CONFIGURATION_INVALID",
+    );
+  });
+
+  it("rejects additional users without a Stripe item mapping", async () => {
+    await createBilling("pro", 2);
+
+    await prisma.organizationBilling.update({
+      where: { organizationId },
+      data: { stripeAdditionalUserItemId: null },
+    });
+
+    const response = await getOverview();
+
+    assert.equal(response.status, 503);
+    assert.equal(
+      response.body.code,
+      "BILLING_PLAN_CONFIGURATION_INVALID",
+    );
+  });
+
+  it("rejects a negative additional-user quantity", async () => {
+    await createBilling("pro");
+
+    await prisma.organizationBilling.update({
+      where: { organizationId },
+      data: { additionalUserQuantity: -1 },
+    });
+
+    const response = await getOverview();
+
+    assert.equal(response.status, 503);
+    assert.equal(
+      response.body.code,
+      "BILLING_PLAN_CONFIGURATION_INVALID",
+    );
+  });
 });
+
+//************************************************************** */

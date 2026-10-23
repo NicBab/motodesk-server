@@ -14,7 +14,6 @@ export async function claimOrganizationCheckout(
   const result = await prisma.organizationBilling.updateMany({
     where: {
       organizationId,
-
       stripeCustomerId,
 
       status: {
@@ -50,9 +49,7 @@ export async function saveOrganizationCheckoutSession(
   const result = await prisma.organizationBilling.updateMany({
     where: {
       organizationId,
-
       stripeCustomerId,
-
       checkoutOperationId: operationId,
       checkoutSessionId: null,
     },
@@ -60,6 +57,40 @@ export async function saveOrganizationCheckoutSession(
     data: {
       checkoutSessionId,
       checkoutSessionExpiresAt: expiresAt,
+    },
+  });
+
+  return result.count === 1;
+}
+
+//************************************************************** */
+
+// Only call after a definitive rejection of session creation.
+// A timeout or interrupted response does not establish rejection.
+export async function releaseRejectedOrganizationCheckout(
+  organizationId: string,
+  stripeCustomerId: string,
+  operationId: string,
+): Promise<boolean> {
+  const result = await prisma.organizationBilling.updateMany({
+    where: {
+      organizationId,
+      stripeCustomerId,
+      checkoutOperationId: operationId,
+      checkoutSessionId: null,
+      checkoutSessionExpiresAt: null,
+
+      status: {
+        in: [
+          BillingSubscriptionStatus.NOT_SUBSCRIBED,
+          BillingSubscriptionStatus.CANCELED,
+          BillingSubscriptionStatus.INCOMPLETE_EXPIRED,
+        ],
+      },
+    },
+
+    data: {
+      checkoutOperationId: null,
     },
   });
 
@@ -76,7 +107,6 @@ export async function clearExpiredOrganizationCheckout(
   const result = await prisma.organizationBilling.updateMany({
     where: {
       organizationId,
-
       checkoutOperationId: operationId,
       checkoutSessionId,
 

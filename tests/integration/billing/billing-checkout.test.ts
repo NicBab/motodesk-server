@@ -9,7 +9,7 @@ import {
   mock,
 } from "node:test";
 
-import type Stripe from "stripe";
+import Stripe from "stripe";
 
 import { prisma } from "../../../src/config/prisma.js";
 import { env } from "../../../src/config/env.js";
@@ -67,7 +67,53 @@ describe("Organization billing checkout", () => {
     });
   }
 
+  async function assertUnconfirmedClaimIsRetained(
+    error: Error,
+  ) {
+    let attempts = 0;
+
+    mock.method(
+      getStripeClient().checkout.sessions,
+      "create",
+      async () => {
+        attempts += 1;
+        throw error;
+      },
+    );
+
+    await assert.rejects(
+      createCheckout(),
+      { code: "BILLING_CHECKOUT_UNCONFIRMED" },
+    );
+
+    const interrupted = await readBilling();
+
+    assert.ok(interrupted.checkoutOperationId);
+    assert.equal(interrupted.checkoutSessionId, null);
+    assert.equal(interrupted.checkoutSessionExpiresAt, null);
+    assert.equal(interrupted.stripeCustomerId, customerId);
+
+    await assert.rejects(
+      createCheckout(),
+      {
+        code: "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
+      },
+    );
+
+    const retried = await readBilling();
+
+    assert.equal(attempts, 1);
+    assert.equal(
+      retried.checkoutOperationId,
+      interrupted.checkoutOperationId,
+    );
+    assert.equal(retried.checkoutSessionId, null);
+  }
+
   beforeEach(async () => {
+    organizationId = "";
+    userId = "";
+
     assert.equal(env.STRIPE_MODE, "test");
 
     assert.ok(
@@ -245,7 +291,6 @@ describe("Organization billing checkout", () => {
       result.url,
       "https://checkout.stripe.com/test-motodesk",
     );
-
     assert.equal(checkoutRequests.length, 1);
 
     const input = checkoutRequests[0]!;
@@ -263,7 +308,6 @@ describe("Organization billing checkout", () => {
       input.subscription_data?.trial_period_days,
       14,
     );
-
     assert.equal(input.metadata?.organizationId, organizationId);
     assert.equal(input.metadata?.planId, "starter");
 
@@ -271,32 +315,30 @@ describe("Organization billing checkout", () => {
       input.subscription_data?.metadata?.organizationId,
       organizationId,
     );
+    assert.equal(
+      input.subscription_data?.metadata?.checkoutOperationId,
+      input.metadata?.checkoutOperationId,
+    );
 
     const success = new URL(input.success_url!);
     const cancel = new URL(input.cancel_url!);
 
-    assert.equal(
-      success.origin,
-      new URL(env.CLIENT_URL).origin,
-    );
-
+    assert.equal(success.origin, new URL(env.CLIENT_URL).origin);
+    assert.equal(cancel.origin, new URL(env.CLIENT_URL).origin);
     assert.equal(success.pathname, "/settings");
+    assert.equal(cancel.pathname, "/settings");
     assert.equal(success.searchParams.get("billing"), "success");
     assert.equal(cancel.searchParams.get("billing"), "canceled");
 
     const billing = await readBilling();
 
-    assert.equal(
-      billing.checkoutSessionId,
-      createdSession!.id,
-    );
-
+    assert.equal(billing.checkoutSessionId, createdSession!.id);
     assert.equal(
       billing.checkoutOperationId,
       input.metadata?.checkoutOperationId,
     );
 
-    // Creating checkout does not establish a paid subscription.
+    // Checkout creation alone does not establish a subscription.
     assert.equal(billing.status, "NOT_SUBSCRIBED");
     assert.equal(billing.stripeSubscriptionId, null);
   });
@@ -312,18 +354,14 @@ describe("Organization billing checkout", () => {
   it("does not grant another trial after a recorded trial", async () => {
     await prisma.organizationBilling.update({
       where: { organizationId },
-
       data: {
-        trialStartedAt: new Date(
-          "2026-01-01T00:00:00.000Z",
-        ),
+        trialStartedAt: new Date("2026-01-01T00:00:00.000Z"),
       },
     });
 
     await createCheckout();
 
     assert.equal(checkoutRequests.length, 1);
-
     assert.equal(
       checkoutRequests[0]!.subscription_data?.trial_period_days,
       undefined,
@@ -337,7 +375,6 @@ describe("Organization billing checkout", () => {
       async () => ({
         object: "list",
         has_more: false,
-
         data: [
           {
             id: `sub_test_${randomUUID()}`,
@@ -360,14 +397,148 @@ describe("Organization billing checkout", () => {
   });
 
   it("retains an unconfirmed claim and blocks replacement checkout", async () => {
+    await assertUnconfirmedClaimIsRetained(
+      new Error("Simulated interrupted Stripe response."),
+    );
+  });
+
+  it("releases a rejected claim and permits a fresh checkout after correction", async () => {
+    const before = await readBilling();
+
+    let attempts = 0;
+    let rejectedOperationId: string | undefined;
+
+    mock.method(
+      getStripeClient().checkout.sessions,
+      "create",
+      async (input: Stripe.Checkout.SessionCreateParams) => {
+        attempts += 1;
+        checkoutRequests.push(input);
+
+        if (attempts === 1) {
+          const operationId = input.metadata?.checkoutOperationId;
+
+          assert.ok(typeof operationId === "string");
+          rejectedOperationId = operationId;
+
+          throw new Stripe.errors.StripeInvalidRequestError({
+            type: "invalid_request_error",
+            statusCode: 400,
+            message: "Private provider configuration details.",
+            param: "line_items[0]",
+          });
+        }
+
+        createdSession = makeSession(input);
+        return createdSession;
+      },
+    );
+
+    await assert.rejects(
+      createCheckout(),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(
+          "code" in error ? error.code : undefined,
+          "BILLING_CHECKOUT_REJECTED",
+        );
+        assert.equal(
+          error.message.includes("Private provider"),
+          false,
+        );
+        return true;
+      },
+    );
+
+    assert.ok(rejectedOperationId);
+
+    const rejected = await readBilling();
+
+    assert.equal(rejected.checkoutOperationId, null);
+    assert.equal(rejected.checkoutSessionId, null);
+    assert.equal(rejected.checkoutSessionExpiresAt, null);
+
+    assert.equal(rejected.id, before.id);
+    assert.equal(rejected.organizationId, organizationId);
+    assert.equal(rejected.stripeCustomerId, customerId);
+    assert.equal(rejected.stripeSubscriptionId, null);
+    assert.equal(rejected.status, "NOT_SUBSCRIBED");
+    assert.equal(rejected.trialStartedAt, null);
+
+    const result = await createCheckout();
+
+    assert.equal(
+      result.url,
+      "https://checkout.stripe.com/test-motodesk",
+    );
+    assert.equal(attempts, 2);
+
+    const accepted = await readBilling();
+
+    assert.ok(accepted.checkoutOperationId);
+    assert.notEqual(
+      accepted.checkoutOperationId,
+      rejectedOperationId,
+    );
+    assert.equal(
+      accepted.checkoutOperationId,
+      checkoutRequests[1]!.metadata?.checkoutOperationId,
+    );
+    assert.equal(accepted.checkoutSessionId, createdSession!.id);
+    assert.equal(accepted.stripeCustomerId, customerId);
+  });
+
+  it("retains the claim after a Stripe connection error", async () => {
+    await assertUnconfirmedClaimIsRetained(
+      new Stripe.errors.StripeConnectionError({
+        message: "Simulated connection interruption.",
+      }),
+    );
+  });
+
+  it("retains the claim after a Stripe server error", async () => {
+    await assertUnconfirmedClaimIsRetained(
+      new Stripe.errors.StripeAPIError({
+        type: "api_error",
+        statusCode: 500,
+        message: "Simulated provider failure.",
+      }),
+    );
+  });
+
+  it("retains the claim after a Stripe idempotency error", async () => {
+    await assertUnconfirmedClaimIsRetained(
+      new Stripe.errors.StripeIdempotencyError({
+        type: "idempotency_error",
+        statusCode: 400,
+        message: "Simulated idempotency conflict.",
+      }),
+    );
+  });
+
+  it("recovers the same session after its database save fails", async () => {
     let attempts = 0;
 
     mock.method(
       getStripeClient().checkout.sessions,
       "create",
-      async () => {
+      async (input: Stripe.Checkout.SessionCreateParams) => {
         attempts += 1;
-        throw new Error("Simulated interrupted Stripe response.");
+        checkoutRequests.push(input);
+        createdSession = makeSession(input);
+
+        // The claim has already been saved. Fail only the next
+        // billing update, which would persist this session ID.
+        mock.method(
+          prisma.organizationBilling,
+          "updateMany",
+          async () => {
+            throw new Error("Simulated database save failure.");
+          },
+          { times: 1 },
+        );
+
+        return createdSession;
       },
     );
 
@@ -378,25 +549,37 @@ describe("Organization billing checkout", () => {
 
     const interrupted = await readBilling();
 
+    assert.ok(createdSession);
     assert.ok(interrupted.checkoutOperationId);
     assert.equal(interrupted.checkoutSessionId, null);
+    assert.equal(interrupted.stripeCustomerId, customerId);
 
-    await assert.rejects(
-      createCheckout(),
-      {
-        code: "BILLING_CHECKOUT_RECONCILIATION_REQUIRED",
-      },
+    // Stripe's list now reveals the session that was created
+    // before the local database save failed.
+    mock.method(
+      getStripeClient().checkout.sessions,
+      "list",
+      async () => ({
+        object: "list",
+        data: [createdSession],
+        has_more: false,
+      }),
     );
 
-    const retried = await readBilling();
+    const recovered = await createCheckout();
 
+    assert.equal(recovered.url, createdSession.url);
     assert.equal(attempts, 1);
 
+    const billing = await readBilling();
+
     assert.equal(
-      retried.checkoutOperationId,
+      billing.checkoutOperationId,
       interrupted.checkoutOperationId,
     );
-
-    assert.equal(retried.checkoutSessionId, null);
+    assert.equal(billing.checkoutSessionId, createdSession.id);
+    assert.equal(billing.stripeCustomerId, customerId);
   });
 });
+
+//************************************************************** */

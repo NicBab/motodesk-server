@@ -7,40 +7,77 @@ import {
   getBillingPlan,
 } from "../src/modules/billing/billing.constants.js";
 
-import { resolveBillingPrice } from "../src/modules/billing/billing-price.service.js";
+import {
+  resolveBillingAdditionalUserPrice,
+  resolveBillingPrice,
+  type ValidatedBillingPrice,
+} from "../src/modules/billing/billing-price.service.js";
+
+//************************************************************** */
+
+interface PriceCheck {
+  label: string;
+  lookupKey: string;
+  unitAmount: number;
+  resolve: () => Promise<ValidatedBillingPrice>;
+}
+
+function buildPriceChecks(): PriceCheck[] {
+  const checks: PriceCheck[] = [];
+
+  for (const planId of BILLING_PLAN_IDS) {
+    const plan = getBillingPlan(planId);
+
+    checks.push({
+      label: plan.name,
+      lookupKey: plan.stripeLookupKey,
+      unitAmount: plan.unitAmount,
+      resolve: () => resolveBillingPrice(planId),
+    });
+
+    const additionalUserPricing = plan.additionalUserPricing;
+
+    if (additionalUserPricing) {
+      checks.push({
+        label: `${plan.name} — Additional user`,
+        lookupKey: additionalUserPricing.stripeLookupKey,
+        unitAmount: additionalUserPricing.unitAmount,
+        resolve: () => resolveBillingAdditionalUserPrice(planId),
+      });
+    }
+  }
+
+  return checks;
+}
 
 //************************************************************** */
 
 async function main(): Promise<void> {
   if (env.STRIPE_MODE !== "test") {
-    console.error("This verification script requires STRIPE_MODE=test.");
+    console.error(
+      "This verification script requires STRIPE_MODE=test.",
+    );
 
     process.exitCode = 1;
     return;
   }
 
+  const checks = buildPriceChecks();
+
   console.log("Checking MotoDesk Stripe sandbox prices...\n");
 
   const results = await Promise.allSettled(
-    BILLING_PLAN_IDS.map(async (planId) => {
-      const price = await resolveBillingPrice(planId);
-
-      return {
-        planId,
-        stripePriceId: price.stripePriceId,
-      };
-    }),
+    checks.map((check) => check.resolve()),
   );
 
   const rows = results.map((result, index) => {
-    const planId = BILLING_PLAN_IDS[index]!;
-    const plan = getBillingPlan(planId);
+    const check = checks[index]!;
 
     if (result.status === "fulfilled") {
       return {
-        plan: plan.name,
-        lookupKey: plan.stripeLookupKey,
-        monthlyUSD: (plan.unitAmount / 100).toFixed(2),
+        price: check.label,
+        lookupKey: check.lookupKey,
+        monthlyUSD: (check.unitAmount / 100).toFixed(2),
         status: "PASS",
         priceId: result.value.stripePriceId,
         error: "",
@@ -50,9 +87,9 @@ async function main(): Promise<void> {
     const error: unknown = result.reason;
 
     return {
-      plan: plan.name,
-      lookupKey: plan.stripeLookupKey,
-      monthlyUSD: (plan.unitAmount / 100).toFixed(2),
+      price: check.label,
+      lookupKey: check.lookupKey,
+      monthlyUSD: (check.unitAmount / 100).toFixed(2),
       status: "FAIL",
       priceId: "",
       error:
@@ -77,13 +114,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("\nAll three sandbox prices match the MotoDesk billing catalog.");
+  console.log(
+    `\nAll ${checks.length} sandbox prices match the MotoDesk billing catalog.`,
+  );
 }
 
 //************************************************************** */
 
 main().catch(() => {
-  // Avoid printing SDK errors that may contain request details.
+  // Avoid exposing raw SDK errors or request details.
   console.error("Stripe price verification could not complete.");
 
   process.exitCode = 1;

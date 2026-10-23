@@ -39,6 +39,11 @@ export interface BillingSubscriptionSnapshot {
   currency: string;
   unitAmount: number;
 
+  additionalUserQuantity: number;
+  additionalUserUnitAmount: number | null;
+  stripeAdditionalUserPriceId: string | null;
+  stripeAdditionalUserItemId: string | null;
+
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
 
@@ -86,6 +91,34 @@ function nullableTimestampToDate(
   return value === null ? null : timestampToDate(value);
 }
 
+function assertExpectedPrice(
+  price: Stripe.Price,
+  lookupKey: string,
+  unitAmount: number,
+  currency: string,
+  interval: "month",
+  expectedLivemode: boolean,
+): void {
+  // Historical subscriptions can reference inactive prices.
+  // Validate their billing terms without requiring active=true.
+  if (
+    !price.id ||
+    price.lookup_key !== lookupKey ||
+    price.livemode !== expectedLivemode ||
+    price.type !== "recurring" ||
+    price.billing_scheme !== "per_unit" ||
+    price.currency !== currency ||
+    price.unit_amount !== unitAmount ||
+    price.recurring?.interval !== interval ||
+    price.recurring.interval_count !== 1 ||
+    price.recurring.usage_type !== "licensed" ||
+    price.transform_quantity !== null ||
+    price.custom_unit_amount !== null
+  ) {
+    throw invalidSubscription();
+  }
+}
+
 //************************************************************** */
 
 export function mapBillingSubscription(
@@ -99,6 +132,8 @@ export function mapBillingSubscription(
       ? subscription.customer
       : subscription.customer.id;
 
+  const items = subscription.items.data;
+
   if (
     customerId !== expectedCustomerId ||
     subscription.livemode !== expectedLivemode ||
@@ -106,24 +141,36 @@ export function mapBillingSubscription(
       expectedOrganizationId ||
     subscription.collection_method !== "charge_automatically" ||
     subscription.items.has_more ||
-    subscription.items.data.length !== 1
+    items.length < 1 ||
+    items.length > 2
   ) {
     throw invalidSubscription();
   }
 
-  const item = subscription.items.data[0];
+  // Find the base plan by its price rather than item order or
+  // subscription metadata, which can retain a previous plan.
+  const baseItems = items.filter((item) =>
+    BILLING_PLAN_IDS.some(
+      (id) =>
+        getBillingPlan(id).stripeLookupKey ===
+        item.price.lookup_key,
+    ),
+  );
 
-  if (!item || item.quantity !== 1) {
+  if (baseItems.length !== 1) {
     throw invalidSubscription();
   }
 
-  const price = item.price;
+  const baseItem = baseItems[0]!;
 
-  // Resolve the current plan from its price. Subscription metadata
-  // can retain the original plan after a customer-portal upgrade.
+  if (baseItem.quantity !== 1) {
+    throw invalidSubscription();
+  }
+
   const planId = BILLING_PLAN_IDS.find(
     (id) =>
-      getBillingPlan(id).stripeLookupKey === price.lookup_key,
+      getBillingPlan(id).stripeLookupKey ===
+      baseItem.price.lookup_key,
   );
 
   if (!planId) {
@@ -133,43 +180,102 @@ export function mapBillingSubscription(
   const plan = getBillingPlan(planId);
   const status = subscriptionStatuses[subscription.status];
 
+  if (!status || subscription.currency !== plan.currency) {
+    throw invalidSubscription();
+  }
+
+  assertExpectedPrice(
+    baseItem.price,
+    plan.stripeLookupKey,
+    plan.unitAmount,
+    plan.currency,
+    plan.interval,
+    expectedLivemode,
+  );
+
+  const currentPeriodStart = timestampToDate(
+    baseItem.current_period_start,
+  );
+
+  const currentPeriodEnd = timestampToDate(
+    baseItem.current_period_end,
+  );
+
   if (
-    !status ||
-    price.livemode !== expectedLivemode ||
-    price.type !== "recurring" ||
-    price.billing_scheme !== "per_unit" ||
-    price.currency !== plan.currency ||
-    subscription.currency !== plan.currency ||
-    price.unit_amount !== plan.unitAmount ||
-    price.recurring?.interval !== plan.interval ||
-    price.recurring.interval_count !== 1 ||
-    price.recurring.usage_type !== "licensed" ||
-    price.transform_quantity !== null ||
-    price.custom_unit_amount !== null
+    currentPeriodEnd.getTime() <=
+    currentPeriodStart.getTime()
   ) {
     throw invalidSubscription();
   }
 
-  const currentPeriodStart = timestampToDate(
-    item.current_period_start,
+  let additionalUserQuantity = 0;
+  let additionalUserUnitAmount: number | null = null;
+  let stripeAdditionalUserPriceId: string | null = null;
+  let stripeAdditionalUserItemId: string | null = null;
+
+  const additionalItems = items.filter(
+    (item) => item !== baseItem,
   );
 
-  const currentPeriodEnd = timestampToDate(
-    item.current_period_end,
-  );
+  if (additionalItems.length > 0) {
+    const additionalItem = additionalItems[0]!;
+    const pricing = plan.additionalUserPricing;
+    const quantity = additionalItem.quantity;
 
-  if (currentPeriodEnd.getTime() <= currentPeriodStart.getTime()) {
-    throw invalidSubscription();
+    if (
+      !pricing ||
+      additionalItems.length !== 1 ||
+      !additionalItem.id ||
+      additionalItem.id === baseItem.id ||
+      typeof quantity !== "number" ||
+      !Number.isSafeInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 2_147_483_647
+    ) {
+      throw invalidSubscription();
+    }
+
+    assertExpectedPrice(
+      additionalItem.price,
+      pricing.stripeLookupKey,
+      pricing.unitAmount,
+      plan.currency,
+      plan.interval,
+      expectedLivemode,
+    );
+
+    // Keep both recurring items on one billing period.
+    if (
+      additionalItem.current_period_start !==
+        baseItem.current_period_start ||
+      additionalItem.current_period_end !==
+        baseItem.current_period_end ||
+      !Number.isSafeInteger(
+        plan.unitAmount + quantity * pricing.unitAmount,
+      )
+    ) {
+      throw invalidSubscription();
+    }
+
+    additionalUserQuantity = quantity;
+    additionalUserUnitAmount = pricing.unitAmount;
+    stripeAdditionalUserPriceId = additionalItem.price.id;
+    stripeAdditionalUserItemId = additionalItem.id;
   }
 
   return {
     stripeSubscriptionId: subscription.id,
-    stripePriceId: price.id,
+    stripePriceId: baseItem.price.id,
     planId,
     status,
 
     currency: plan.currency,
     unitAmount: plan.unitAmount,
+
+    additionalUserQuantity,
+    additionalUserUnitAmount,
+    stripeAdditionalUserPriceId,
+    stripeAdditionalUserItemId,
 
     currentPeriodStart,
     currentPeriodEnd,

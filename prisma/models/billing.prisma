@@ -30,9 +30,17 @@ model OrganizationBilling {
 
   status BillingSubscriptionStatus @default(NOT_SUBSCRIBED)
 
-  // Snapshot of the subscription price, in minor currency units.
+  // Base subscription price in minor currency units.
+  // Additional-user charges are stored separately.
   currency   String?
   unitAmount Int?
+
+  // Purchased additional users beyond the plan's included users.
+  // These values are synchronized from validated Stripe items.
+  additionalUserQuantity      Int     @default(0)
+  additionalUserUnitAmount    Int?
+  stripeAdditionalUserPriceId String?
+  stripeAdditionalUserItemId  String?
 
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?

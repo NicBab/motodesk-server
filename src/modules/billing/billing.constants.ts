@@ -11,6 +11,11 @@ export type BillingPlanId =
 
 //************************************************************** */
 
+export interface AdditionalUserPricing {
+  readonly stripeLookupKey: string;
+  readonly unitAmount: number;
+}
+
 export interface BillingPlanDefinition {
   readonly id: BillingPlanId;
   readonly name: string;
@@ -19,6 +24,7 @@ export interface BillingPlanDefinition {
   readonly interval: "month";
   readonly unitAmount: number;
   readonly usersIncluded: number;
+  readonly additionalUserPricing: AdditionalUserPricing | null;
   readonly trialDays: number;
   readonly recommended: boolean;
 }
@@ -34,6 +40,7 @@ export const BILLING_PLANS = {
     interval: "month",
     unitAmount: 8_900,
     usersIncluded: 2,
+    additionalUserPricing: null,
     trialDays: 14,
     recommended: false,
   },
@@ -46,6 +53,7 @@ export const BILLING_PLANS = {
     interval: "month",
     unitAmount: 18_900,
     usersIncluded: 5,
+    additionalUserPricing: null,
     trialDays: 14,
     recommended: true,
   },
@@ -58,6 +66,12 @@ export const BILLING_PLANS = {
     interval: "month",
     unitAmount: 29_900,
     usersIncluded: 10,
+
+    additionalUserPricing: {
+      stripeLookupKey: "pro-additional-user-monthly",
+      unitAmount: 1_000,
+    },
+
     trialDays: 14,
     recommended: false,
   },

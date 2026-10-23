@@ -30,6 +30,18 @@ import {
 
 //************************************************************** */
 
+function invalidBillingConfiguration(): AppError {
+  return new AppError(
+    503,
+    "The organization billing configuration requires review.",
+    {
+      code: "BILLING_PLAN_CONFIGURATION_INVALID",
+    },
+  );
+}
+
+//************************************************************** */
+
 export async function getOrganizationBillingOverview(
   organizationId: string,
   userId: string,
@@ -63,19 +75,74 @@ export async function getOrganizationBillingOverview(
     storedPlanId !== null &&
     !isBillingPlanId(storedPlanId)
   ) {
-    throw new AppError(
-      503,
-      "The organization billing configuration requires review.",
-      {
-        code: "BILLING_PLAN_CONFIGURATION_INVALID",
-      },
-    );
+    throw invalidBillingConfiguration();
   }
 
   const plan =
     storedPlanId !== null
       ? getBillingPlan(storedPlanId)
       : null;
+
+  const additionalUserQuantity =
+    billing?.additionalUserQuantity ?? 0;
+
+  const additionalUserUnitAmount =
+    billing?.additionalUserUnitAmount ?? null;
+
+  const additionalUserPriceId =
+    billing?.stripeAdditionalUserPriceId ?? null;
+
+  const additionalUserItemId =
+    billing?.stripeAdditionalUserItemId ?? null;
+
+  if (
+    !Number.isSafeInteger(additionalUserQuantity) ||
+    additionalUserQuantity < 0 ||
+    additionalUserQuantity > 2_147_483_647
+  ) {
+    throw invalidBillingConfiguration();
+  }
+
+  if (additionalUserQuantity > 0) {
+    if (
+      !plan?.additionalUserPricing ||
+      additionalUserUnitAmount !==
+        plan.additionalUserPricing.unitAmount ||
+      !additionalUserPriceId ||
+      !additionalUserItemId
+    ) {
+      throw invalidBillingConfiguration();
+    }
+  } else if (
+    additionalUserUnitAmount !== null ||
+    additionalUserPriceId !== null ||
+    additionalUserItemId !== null
+  ) {
+    // A base-only subscription should not retain stale add-on data.
+    throw invalidBillingConfiguration();
+  }
+
+  const additionalUserMonthlyAmount =
+    additionalUserQuantity * (additionalUserUnitAmount ?? 0);
+
+  const monthlyTotalAmount = plan
+    ? plan.unitAmount + additionalUserMonthlyAmount
+    : null;
+
+  const purchasedUserCapacity = plan
+    ? plan.usersIncluded + additionalUserQuantity
+    : 0;
+
+  if (
+    !Number.isSafeInteger(additionalUserMonthlyAmount) ||
+    !Number.isSafeInteger(purchasedUserCapacity) ||
+    (
+      monthlyTotalAmount !== null &&
+      !Number.isSafeInteger(monthlyTotalAmount)
+    )
+  ) {
+    throw invalidBillingConfiguration();
+  }
 
   return {
     organizationId,
@@ -97,6 +164,15 @@ export async function getOrganizationBillingOverview(
         interval: availablePlan.interval,
         unitAmount: availablePlan.unitAmount,
         usersIncluded: availablePlan.usersIncluded,
+
+        additionalUserPricing:
+          availablePlan.additionalUserPricing
+            ? {
+                unitAmount:
+                  availablePlan.additionalUserPricing.unitAmount,
+              }
+            : null,
+
         trialDays: availablePlan.trialDays,
         recommended: availablePlan.recommended,
       };
@@ -115,8 +191,23 @@ export async function getOrganizationBillingOverview(
             interval: plan.interval,
             unitAmount: plan.unitAmount,
             usersIncluded: plan.usersIncluded,
+
+            additionalUserPricing: plan.additionalUserPricing
+              ? {
+                  unitAmount:
+                    plan.additionalUserPricing.unitAmount,
+                }
+              : null,
           }
         : null,
+
+      additionalUserQuantity,
+      additionalUserUnitAmount,
+      additionalUserMonthlyAmount,
+
+      // Recurring list-price total before taxes, discounts,
+      // credits, or prorations. This is not an invoice balance.
+      monthlyTotalAmount,
 
       currentPeriodStart:
         billing?.currentPeriodStart?.toISOString() ?? null,
@@ -145,6 +236,10 @@ export async function getOrganizationBillingOverview(
 
     usage: {
       assignedUsers,
+
+      // Null represents exempt, unlimited capacity.
+      // Capacity alone does not establish subscription access.
+      userLimit: billingExempt ? null : purchasedUserCapacity,
     },
 
     checkoutPending: Boolean(
