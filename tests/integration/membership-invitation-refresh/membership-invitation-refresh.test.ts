@@ -1,63 +1,81 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 
-import { describe, it } from "node:test";
+import {
+  describe,
+  it,
+} from "node:test";
 
-import { MembershipRole } from "../../../src/generated/prisma/client.js";
+import {
+  MembershipRole,
+} from "../../../src/generated/prisma/client.js";
 
 import { prisma } from "../../../src/config/prisma.js";
 
-import { hashToken } from "../../../src/modules/auth/tokens/token.crypto.js";
+import {
+  hashToken,
+} from "../../../src/modules/auth/tokens/token.crypto.js";
 
-import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+import {
+  createAuthenticatedAgent,
+} from "../helpers/billing-authenticated-agent.js";
 
 //************************************************************** */
 
 describe("Membership invitation refresh integration", () => {
   it("refreshes an active invitation with a new token and expiration", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
-
-    const email = `refresh-invite-${Date.now()}@motodesk.local`;
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
     const createResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
-        email,
-
+        email: `refresh-invite-${randomUUID()}@example.com`,
         role: MembershipRole.TECHNICIAN,
       });
 
-    assert.equal(createResponse.status, 201);
+    assert.equal(
+      createResponse.status,
+      201,
+      JSON.stringify(createResponse.body),
+    );
 
     const invitationId = createResponse.body.data.invitation.id;
-
     const originalToken = createResponse.body.data.token;
+
+    // Give the invitation a shorter remaining lifetime so the
+    // expiration-extension assertion does not depend on timing.
+    await prisma.membershipInvitation.update({
+      where: { id: invitationId },
+      data: {
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
 
     const originalInvitation =
       await prisma.membershipInvitation.findUniqueOrThrow({
-        where: {
-          id: invitationId,
-        },
+        where: { id: invitationId },
       });
 
     const refreshResponse = await agent.post(
       `/api/v1/organizations/${organizationId}/membership-invitations/${invitationId}/refresh`,
     );
 
-    assert.equal(refreshResponse.status, 200);
-
+    assert.equal(
+      refreshResponse.status,
+      200,
+      JSON.stringify(refreshResponse.body),
+    );
     assert.equal(refreshResponse.body.success, true);
 
     const refreshedToken = refreshResponse.body.data.token;
 
     assert.equal(typeof refreshedToken, "string");
-
     assert.notEqual(refreshedToken, originalToken);
 
     const refreshedInvitation =
       await prisma.membershipInvitation.findUniqueOrThrow({
-        where: {
-          id: invitationId,
-        },
+        where: { id: invitationId },
       });
 
     assert.notEqual(
@@ -65,73 +83,76 @@ describe("Membership invitation refresh integration", () => {
       originalInvitation.tokenHash,
     );
 
-    assert.equal(refreshedInvitation.tokenHash, hashToken(refreshedToken));
-
     assert.equal(
+      refreshedInvitation.tokenHash,
+      hashToken(refreshedToken),
+    );
+
+    assert.ok(
       refreshedInvitation.expiresAt.getTime() >
         originalInvitation.expiresAt.getTime(),
-      true,
     );
 
     assert.equal(refreshedInvitation.acceptedAt, null);
-
     assert.equal(refreshedInvitation.revokedAt, null);
   });
 
-  //************************************************************** */
-
   it("invalidates the previous invitation token after refresh", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
-
-    const email = `refresh-old-token-${Date.now()}@motodesk.local`;
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
     const createResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
-        email,
-
+        email: `refresh-old-token-${randomUUID()}@example.com`,
         role: MembershipRole.PARTS,
       });
 
-    assert.equal(createResponse.status, 201);
+    assert.equal(
+      createResponse.status,
+      201,
+      JSON.stringify(createResponse.body),
+    );
 
     const invitationId = createResponse.body.data.invitation.id;
-
     const originalToken = createResponse.body.data.token;
 
     const refreshResponse = await agent.post(
       `/api/v1/organizations/${organizationId}/membership-invitations/${invitationId}/refresh`,
     );
 
-    assert.equal(refreshResponse.status, 200);
+    assert.equal(
+      refreshResponse.status,
+      200,
+      JSON.stringify(refreshResponse.body),
+    );
 
-    const originalTokenHash = hashToken(originalToken);
-
-    const staleInvitation = await prisma.membershipInvitation.findUnique({
-      where: {
-        tokenHash: originalTokenHash,
-      },
-    });
+    const staleInvitation =
+      await prisma.membershipInvitation.findUnique({
+        where: {
+          tokenHash: hashToken(originalToken),
+        },
+      });
 
     assert.equal(staleInvitation, null);
   });
 
-  //************************************************************** */
-
   it("refreshes a revoked invitation and makes it active again", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
-
-    const email = `refresh-revoked-${Date.now()}@motodesk.local`;
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
     const createResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
-        email,
-
+        email: `refresh-revoked-${randomUUID()}@example.com`,
         role: MembershipRole.SERVICE_ADVISOR,
       });
 
-    assert.equal(createResponse.status, 201);
+    assert.equal(
+      createResponse.status,
+      201,
+      JSON.stringify(createResponse.body),
+    );
 
     const invitationId = createResponse.body.data.invitation.id;
 
@@ -143,57 +164,54 @@ describe("Membership invitation refresh integration", () => {
 
     const revokedInvitation =
       await prisma.membershipInvitation.findUniqueOrThrow({
-        where: {
-          id: invitationId,
-        },
+        where: { id: invitationId },
       });
 
-    assert.notEqual(revokedInvitation.revokedAt, null);
+    assert.ok(revokedInvitation.revokedAt);
 
     const refreshResponse = await agent.post(
       `/api/v1/organizations/${organizationId}/membership-invitations/${invitationId}/refresh`,
     );
 
-    assert.equal(refreshResponse.status, 200);
+    assert.equal(
+      refreshResponse.status,
+      200,
+      JSON.stringify(refreshResponse.body),
+    );
 
     const refreshedInvitation =
       await prisma.membershipInvitation.findUniqueOrThrow({
-        where: {
-          id: invitationId,
-        },
+        where: { id: invitationId },
       });
 
     assert.equal(refreshedInvitation.revokedAt, null);
-
     assert.equal(refreshedInvitation.acceptedAt, null);
-
-    assert.equal(refreshedInvitation.expiresAt.getTime() > Date.now(), true);
+    assert.ok(
+      refreshedInvitation.expiresAt.getTime() > Date.now(),
+    );
   });
 
-  //************************************************************** */
-
   it("rejects refreshing an accepted invitation", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
-
-    const email = `refresh-accepted-${Date.now()}@motodesk.local`;
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
     const createResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
-        email,
-
+        email: `refresh-accepted-${randomUUID()}@example.com`,
         role: MembershipRole.TECHNICIAN,
       });
 
-    assert.equal(createResponse.status, 201);
+    assert.equal(
+      createResponse.status,
+      201,
+      JSON.stringify(createResponse.body),
+    );
 
     const invitationId = createResponse.body.data.invitation.id;
 
     await prisma.membershipInvitation.update({
-      where: {
-        id: invitationId,
-      },
-
+      where: { id: invitationId },
       data: {
         acceptedAt: new Date(),
       },
@@ -204,54 +222,26 @@ describe("Membership invitation refresh integration", () => {
     );
 
     assert.equal(response.status, 409);
-
-    assert.equal(response.body.code, "MEMBERSHIP_INVITATION_ALREADY_ACCEPTED");
+    assert.equal(
+      response.body.code,
+      "MEMBERSHIP_INVITATION_ALREADY_ACCEPTED",
+    );
   });
-
-  //************************************************************** */
 
   it("returns not found for an invitation outside the organization", async () => {
     const first = await createAuthenticatedAgent();
-
-    const ownerMembership = await prisma.membership.findUniqueOrThrow({
-      where: {
-        id: first.membershipId,
-      },
-    });
-
-    const secondOrganization = await prisma.organization.create({
-      data: {
-        name: `Refresh Scope ${Date.now()}`,
-
-        slug: `refresh-scope-${Date.now()}-${Math.random()}`,
-      },
-    });
-
-    const secondMembership = await prisma.membership.create({
-      data: {
-        organizationId: secondOrganization.id,
-
-        userId: ownerMembership.userId,
-
-        role: MembershipRole.OWNER,
-
-        status: "ACTIVE",
-      },
-    });
+    const second = await createAuthenticatedAgent();
 
     const invitation = await prisma.membershipInvitation.create({
       data: {
-        organizationId: secondOrganization.id,
-
-        invitedByMembershipId: secondMembership.id,
-
-        email: `refresh-cross-org-${Date.now()}@motodesk.local`,
-
+        organizationId: second.organizationId,
+        invitedByMembershipId: second.membershipId,
+        email: `refresh-cross-org-${randomUUID()}@example.com`,
         role: MembershipRole.TECHNICIAN,
-
-        tokenHash: `refresh-cross-org-token-${Date.now()}-${Math.random()}`,
-
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000),
+        tokenHash: randomUUID(),
+        expiresAt: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1_000,
+        ),
       },
     });
 
@@ -260,8 +250,23 @@ describe("Membership invitation refresh integration", () => {
     );
 
     assert.equal(response.status, 404);
+    assert.equal(
+      response.body.code,
+      "MEMBERSHIP_INVITATION_NOT_FOUND",
+    );
 
-    assert.equal(response.body.code, "MEMBERSHIP_INVITATION_NOT_FOUND");
+    const unchanged =
+      await prisma.membershipInvitation.findUniqueOrThrow({
+        where: { id: invitation.id },
+      });
+
+    assert.equal(unchanged.tokenHash, invitation.tokenHash);
+    assert.equal(
+      unchanged.expiresAt.getTime(),
+      invitation.expiresAt.getTime(),
+    );
+    assert.equal(unchanged.acceptedAt, null);
+    assert.equal(unchanged.revokedAt, null);
   });
 });
 

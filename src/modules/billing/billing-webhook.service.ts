@@ -11,9 +11,13 @@ import {
 } from "./billing-webhook.repository.js";
 
 import {
-  applyBillingSynchronization,
   prepareBillingSynchronization,
 } from "./billing-sync.service.js";
+
+import {
+  applyBillingUserCapacityReconciliation,
+  prepareBillingUserCapacityReconciliation,
+} from "./billing-user-capacity-reconciliation.service.js";
 
 //************************************************************** */
 
@@ -34,8 +38,11 @@ function isSupportedEvent(type: string): boolean {
     case "customer.subscription.deleted":
     case "customer.subscription.paused":
     case "customer.subscription.resumed":
+    case "customer.subscription.pending_update_applied":
+    case "customer.subscription.pending_update_expired":
     case "invoice.paid":
     case "invoice.payment_failed":
+    case "invoice.voided":
       return true;
 
     default:
@@ -54,7 +61,10 @@ function readCustomerId(
 ): string | null {
   const customer = object.customer;
 
-  if (typeof customer === "string" && customer.length > 0) {
+  if (
+    typeof customer === "string" &&
+    customer.length > 0
+  ) {
     return customer;
   }
 
@@ -159,18 +169,29 @@ export async function processBillingWebhookEvent(
   }
 
   try {
+    // Fetch Stripe state before entering the database transaction.
     const prepared = await prepareBillingSynchronization(
       customerId,
     );
+
+    const reconciliation = prepared
+      ? await prepareBillingUserCapacityReconciliation(
+          event,
+          prepared,
+        )
+      : null;
 
     const completed = await completeBillingWebhookEvent(
       event.id,
       claim.processingToken,
       async (transaction) => {
         if (prepared) {
-          await applyBillingSynchronization(
+          // Subscription state, capacity-change outcome, and the
+          // webhook completion marker commit atomically.
+          await applyBillingUserCapacityReconciliation(
             transaction,
             prepared,
+            reconciliation,
           );
         }
       },
@@ -191,7 +212,7 @@ export async function processBillingWebhookEvent(
       );
     } catch {
       // If release fails, the processing lease can expire.
-      // Do not acknowledge an event whose processing failed.
+      // Never acknowledge an event whose processing failed.
     }
 
     if (error instanceof AppError) {

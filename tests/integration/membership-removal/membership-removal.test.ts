@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 
-import { describe, it } from "node:test";
+import {
+  after,
+  describe,
+  it,
+} from "node:test";
 
 import request from "supertest";
 
@@ -10,61 +15,73 @@ import {
 } from "../../../src/generated/prisma/client.js";
 
 import { prisma } from "../../../src/config/prisma.js";
-
 import { app } from "../../../src/app.js";
 
-import { hashPassword } from "../../../src/modules/auth/security/password.service.js";
+import {
+  hashPassword,
+} from "../../../src/modules/auth/security/password.service.js";
 
 import {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } from "../../../src/modules/audit/audit.constants.js";
 
-import { getPermissionsForRole } from "../../../src/modules/permissions/permission.utils.js";
+import {
+  getPermissionsForRole,
+} from "../../../src/modules/permissions/permission.utils.js";
 
-import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+import {
+  createAuthenticatedAgent,
+} from "../helpers/billing-authenticated-agent.js";
 
 //************************************************************** */
 
 const TEST_PASSWORD = "MotoDeskRemoval123!";
+const createdUserIds: string[] = [];
 
-//************************************************************** */
+function accessCookie(
+  response: { headers: Record<string, unknown> },
+): string {
+  const header = response.headers["set-cookie"];
+
+  const lines = Array.isArray(header)
+    ? header.map(String)
+    : typeof header === "string"
+      ? [header]
+      : [];
+
+  const cookie = lines.find((line) =>
+    line.startsWith("motodesk_access_token="),
+  );
+
+  assert.ok(cookie, "Expected client access cookie.");
+
+  return cookie.split(";")[0]!;
+}
 
 async function createMember(
   organizationId: string,
   grantedByMembershipId: string,
   role: MembershipRole,
 ) {
-  const suffix = `${Date.now()}-${Math.random()}`;
-
-  const email = `membership-removal-${suffix}@motodesk.local`;
-
-  const passwordHash = await hashPassword(TEST_PASSWORD);
-
   const user = await prisma.user.create({
     data: {
-      email,
-
-      passwordHash,
-
+      email: `membership-removal-${randomUUID()}@example.com`,
+      passwordHash: await hashPassword(TEST_PASSWORD),
       firstName: "Removal",
-
       lastName: "Employee",
-
       isActive: true,
-
       emailVerifiedAt: new Date(),
     },
   });
 
+  createdUserIds.push(user.id);
+
   const membership = await prisma.membership.create({
     data: {
       userId: user.id,
-
       organizationId,
-
       role,
-
       status: MembershipStatus.ACTIVE,
     },
   });
@@ -75,44 +92,69 @@ async function createMember(
     await prisma.membershipPermission.createMany({
       data: permissions.map((permission) => ({
         organizationId,
-
         membershipId: membership.id,
-
         permission,
-
         grantedByMembershipId,
       })),
     });
   }
 
-  return {
-    user,
-    membership,
-  };
+  return { user, membership };
 }
 
-//************************************************************** */
-
-async function createMemberAgent(email: string, organizationId: string) {
+async function createMemberAgent(
+  email: string,
+  organizationId: string,
+) {
   const agent = request.agent(app);
 
-  const loginResponse = await agent.post("/api/v1/auth/login").send({
-    email,
-    password: TEST_PASSWORD,
-  });
+  const loginResponse = await agent
+    .post("/api/v1/auth/login")
+    .send({
+      email,
+      password: TEST_PASSWORD,
+    });
 
-  assert.equal(loginResponse.status, 200);
+  assert.equal(
+    loginResponse.status,
+    200,
+    JSON.stringify(loginResponse.body),
+  );
+
+  agent.set("Cookie", accessCookie(loginResponse));
 
   const switchResponse = await agent
     .post("/api/v1/auth/switch-organization")
-    .send({
-      organizationId,
-    });
+    .send({ organizationId });
 
-  assert.equal(switchResponse.status, 200);
+  assert.equal(
+    switchResponse.status,
+    200,
+    JSON.stringify(switchResponse.body),
+  );
+
+  agent.set("Cookie", accessCookie(switchResponse));
 
   return agent;
 }
+
+after(async () => {
+  if (createdUserIds.length === 0) {
+    return;
+  }
+
+  await prisma.auditLog.deleteMany({
+    where: {
+      actorUserId: { in: createdUserIds },
+    },
+  });
+
+  await prisma.user.deleteMany({
+    where: {
+      id: { in: createdUserIds },
+    },
+  });
+});
 
 //************************************************************** */
 
@@ -130,45 +172,47 @@ describe("Membership removal integration", () => {
       MembershipRole.TECHNICIAN,
     );
 
-    const employeeAgent = await createMemberAgent(user.email, organizationId);
+    const employeeAgent = await createMemberAgent(
+      user.email,
+      organizationId,
+    );
 
-    const beforeResponse = await employeeAgent.get("/api/v1/auth/me");
+    assert.equal(
+      (await employeeAgent.get("/api/v1/auth/me")).status,
+      200,
+    );
 
-    assert.equal(beforeResponse.status, 200);
-
-    const removeResponse = await ownerAgent.delete(
+    const response = await ownerAgent.delete(
       `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
     );
 
-    assert.equal(removeResponse.status, 200);
+    assert.equal(
+      response.status,
+      200,
+      JSON.stringify(response.body),
+    );
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.status, MembershipStatus.REMOVED);
 
-    assert.equal(removeResponse.body.success, true);
-
-    assert.equal(removeResponse.body.data.status, MembershipStatus.REMOVED);
-
-    const storedMembership = await prisma.membership.findUnique({
-      where: {
-        id: membership.id,
-      },
+    const stored = await prisma.membership.findUniqueOrThrow({
+      where: { id: membership.id },
     });
 
-    assert.ok(storedMembership);
+    assert.equal(stored.status, MembershipStatus.REMOVED);
 
-    assert.equal(storedMembership.status, MembershipStatus.REMOVED);
-
-    const permissionCount = await prisma.membershipPermission.count({
-      where: {
-        organizationId,
-        membershipId: membership.id,
-      },
-    });
-
-    assert.equal(permissionCount, 0);
+    assert.equal(
+      await prisma.membershipPermission.count({
+        where: {
+          organizationId,
+          membershipId: membership.id,
+        },
+      }),
+      0,
+    );
 
     const afterResponse = await employeeAgent.get("/api/v1/auth/me");
 
     assert.equal(afterResponse.status, 401);
-
     assert.equal(
       afterResponse.body.code,
       "ORGANIZATION_MEMBERSHIP_UNAVAILABLE",
@@ -177,17 +221,11 @@ describe("Membership removal integration", () => {
     const auditLog = await prisma.auditLog.findFirst({
       where: {
         organizationId,
-
         action: AUDIT_ACTIONS.MEMBERSHIP_REMOVED,
-
         resourceType: AUDIT_ENTITY_TYPES.MEMBERSHIP,
-
         resourceId: membership.id,
       },
-
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     assert.ok(auditLog);
@@ -195,13 +233,9 @@ describe("Membership removal integration", () => {
     const metadata = auditLog.metadata as Record<string, unknown>;
 
     assert.equal(metadata.actorMembershipId, ownerMembershipId);
-
     assert.ok(metadata.before);
-
     assert.ok(metadata.after);
   });
-
-  //************************************************************** */
 
   it("requires recent authentication before removing a membership", async () => {
     const {
@@ -216,96 +250,67 @@ describe("Membership removal integration", () => {
       MembershipRole.TECHNICIAN,
     );
 
-    //************************************************************** */
-    // Resolve the exact session belonging to this authenticated
-    // agent. Multiple integration suites can authenticate the seeded
-    // owner concurrently, so "newest session" is not deterministic.
-
-    const sessionsResponse = await ownerAgent.get("/api/v1/auth/sessions");
+    const sessionsResponse = await ownerAgent.get(
+      "/api/v1/auth/sessions",
+    );
 
     assert.equal(sessionsResponse.status, 200);
+    assert.equal(sessionsResponse.body.success, true);
 
-    assert.equal(sessionsResponse.body?.success, true);
-
-    const currentSession = sessionsResponse.body?.data?.sessions?.find(
-      (session: { id: string; isCurrent: boolean }) =>
-        session.isCurrent === true,
-    );
+    const currentSession =
+      sessionsResponse.body.data.sessions.find(
+        (session: { id: string; isCurrent: boolean }) =>
+          session.isCurrent === true,
+      );
 
     assert.ok(currentSession);
 
     await prisma.session.update({
-      where: {
-        id: currentSession.id,
-      },
-
+      where: { id: currentSession.id },
       data: {
-        lastAuthenticatedAt: new Date("2000-01-01T00:00:00.000Z"),
+        lastAuthenticatedAt:
+          new Date("2000-01-01T00:00:00.000Z"),
       },
     });
-
-    //************************************************************** */
-    // Membership removal is security-sensitive and must require a
-    // recent credential challenge even for an authorized owner.
 
     const response = await ownerAgent.delete(
       `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
     );
 
     assert.equal(response.status, 403);
-
-    assert.equal(response.body?.success, false);
-
-    assert.equal(response.body?.code, "RECENT_AUTHENTICATION_REQUIRED");
-
-    //************************************************************** */
-    // The rejected operation must not mutate the membership.
-
-    const storedMembership = await prisma.membership.findUniqueOrThrow({
-      where: {
-        id: membership.id,
-      },
-    });
-
-    assert.equal(storedMembership.status, MembershipStatus.ACTIVE);
-
-    //************************************************************** */
-    // Permissions must also remain intact. This proves the request
-    // was stopped before the removal service performed its cleanup.
-
-    const permissionCount = await prisma.membershipPermission.count({
-      where: {
-        organizationId,
-
-        membershipId: membership.id,
-      },
-    });
-
+    assert.equal(response.body.success, false);
     assert.equal(
-      permissionCount,
-      getPermissionsForRole(MembershipRole.TECHNICIAN).length,
+      response.body.code,
+      "RECENT_AUTHENTICATION_REQUIRED",
     );
 
-    //************************************************************** */
-    // A blocked security operation must not produce a false
-    // membership-removal audit event.
+    const stored = await prisma.membership.findUniqueOrThrow({
+      where: { id: membership.id },
+    });
+
+    assert.equal(stored.status, MembershipStatus.ACTIVE);
+
+    assert.equal(
+      await prisma.membershipPermission.count({
+        where: {
+          organizationId,
+          membershipId: membership.id,
+        },
+      }),
+      getPermissionsForRole(MembershipRole.TECHNICIAN).length,
+    );
 
     const auditLog = await prisma.auditLog.findFirst({
       where: {
         organizationId,
-
         action: AUDIT_ACTIONS.MEMBERSHIP_REMOVED,
-
         resourceType: AUDIT_ENTITY_TYPES.MEMBERSHIP,
-
         resourceId: membership.id,
       },
     });
 
     assert.equal(auditLog, null);
   });
-
-  //************************************************************** */
 
   it("rejects removal of the owner membership", async () => {
     const {
@@ -319,15 +324,21 @@ describe("Membership removal integration", () => {
     );
 
     assert.equal(response.status, 403);
-
     assert.equal(response.body.code, "OWNER_PROTECTED");
+
+    const owner = await prisma.membership.findUniqueOrThrow({
+      where: { id: ownerMembershipId },
+    });
+
+    assert.equal(owner.role, MembershipRole.OWNER);
+    assert.equal(owner.status, MembershipStatus.ACTIVE);
   });
 
-  //************************************************************** */
-
   it("rejects a member attempting to remove their own membership", async () => {
-    const { organizationId, membershipId: ownerMembershipId } =
-      await createAuthenticatedAgent();
+    const {
+      organizationId,
+      membershipId: ownerMembershipId,
+    } = await createAuthenticatedAgent();
 
     const { user, membership } = await createMember(
       organizationId,
@@ -335,22 +346,27 @@ describe("Membership removal integration", () => {
       MembershipRole.ADMIN,
     );
 
-    const adminAgent = await createMemberAgent(user.email, organizationId);
+    const adminAgent = await createMemberAgent(
+      user.email,
+      organizationId,
+    );
 
     const response = await adminAgent.delete(
       `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
     );
 
     assert.equal(response.status, 403);
-
-    assert.equal(response.body.code, "SELF_MEMBERSHIP_REMOVAL_FORBIDDEN");
+    assert.equal(
+      response.body.code,
+      "SELF_MEMBERSHIP_REMOVAL_FORBIDDEN",
+    );
   });
 
-  //************************************************************** */
-
   it("rejects an administrator attempting to remove another administrator", async () => {
-    const { organizationId, membershipId: ownerMembershipId } =
-      await createAuthenticatedAgent();
+    const {
+      organizationId,
+      membershipId: ownerMembershipId,
+    } = await createAuthenticatedAgent();
 
     const firstAdmin = await createMember(
       organizationId,
@@ -374,11 +390,11 @@ describe("Membership removal integration", () => {
     );
 
     assert.equal(response.status, 403);
-
-    assert.equal(response.body.code, "ADMIN_PEER_MODIFICATION_FORBIDDEN");
+    assert.equal(
+      response.body.code,
+      "ADMIN_PEER_MODIFICATION_FORBIDDEN",
+    );
   });
-
-  //************************************************************** */
 
   it("rejects a second removal attempt for an already removed membership", async () => {
     const {
@@ -393,22 +409,25 @@ describe("Membership removal integration", () => {
       MembershipRole.PARTS,
     );
 
-    const firstResponse = await agent.delete(
-      `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
+    const endpoint =
+      `/api/v1/organizations/${organizationId}/memberships/${membership.id}`;
+
+    const firstResponse = await agent.delete(endpoint);
+
+    assert.equal(
+      firstResponse.status,
+      200,
+      JSON.stringify(firstResponse.body),
     );
 
-    assert.equal(firstResponse.status, 200);
-
-    const secondResponse = await agent.delete(
-      `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
-    );
+    const secondResponse = await agent.delete(endpoint);
 
     assert.equal(secondResponse.status, 409);
-
-    assert.equal(secondResponse.body.code, "MEMBERSHIP_ALREADY_REMOVED");
+    assert.equal(
+      secondResponse.body.code,
+      "MEMBERSHIP_ALREADY_REMOVED",
+    );
   });
-
-  //************************************************************** */
 
   it("preserves the membership record after removal", async () => {
     const {
@@ -427,21 +446,19 @@ describe("Membership removal integration", () => {
       `/api/v1/organizations/${organizationId}/memberships/${membership.id}`,
     );
 
-    assert.equal(response.status, 200);
+    assert.equal(
+      response.status,
+      200,
+      JSON.stringify(response.body),
+    );
 
-    const storedMembership = await prisma.membership.findUnique({
-      where: {
-        id: membership.id,
-      },
+    const stored = await prisma.membership.findUniqueOrThrow({
+      where: { id: membership.id },
     });
 
-    assert.ok(storedMembership);
-
-    assert.equal(storedMembership.userId, user.id);
-
-    assert.equal(storedMembership.organizationId, organizationId);
-
-    assert.equal(storedMembership.status, MembershipStatus.REMOVED);
+    assert.equal(stored.userId, user.id);
+    assert.equal(stored.organizationId, organizationId);
+    assert.equal(stored.status, MembershipStatus.REMOVED);
   });
 });
 

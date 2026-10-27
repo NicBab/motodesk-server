@@ -15,8 +15,6 @@ import {
 //************************************************************** */
 
 interface CapacityOptions {
-  // Internal callers must validate these records in the same
-  // transaction. These options are never accepted from request data.
   excludeInvitationId?: string;
   excludeMembershipId?: string;
 }
@@ -41,10 +39,29 @@ function invalidBillingConfiguration(): AppError {
   );
 }
 
+function capacityReconciliationRequired(): AppError {
+  return new AppError(
+    409,
+    "The organization's user-capacity change requires reconciliation.",
+    {
+      code: "BILLING_CAPACITY_RECONCILIATION_REQUIRED",
+    },
+  );
+}
+
+function organizationNotFound(): AppError {
+  return new AppError(404, "Organization not found.", {
+    code: "ORGANIZATION_NOT_FOUND",
+  });
+}
+
 //************************************************************** */
 
-// Always acquire these locks in organization-then-billing order.
-// Locks remain held until the caller's transaction finishes.
+// Locking does not authorize an operation or require active status.
+// Background billing reconciliation must also handle archived
+// organizations that still have Stripe billing events.
+//
+// Always acquire organization and billing locks in this order.
 export async function lockOrganizationUserCapacity(
   transaction: Prisma.TransactionClient,
   organizationId: string,
@@ -56,15 +73,12 @@ export async function lockOrganizationUserCapacity(
       SELECT "id"
       FROM "Organization"
       WHERE "id" = ${organizationId}
-        AND "status" = 'ACTIVE'
       FOR UPDATE
     `,
   );
 
   if (organizations.length !== 1) {
-    throw new AppError(404, "Organization not found.", {
-      code: "ORGANIZATION_NOT_FOUND",
-    });
+    throw organizationNotFound();
   }
 
   await transaction.$queryRaw(
@@ -79,11 +93,10 @@ export async function lockOrganizationUserCapacity(
 
 //************************************************************** */
 
-// Internal write guard, not an authorization check.
+// Internal capacity guard, not an authorization check.
 //
-// Use the same transaction for this check and the corresponding
-// membership or invitation write. Excluded records represent
-// reservations being replaced by that write.
+// Use the same transaction for this check and the membership or
+// invitation write. Exclusions are internal reservation replacements.
 export async function assertOrganizationUserCapacity(
   transaction: Prisma.TransactionClient,
   organizationId: string,
@@ -93,6 +106,20 @@ export async function assertOrganizationUserCapacity(
     transaction,
     organizationId,
   );
+
+  const organization = await transaction.organization.findUnique({
+    where: {
+      id: organizationId,
+    },
+
+    select: {
+      status: true,
+    },
+  });
+
+  if (organization?.status !== OrganizationStatus.ACTIVE) {
+    throw organizationNotFound();
+  }
 
   const exemptOwner = await transaction.membership.findFirst({
     where: {
@@ -179,11 +206,12 @@ export async function assertOrganizationUserCapacity(
     };
   }
 
-  const billing = await transaction.organizationBilling.findUnique({
-    where: {
-      organizationId,
-    },
-  });
+  const billing =
+    await transaction.organizationBilling.findUnique({
+      where: {
+        organizationId,
+      },
+    });
 
   if (
     !billing ||
@@ -234,7 +262,42 @@ export async function assertOrganizationUserCapacity(
     throw invalidBillingConfiguration();
   }
 
-  const userLimit = plan.usersIncluded + quantity;
+  let userLimit = plan.usersIncluded + quantity;
+
+  if (billing.activeUserCapacityChangeId) {
+    const change =
+      await transaction.billingUserCapacityChange.findFirst({
+        where: {
+          id: billing.activeUserCapacityChangeId,
+          organizationBillingId: billing.id,
+        },
+      });
+
+    if (
+      !change ||
+      plan.id !== "pro" ||
+      change.stripeCustomerId !== billing.stripeCustomerId ||
+      change.stripeSubscriptionId !==
+        billing.stripeSubscriptionId ||
+      (
+        change.status !== "PROCESSING" &&
+        change.status !== "PENDING_PAYMENT" &&
+        change.status !== "RECONCILIATION_REQUIRED"
+      ) ||
+      !Number.isSafeInteger(change.targetAdditionalUserQuantity) ||
+      change.targetAdditionalUserQuantity < 0 ||
+      change.targetAdditionalUserQuantity > 2_147_483_647
+    ) {
+      throw capacityReconciliationRequired();
+    }
+
+    // Reductions reserve the lower limit immediately.
+    // Increases require synchronized purchased capacity.
+    userLimit = Math.min(
+      userLimit,
+      plan.usersIncluded + change.targetAdditionalUserQuantity,
+    );
+  }
 
   const usedCapacity =
     assignedUsers +

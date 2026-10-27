@@ -1,26 +1,32 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 
-import { describe, it } from "node:test";
+import {
+  describe,
+  it,
+} from "node:test";
 
 import {
   MembershipRole,
-  MembershipStatus,
 } from "../../../src/generated/prisma/client.js";
 
 import { prisma } from "../../../src/config/prisma.js";
 
-import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+import {
+  createAuthenticatedAgent,
+} from "../helpers/billing-authenticated-agent.js";
 
 //************************************************************** */
 
 describe("Membership invitation listing integration", () => {
   it("lists organization membership invitations with pagination", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
     const emails = [
-      `invite-list-1-${Date.now()}@motodesk.local`,
-      `invite-list-2-${Date.now()}@motodesk.local`,
-      `invite-list-3-${Date.now()}@motodesk.local`,
+      `invite-list-1-${randomUUID()}@example.com`,
+      `invite-list-2-${randomUUID()}@example.com`,
+      `invite-list-3-${randomUUID()}@example.com`,
     ];
 
     for (const email of emails) {
@@ -28,138 +34,157 @@ describe("Membership invitation listing integration", () => {
         .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
         .send({
           email,
-
           role: MembershipRole.TECHNICIAN,
         });
 
-      assert.equal(response.status, 201);
+      assert.equal(
+        response.status,
+        201,
+        JSON.stringify(response.body),
+      );
     }
 
-    const response = await agent.get(
+    const firstPage = await agent.get(
       `/api/v1/organizations/${organizationId}/membership-invitations?page=1&pageSize=2`,
     );
 
-    assert.equal(response.status, 200);
+    assert.equal(firstPage.status, 200);
+    assert.equal(firstPage.body.success, true);
+    assert.equal(firstPage.body.data.items.length, 2);
+    assert.equal(firstPage.body.data.pagination.page, 1);
+    assert.equal(firstPage.body.data.pagination.pageSize, 2);
+    assert.equal(firstPage.body.data.pagination.totalItems, 3);
 
-    assert.equal(response.body.success, true);
+    const secondPage = await agent.get(
+      `/api/v1/organizations/${organizationId}/membership-invitations?page=2&pageSize=2`,
+    );
 
-    assert.equal(response.body.data.items.length, 2);
+    assert.equal(secondPage.status, 200);
+    assert.equal(secondPage.body.data.items.length, 1);
+    assert.equal(secondPage.body.data.pagination.page, 2);
+    assert.equal(secondPage.body.data.pagination.totalItems, 3);
 
-    assert.equal(response.body.data.pagination.page, 1);
+    const returnedEmails = [
+      ...firstPage.body.data.items,
+      ...secondPage.body.data.items,
+    ].map((invitation: { email: string }) => invitation.email);
 
-    assert.equal(response.body.data.pagination.pageSize, 2);
+    assert.equal(new Set(returnedEmails).size, 3);
 
-    assert.equal(response.body.data.pagination.totalItems >= 3, true);
+    assert.deepEqual(
+      [...returnedEmails].sort(),
+      [...emails].sort(),
+    );
   });
-
-  //************************************************************** */
 
   it("returns invitation records scoped to the requested organization", async () => {
     const first = await createAuthenticatedAgent();
+    const second = await createAuthenticatedAgent();
 
-    const ownerMembership = await prisma.membership.findUniqueOrThrow({
-      where: {
-        id: first.membershipId,
-      },
-    });
+    const firstEmail =
+      `invite-scope-first-${randomUUID()}@example.com`;
 
-    const secondOrganization = await prisma.organization.create({
-      data: {
-        name: `Invitation Scope ${Date.now()}`,
-
-        slug: `invitation-scope-${Date.now()}-${Math.random()}`,
-      },
-    });
-
-    const secondMembership = await prisma.membership.create({
-      data: {
-        organizationId: secondOrganization.id,
-
-        userId: ownerMembership.userId,
-
-        role: MembershipRole.OWNER,
-
-        status: MembershipStatus.ACTIVE,
-      },
-    });
-
-    const firstEmail = `invite-scope-first-${Date.now()}@motodesk.local`;
-
-    const secondEmail = `invite-scope-second-${Date.now()}@motodesk.local`;
+    const secondEmail =
+      `invite-scope-second-${randomUUID()}@example.com`;
 
     const firstCreateResponse = await first.agent
-      .post(
-        `/api/v1/organizations/${first.organizationId}/membership-invitations`,
-      )
+      .post(`/api/v1/organizations/${first.organizationId}/membership-invitations`)
       .send({
         email: firstEmail,
-
         role: MembershipRole.PARTS,
       });
 
-    assert.equal(firstCreateResponse.status, 201);
+    assert.equal(
+      firstCreateResponse.status,
+      201,
+      JSON.stringify(firstCreateResponse.body),
+    );
 
-    await prisma.membershipInvitation.create({
-      data: {
-        organizationId: secondOrganization.id,
-
-        invitedByMembershipId: secondMembership.id,
-
+    const secondCreateResponse = await second.agent
+      .post(`/api/v1/organizations/${second.organizationId}/membership-invitations`)
+      .send({
         email: secondEmail,
-
         role: MembershipRole.SERVICE_ADVISOR,
+      });
 
-        tokenHash: `scope-test-${Date.now()}-${Math.random()}`,
-
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000),
-      },
-    });
+    assert.equal(
+      secondCreateResponse.status,
+      201,
+      JSON.stringify(secondCreateResponse.body),
+    );
 
     const response = await first.agent.get(
       `/api/v1/organizations/${first.organizationId}/membership-invitations?page=1&pageSize=100`,
     );
 
     assert.equal(response.status, 200);
+    assert.equal(response.body.data.pagination.totalItems, 1);
 
-    const emails = response.body.data.items.map(
-      (invitation: { email: string }) => invitation.email,
+    const items = response.body.data.items;
+
+    assert.equal(items.length, 1);
+    assert.equal(items[0].email, firstEmail);
+    assert.equal(
+      items[0].organizationId,
+      first.organizationId,
     );
 
-    assert.equal(emails.includes(firstEmail), true);
-
-    assert.equal(emails.includes(secondEmail), false);
+    assert.equal(
+      items.some(
+        (invitation: { email: string }) =>
+          invitation.email === secondEmail,
+      ),
+      false,
+    );
   });
 
-  //************************************************************** */
-
   it("orders invitations by newest first", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
 
-    const firstEmail = `invite-order-first-${Date.now()}@motodesk.local`;
+    const firstEmail =
+      `invite-order-first-${randomUUID()}@example.com`;
 
-    const secondEmail = `invite-order-second-${Date.now()}@motodesk.local`;
+    const secondEmail =
+      `invite-order-second-${randomUUID()}@example.com`;
 
     const firstResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
         email: firstEmail,
-
         role: MembershipRole.TECHNICIAN,
       });
 
-    assert.equal(firstResponse.status, 201);
+    assert.equal(
+      firstResponse.status,
+      201,
+      JSON.stringify(firstResponse.body),
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Set an explicit earlier timestamp instead of relying on a
+    // delay between requests to establish ordering.
+    await prisma.membershipInvitation.update({
+      where: {
+        id: firstResponse.body.data.invitation.id,
+      },
+
+      data: {
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
 
     const secondResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/membership-invitations`)
       .send({
         email: secondEmail,
-
         role: MembershipRole.TECHNICIAN,
       });
 
-    assert.equal(secondResponse.status, 201);
+    assert.equal(
+      secondResponse.status,
+      201,
+      JSON.stringify(secondResponse.body),
+    );
 
     const response = await agent.get(
       `/api/v1/organizations/${organizationId}/membership-invitations?page=1&pageSize=100`,
@@ -169,19 +194,9 @@ describe("Membership invitation listing integration", () => {
 
     const items = response.body.data.items;
 
-    const firstIndex = items.findIndex(
-      (invitation: { email: string }) => invitation.email === firstEmail,
-    );
-
-    const secondIndex = items.findIndex(
-      (invitation: { email: string }) => invitation.email === secondEmail,
-    );
-
-    assert.equal(firstIndex >= 0, true);
-
-    assert.equal(secondIndex >= 0, true);
-
-    assert.equal(secondIndex < firstIndex, true);
+    assert.equal(items.length, 2);
+    assert.equal(items[0].email, secondEmail);
+    assert.equal(items[1].email, firstEmail);
   });
 });
 

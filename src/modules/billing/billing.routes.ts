@@ -31,12 +31,16 @@ import {
 import {
   createBillingCheckoutSchema,
   createBillingPortalSchema,
+  createBillingUserCapacityPreviewSchema,
+  confirmBillingUserCapacityChangeSchema,
 } from "./billing.schemas.js";
 
 import {
   createBillingCheckoutHandler,
   createBillingPortalHandler,
   getBillingOverviewHandler,
+  previewBillingUserCapacityHandler,
+  confirmBillingUserCapacityHandler,
 } from "./billing.controller.js";
 
 //************************************************************** */
@@ -44,8 +48,6 @@ import {
 const router = Router({
   mergeParams: true,
 });
-
-//************************************************************** */
 
 router.use(preventSensitiveResponseCaching);
 
@@ -82,6 +84,30 @@ router.post(
   requirePermissions(Permissions.BILLING_UPDATE),
   validateBody(createBillingPortalSchema),
   createBillingPortalHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/user-capacity/preview",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(createBillingUserCapacityPreviewSchema),
+  previewBillingUserCapacityHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/user-capacity/confirm",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(confirmBillingUserCapacityChangeSchema),
+  confirmBillingUserCapacityHandler,
 );
 
 //************************************************************** */

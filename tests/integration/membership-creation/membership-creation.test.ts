@@ -21,7 +21,7 @@ import {
 
 import {
   createAuthenticatedAgent,
-} from "../helpers/billing-authenticated-agent.test.js"
+} from "../helpers/billing-authenticated-agent.js"
 
 //************************************************************** */
 

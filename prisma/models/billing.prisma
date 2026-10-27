@@ -14,6 +14,18 @@ enum BillingSubscriptionStatus {
 
 //************************************************************** */
 
+enum BillingUserCapacityChangeStatus {
+  QUOTED
+  PROCESSING
+  PENDING_PAYMENT
+  APPLIED
+  REJECTED
+  EXPIRED
+  RECONCILIATION_REQUIRED
+}
+
+//************************************************************** */
+
 model OrganizationBilling {
   id String @id @default(cuid())
 
@@ -25,18 +37,15 @@ model OrganizationBilling {
   stripePriceId        String?
 
   // Validated against the server billing plan catalog.
-  // Nullable until a supported subscription is established.
   planId String?
 
   status BillingSubscriptionStatus @default(NOT_SUBSCRIBED)
 
   // Base subscription price in minor currency units.
-  // Additional-user charges are stored separately.
   currency   String?
   unitAmount Int?
 
-  // Purchased additional users beyond the plan's included users.
-  // These values are synchronized from validated Stripe items.
+  // Purchased users beyond the plan's included users.
   additionalUserQuantity      Int     @default(0)
   additionalUserUnitAmount    Int?
   stripeAdditionalUserPriceId String?
@@ -54,10 +63,15 @@ model OrganizationBilling {
   trialStartedAt DateTime?
   trialEndsAt    DateTime?
 
-  // Used to coordinate checkout creation and retain its outcome.
   checkoutOperationId      String?   @unique
   checkoutSessionId        String?   @unique
   checkoutSessionExpiresAt DateTime?
+
+  // Application-managed operation identifier. Claimed and cleared
+  // transactionally after verifying ownership of the change record.
+  activeUserCapacityChangeId String? @unique
+
+  userCapacityChanges BillingUserCapacityChange[]
 
   lastSyncedAt DateTime?
 
@@ -70,25 +84,85 @@ model OrganizationBilling {
 
 //************************************************************** */
 
+model BillingUserCapacityChange {
+  // Also used to derive this operation's Stripe idempotency key.
+  id String @id @default(uuid())
+
+  organizationBillingId String
+  organizationBilling   OrganizationBilling @relation(fields: [organizationBillingId], references: [id], onDelete: Cascade)
+
+  // Retain the requesting user's identifier without copying their
+  // profile or credentials. Authorization is rechecked on confirmation.
+  requestedByUserId String
+
+  status BillingUserCapacityChangeStatus @default(QUOTED)
+
+  // Immutable Stripe mapping captured by the preview.
+  stripeCustomerId     String
+  stripeSubscriptionId String
+
+  expectedAdditionalUserQuantity Int
+  targetAdditionalUserQuantity   Int
+
+  expectedLastSyncedAt DateTime?
+
+  // Fixed timestamp shared by preview and confirmed Stripe request.
+  prorationDate Int
+
+  currency String
+
+  // Integer minor-currency amounts. BigInt avoids overflow when
+  // multiplying a valid user quantity by its recurring price.
+  // Public responses must explicitly convert validated safe values.
+  estimatedAmountDue BigInt
+  monthlyTotalAmount BigInt
+
+  // Server-generated Stripe update parameters only.
+  // Never store arbitrary client input, tokens, or payment details.
+  // Persisting them keeps retries identical to the confirmed request.
+  stripeUpdateParameters Json
+
+  // A preview expires before an unsubmitted change can be confirmed.
+  expiresAt DateTime
+
+  // Records when a Stripe submission could first have occurred.
+  // Old uncertain operations must be reconciled rather than retried
+  // after Stripe's idempotency retention window.
+  submittedAt DateTime?
+
+  stripeInvoiceId String?
+  appliedAt       DateTime?
+
+  // Application-defined codes only; never raw Stripe error payloads.
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationBillingId, createdAt])
+  @@index([organizationBillingId, status])
+  @@index([status, expiresAt])
+}
+
+//************************************************************** */
+
 model StripeWebhookEvent {
-  // Stripe event identifier, used for duplicate-event detection.
   id String @id
 
   type           String
   livemode       Boolean
   eventCreatedAt DateTime
 
-  // Store identifiers and processing state, not raw payloads.
+  // Identifiers and processing state, not raw payloads.
   stripeObjectId String?
 
-  // A claim can expire so interrupted processing can be retried.
   processingToken      String?
   processingLeaseUntil DateTime?
   attemptCount         Int       @default(0)
 
   processedAt DateTime?
 
-  // Application-defined failure code only; never raw error payloads.
+  // Application-defined failure code only.
   lastErrorCode String?
 
   createdAt DateTime @default(now())

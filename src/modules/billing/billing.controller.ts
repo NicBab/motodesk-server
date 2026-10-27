@@ -6,7 +6,9 @@ import type {
 
 import { AppError } from "../../platform/errors/app-error.js";
 
-import { ok } from "../../platform/http/api-response.js";
+import {
+  ok,
+} from "../../platform/http/api-response.js";
 
 import {
   requireValidatedBody,
@@ -24,8 +26,18 @@ import {
   createOrganizationBillingPortal,
 } from "./billing-portal.service.js";
 
+import {
+  previewOrganizationBillingUserCapacity,
+} from "./billing-user-capacity-preview.service.js";
+
+import {
+  confirmOrganizationBillingUserCapacity,
+} from "./billing-user-capacity-confirm.service.js";
+
 import type {
   CreateBillingCheckoutInput,
+  CreateBillingUserCapacityPreviewInput,
+  ConfirmBillingUserCapacityChangeInput,
 } from "./billing.schemas.js";
 
 //************************************************************** */
@@ -39,9 +51,13 @@ function requireBillingRequestContext(
   const userId = request.authenticatedUser?.id;
 
   if (!userId) {
-    throw new AppError(401, "Authentication required.", {
-      code: "AUTHENTICATION_REQUIRED",
-    });
+    throw new AppError(
+      401,
+      "Authentication required.",
+      {
+        code: "AUTHENTICATION_REQUIRED",
+      },
+    );
   }
 
   const organizationId = request.params.organizationId;
@@ -91,9 +107,10 @@ export async function createBillingCheckoutHandler(
   const { organizationId, userId } =
     requireBillingRequestContext(request);
 
-  const input = requireValidatedBody<CreateBillingCheckoutInput>(
-    request,
-  );
+  const input =
+    requireValidatedBody<CreateBillingCheckoutInput>(
+      request,
+    );
 
   const result = await createOrganizationBillingCheckout(
     organizationId,
@@ -116,6 +133,52 @@ export async function createBillingPortalHandler(
   const result = await createOrganizationBillingPortal(
     organizationId,
     userId,
+  );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function previewBillingUserCapacityHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<CreateBillingUserCapacityPreviewInput>(
+      request,
+    );
+
+  const result = await previewOrganizationBillingUserCapacity(
+    organizationId,
+    userId,
+    input,
+  );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function confirmBillingUserCapacityHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<ConfirmBillingUserCapacityChangeInput>(
+      request,
+    );
+
+  const result = await confirmOrganizationBillingUserCapacity(
+    organizationId,
+    userId,
+    input,
   );
 
   ok(response, result);
