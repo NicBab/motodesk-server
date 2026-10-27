@@ -34,11 +34,24 @@ import {
   confirmOrganizationBillingUserCapacity,
 } from "./billing-user-capacity-confirm.service.js";
 
+import {
+  previewOrganizationBillingPlanChange,
+} from "./billing-plan-change-preview.service.js";
+
+import {
+  confirmOrganizationBillingPlanChange,
+} from "./billing-plan-change-confirm.service.js";
+
 import type {
   CreateBillingCheckoutInput,
   CreateBillingUserCapacityPreviewInput,
   ConfirmBillingUserCapacityChangeInput,
 } from "./billing.schemas.js";
+
+import type {
+  CreateBillingPlanChangePreviewInput,
+  ConfirmBillingPlanChangeInput,
+} from "./billing-plan-change.schemas.js";
 
 //************************************************************** */
 
@@ -176,6 +189,52 @@ export async function confirmBillingUserCapacityHandler(
     );
 
   const result = await confirmOrganizationBillingUserCapacity(
+    organizationId,
+    userId,
+    input,
+  );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function previewBillingPlanChangeHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<CreateBillingPlanChangePreviewInput>(
+      request,
+    );
+
+  const result = await previewOrganizationBillingPlanChange(
+    organizationId,
+    userId,
+    input,
+  );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function confirmBillingPlanChangeHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<ConfirmBillingPlanChangeInput>(
+      request,
+    );
+
+  const result = await confirmOrganizationBillingPlanChange(
     organizationId,
     userId,
     input,

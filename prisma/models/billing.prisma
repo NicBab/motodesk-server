@@ -26,6 +26,18 @@ enum BillingUserCapacityChangeStatus {
 
 //************************************************************** */
 
+enum BillingPlanChangeStatus {
+  QUOTED
+  PROCESSING
+  PENDING_PAYMENT
+  APPLIED
+  REJECTED
+  EXPIRED
+  RECONCILIATION_REQUIRED
+}
+
+//************************************************************** */
+
 model OrganizationBilling {
   id String @id @default(cuid())
 
@@ -67,11 +79,14 @@ model OrganizationBilling {
   checkoutSessionId        String?   @unique
   checkoutSessionExpiresAt DateTime?
 
-  // Application-managed operation identifier. Claimed and cleared
-  // transactionally after verifying ownership of the change record.
+  // Application-managed operation identifiers. Services must
+  // verify record ownership and serialize both kinds of changes
+  // using the existing organization-then-billing lock order.
   activeUserCapacityChangeId String? @unique
+  activePlanChangeId         String? @unique
 
   userCapacityChanges BillingUserCapacityChange[]
+  planChanges         BillingPlanChange[]
 
   lastSyncedAt DateTime?
 
@@ -134,6 +149,66 @@ model BillingUserCapacityChange {
   appliedAt       DateTime?
 
   // Application-defined codes only; never raw Stripe error payloads.
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationBillingId, createdAt])
+  @@index([organizationBillingId, status])
+  @@index([status, expiresAt])
+}
+
+//************************************************************** */
+
+model BillingPlanChange {
+  // Also used to derive this operation's Stripe idempotency key.
+  id String @id @default(uuid())
+
+  organizationBillingId String
+  organizationBilling   OrganizationBilling @relation(fields: [organizationBillingId], references: [id], onDelete: Cascade)
+
+  // Authorization is rechecked before confirmation.
+  requestedByUserId String
+
+  status BillingPlanChangeStatus @default(QUOTED)
+
+  // Immutable mapping and expected subscription state.
+  stripeCustomerId     String
+  stripeSubscriptionId String
+  expectedStripePriceId String
+
+  // Plan identifiers are validated against the server catalog.
+  expectedPlanId String
+  targetPlanId   String
+
+  // Targets are totals, not increments.
+  expectedAdditionalUserQuantity Int
+  targetAdditionalUserQuantity   Int
+
+  expectedLastSyncedAt DateTime?
+
+  // Fixed timestamp shared by preview and confirmed Stripe request.
+  prorationDate Int
+
+  currency String
+
+  // Stripe's invoice estimate and the target recurring list price,
+  // both expressed in integer minor-currency units.
+  estimatedAmountDue BigInt
+  monthlyTotalAmount BigInt
+
+  // Server-created, validated update parameters only.
+  // Repeated submissions must reuse this exact request.
+  stripeUpdateParameters Json
+
+  expiresAt   DateTime
+  submittedAt DateTime?
+
+  stripeInvoiceId String?
+  appliedAt       DateTime?
+
+  // Application-defined codes only; never raw provider errors.
   lastErrorCode String?
 
   createdAt DateTime @default(now())

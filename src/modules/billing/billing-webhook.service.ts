@@ -19,6 +19,11 @@ import {
   prepareBillingUserCapacityReconciliation,
 } from "./billing-user-capacity-reconciliation.service.js";
 
+import {
+  applyBillingPlanChangeReconciliation,
+  prepareBillingPlanChangeReconciliation,
+} from "./billing-plan-change-reconciliation.service.js";
+
 //************************************************************** */
 
 export interface BillingWebhookResult {
@@ -169,13 +174,20 @@ export async function processBillingWebhookEvent(
   }
 
   try {
-    // Fetch Stripe state before entering the database transaction.
+    // Fetch provider state before entering the database transaction.
     const prepared = await prepareBillingSynchronization(
       customerId,
     );
 
-    const reconciliation = prepared
+    const capacityReconciliation = prepared
       ? await prepareBillingUserCapacityReconciliation(
+          event,
+          prepared,
+        )
+      : null;
+
+    const planReconciliation = prepared
+      ? await prepareBillingPlanChangeReconciliation(
           event,
           prepared,
         )
@@ -186,13 +198,24 @@ export async function processBillingWebhookEvent(
       claim.processingToken,
       async (transaction) => {
         if (prepared) {
-          // Subscription state, capacity-change outcome, and the
-          // webhook completion marker commit atomically.
+          // This existing function applies shared subscription
+          // synchronization once, then any capacity-change outcome.
           await applyBillingUserCapacityReconciliation(
             transaction,
             prepared,
-            reconciliation,
+            capacityReconciliation,
           );
+
+          // Apply only the plan-change outcome. Shared subscription
+          // synchronization has already run in this transaction.
+          await applyBillingPlanChangeReconciliation(
+            transaction,
+            prepared,
+            planReconciliation,
+          );
+
+          // Both outcomes, subscription state, and the webhook
+          // completion marker commit together.
         }
       },
     );
@@ -219,7 +242,7 @@ export async function processBillingWebhookEvent(
       throw error;
     }
 
-    // Avoid exposing raw Stripe or database error details.
+    // Avoid exposing raw provider or database error details.
     throw retryRequired();
   }
 }

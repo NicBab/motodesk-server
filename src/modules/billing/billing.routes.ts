@@ -36,11 +36,18 @@ import {
 } from "./billing.schemas.js";
 
 import {
+  createBillingPlanChangePreviewSchema,
+  confirmBillingPlanChangeSchema,
+} from "./billing-plan-change.schemas.js";
+
+import {
   createBillingCheckoutHandler,
   createBillingPortalHandler,
   getBillingOverviewHandler,
   previewBillingUserCapacityHandler,
   confirmBillingUserCapacityHandler,
+  previewBillingPlanChangeHandler,
+  confirmBillingPlanChangeHandler,
 } from "./billing.controller.js";
 
 //************************************************************** */
@@ -108,6 +115,30 @@ router.post(
   requirePermissions(Permissions.BILLING_UPDATE),
   validateBody(confirmBillingUserCapacityChangeSchema),
   confirmBillingUserCapacityHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/plan-change/preview",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(createBillingPlanChangePreviewSchema),
+  previewBillingPlanChangeHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/plan-change/confirm",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(confirmBillingPlanChangeSchema),
+  confirmBillingPlanChangeHandler,
 );
 
 //************************************************************** */

@@ -49,10 +49,28 @@ function capacityReconciliationRequired(): AppError {
   );
 }
 
+function planReconciliationRequired(): AppError {
+  return new AppError(
+    409,
+    "The organization's plan change requires reconciliation.",
+    {
+      code: "BILLING_PLAN_RECONCILIATION_REQUIRED",
+    },
+  );
+}
+
 function organizationNotFound(): AppError {
   return new AppError(404, "Organization not found.", {
     code: "ORGANIZATION_NOT_FOUND",
   });
+}
+
+function isValidQuantity(value: number): boolean {
+  return (
+    Number.isSafeInteger(value) &&
+    value >= 0 &&
+    value <= 2_147_483_647
+  );
 }
 
 //************************************************************** */
@@ -133,6 +151,7 @@ export async function assertOrganizationUserCapacity(
 
       user: {
         isActive: true,
+
         emailVerifiedAt: {
           not: null,
         },
@@ -236,11 +255,7 @@ export async function assertOrganizationUserCapacity(
   const plan = getBillingPlan(billing.planId);
   const quantity = billing.additionalUserQuantity;
 
-  if (
-    !Number.isSafeInteger(quantity) ||
-    quantity < 0 ||
-    quantity > 2_147_483_647
-  ) {
+  if (!isValidQuantity(quantity)) {
     throw invalidBillingConfiguration();
   }
 
@@ -260,6 +275,13 @@ export async function assertOrganizationUserCapacity(
     billing.stripeAdditionalUserItemId !== null
   ) {
     throw invalidBillingConfiguration();
+  }
+
+  if (
+    billing.activePlanChangeId &&
+    billing.activeUserCapacityChangeId
+  ) {
+    throw planReconciliationRequired();
   }
 
   let userLimit = plan.usersIncluded + quantity;
@@ -284,9 +306,7 @@ export async function assertOrganizationUserCapacity(
         change.status !== "PENDING_PAYMENT" &&
         change.status !== "RECONCILIATION_REQUIRED"
       ) ||
-      !Number.isSafeInteger(change.targetAdditionalUserQuantity) ||
-      change.targetAdditionalUserQuantity < 0 ||
-      change.targetAdditionalUserQuantity > 2_147_483_647
+      !isValidQuantity(change.targetAdditionalUserQuantity)
     ) {
       throw capacityReconciliationRequired();
     }
@@ -296,6 +316,63 @@ export async function assertOrganizationUserCapacity(
     userLimit = Math.min(
       userLimit,
       plan.usersIncluded + change.targetAdditionalUserQuantity,
+    );
+  }
+
+  if (billing.activePlanChangeId) {
+    const change = await transaction.billingPlanChange.findFirst({
+      where: {
+        id: billing.activePlanChangeId,
+        organizationBillingId: billing.id,
+      },
+    });
+
+    if (
+      !change ||
+      change.stripeCustomerId !== billing.stripeCustomerId ||
+      change.stripeSubscriptionId !== billing.stripeSubscriptionId ||
+      (
+        change.status !== "PROCESSING" &&
+        change.status !== "PENDING_PAYMENT" &&
+        change.status !== "RECONCILIATION_REQUIRED"
+      ) ||
+      !isBillingPlanId(change.expectedPlanId) ||
+      !isBillingPlanId(change.targetPlanId) ||
+      change.expectedPlanId === change.targetPlanId ||
+      !isValidQuantity(change.expectedAdditionalUserQuantity) ||
+      !isValidQuantity(change.targetAdditionalUserQuantity) ||
+      (
+        change.expectedPlanId !== "pro" &&
+        change.expectedAdditionalUserQuantity !== 0
+      ) ||
+      (
+        change.targetPlanId !== "pro" &&
+        change.targetAdditionalUserQuantity !== 0
+      )
+    ) {
+      throw planReconciliationRequired();
+    }
+
+    const matchesExpectedState =
+      billing.planId === change.expectedPlanId &&
+      quantity === change.expectedAdditionalUserQuantity;
+
+    const matchesTargetState =
+      billing.planId === change.targetPlanId &&
+      quantity === change.targetAdditionalUserQuantity;
+
+    if (!matchesExpectedState && !matchesTargetState) {
+      throw planReconciliationRequired();
+    }
+
+    const targetPlan = getBillingPlan(change.targetPlanId);
+
+    // Reserve a downgrade's lower limit while it is pending.
+    // An upgrade cannot grant capacity before synchronization.
+    userLimit = Math.min(
+      userLimit,
+      targetPlan.usersIncluded +
+        change.targetAdditionalUserQuantity,
     );
   }
 

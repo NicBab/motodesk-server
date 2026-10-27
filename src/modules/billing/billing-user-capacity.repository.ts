@@ -58,6 +58,17 @@ function sameTimestamp(
   return left?.getTime() === right?.getTime();
 }
 
+function assertNoActivePlanChange(
+  activePlanChangeId: string | null,
+): void {
+  if (activePlanChangeId) {
+    throw changeConflict(
+      "BILLING_SUBSCRIPTION_CHANGE_PENDING",
+      "Resolve the existing plan change before changing user capacity.",
+    );
+  }
+}
+
 //************************************************************** */
 
 // Internal repository functions. The service must authorize
@@ -123,6 +134,8 @@ export async function createBillingUserCapacityPreview(
         "Billing changed while preparing this preview. Refresh and try again.",
       );
     }
+
+    assertNoActivePlanChange(billing.activePlanChangeId);
 
     if (billing.activeUserCapacityChangeId) {
       throw changeConflict(
@@ -203,6 +216,8 @@ export async function claimBillingUserCapacityChange(
       );
     }
 
+    // Returning an already-applied result does not submit a new
+    // change or interfere with a subsequent plan operation.
     if (change.status === "APPLIED") {
       return {
         outcome: "applied",
@@ -228,6 +243,8 @@ export async function claimBillingUserCapacityChange(
         "The subscription changed. Refresh billing before continuing.",
       );
     }
+
+    assertNoActivePlanChange(billing.activePlanChangeId);
 
     if (change.status === "PENDING_PAYMENT") {
       if (billing.activeUserCapacityChangeId !== change.id) {

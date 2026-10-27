@@ -25,8 +25,8 @@ import {
 } from "./billing.constants.js";
 
 import {
-  findOrganizationBilling,
-} from "./billing.repository.js";
+  readBillingOverviewState,
+} from "./billing-pending-change.repository.js";
 
 //************************************************************** */
 
@@ -53,11 +53,14 @@ export async function getOrganizationBillingOverview(
   );
 
   const [
-    billing,
+    billingState,
     billingExempt,
     assignedUsers,
   ] = await Promise.all([
-    findOrganizationBilling(organizationId),
+    readBillingOverviewState(
+      organizationId,
+      userId,
+    ),
 
     isOrganizationBillingExempt(organizationId),
 
@@ -68,6 +71,8 @@ export async function getOrganizationBillingOverview(
       },
     }),
   ]);
+
+  const { billing, pendingChange } = billingState;
 
   const storedPlanId = billing?.planId ?? null;
 
@@ -118,7 +123,6 @@ export async function getOrganizationBillingOverview(
     additionalUserPriceId !== null ||
     additionalUserItemId !== null
   ) {
-    // A base-only subscription should not retain stale add-on data.
     throw invalidBillingConfiguration();
   }
 
@@ -205,8 +209,7 @@ export async function getOrganizationBillingOverview(
       additionalUserUnitAmount,
       additionalUserMonthlyAmount,
 
-      // Recurring list-price total before taxes, discounts,
-      // credits, or prorations. This is not an invoice balance.
+      // Recurring list price, not an invoice balance.
       monthlyTotalAmount,
 
       currentPeriodStart:
@@ -237,10 +240,15 @@ export async function getOrganizationBillingOverview(
     usage: {
       assignedUsers,
 
-      // Null represents exempt, unlimited capacity.
+      // Purchased capacity. Pending reductions can temporarily
+      // impose a lower limit, enforced by the capacity guard.
       // Capacity alone does not establish subscription access.
       userLimit: billingExempt ? null : purchasedUserCapacity,
     },
+
+    // Only the safe public operation projection is returned.
+    // Never spread billingState.billing into the response.
+    pendingChange,
 
     checkoutPending: Boolean(
       billing?.checkoutOperationId,
