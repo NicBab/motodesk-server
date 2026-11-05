@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { validateBody } from "../../platform/validation/validate-body.js";
 
@@ -36,6 +37,10 @@ import dashboardRouter from "../dashboard/dashboard.routes.js";
 import billingRouter from "../billing/billing.routes.js";
 
 import {
+  requireSubscriptionAccess,
+} from "../billing/billing-subscription-access.middleware.js";
+
+import {
   createOrganizationSchema,
   updateOrganizationSchema,
   organizationIdSchema,
@@ -62,6 +67,8 @@ import {
 
 const router = Router();
 
+// Organization creation remains available for onboarding.
+
 router.post(
   "/",
   authenticateRequest,
@@ -73,6 +80,8 @@ router.post(
 
 //************************************************************** */
 
+// Organization selection remains available.
+
 router.get(
   "/me",
   authenticateRequest,
@@ -82,12 +91,16 @@ router.get(
 
 //************************************************************** */
 
+// Ownership transfer is a business mutation and must
+// also be protected by the subscription gate.
+
 router.post(
   "/:organizationId/transfer-ownership",
   authenticateRequest,
   requireVerifiedEmail,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireSubscriptionAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),
   requireRecentAuthentication,
   validateParams(organizationIdSchema),
@@ -96,8 +109,8 @@ router.post(
 );
 
 //************************************************************** */
-// All organization-scoped business modules below this boundary
-// require a verified email address.
+
+// Shared authentication boundary for organization routes.
 
 router.use(
   "/:organizationId",
@@ -107,127 +120,94 @@ router.use(
 
 //************************************************************** */
 
-router.use("/:organizationId/memberships", membershipRouter);
+// Billing must remain available for subscription recovery.
+// The billing router retains its existing authorization
+// and permission middleware.
+
+router.use(
+  "/:organizationId/billing",
+  billingRouter,
+);
 
 //************************************************************** */
+
+// Shared organization business access boundary.
+
+router.use(
+  "/:organizationId",
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requireSubscriptionAccess,
+);
+
+//************************************************************** */
+
+router.use("/:organizationId/memberships", membershipRouter);
 
 router.use("/:organizationId/memberships", permissionRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/customers", customerRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/vehicles", vehicleRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/repair-orders", repairOrderRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/parts", partRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/vendors", vendorRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/purchase-orders", purchaseOrderRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/sales", saleRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/scheduling", scheduleRouter);
-
-//************************************************************** */
 
 router.use(
   "/:organizationId/scheduling/appointments",
   serviceAppointmentRouter,
 );
 
-//************************************************************** */
-
 router.use("/:organizationId/employees", employeeRouter);
-//************************************************************** */
 
 router.use("/:organizationId/time-clock", timeClockRouter);
-
-//************************************************************** */
 
 router.use(
   "/:organizationId/technician-assignments",
   technicianAssignmentRouter,
 );
 
-//************************************************************** */
-
 router.use("/:organizationId/service-bays", serviceBayRouter);
-
-//************************************************************** */
 
 router.use(
   "/:organizationId/repair-order-work-status",
   repairOrderWorkStatusRouter,
 );
 
-//************************************************************** */
-
 router.use("/:organizationId/repair-orders", repairOrderReopenRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/repair-orders", repairOrderAdditionalWorkRouter);
-
-//************************************************************** */
 
 router.use(
   "/:organizationId/repair-orders",
   repairOrderAdditionalApprovalRouter,
 );
 
-//************************************************************** */
-
 router.use("/:organizationId/repair-orders", repairOrderLaborCancelRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/repair-orders", repairOrderPartCancelRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/permission-catalog", permissionCatalogRouter);
-
-//************************************************************** */
 
 router.use(
   "/:organizationId/membership-invitations",
   membershipInvitationRouter,
 );
 
-//************************************************************** */
-
 router.use("/:organizationId/audit", auditRouter);
-
-//************************************************************** */
-
-router.use("/:organizationId/billing", billingRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/part-returns", partReturnRouter);
 
-//************************************************************** */
-
 router.use("/:organizationId/reports", reportRouter);
-
-//************************************************************** */
 
 router.use("/:organizationId/dashboard", dashboardRouter);
 
@@ -235,10 +215,6 @@ router.use("/:organizationId/dashboard", dashboardRouter);
 
 router.get(
   "/:organizationId",
-  authenticateRequest,
-  requireVerifiedEmail,
-  initializeRequestContext,
-  requireOrganizationAccess,
   validateParams(organizationIdSchema),
   getOrganizationHandler,
 );
@@ -247,10 +223,6 @@ router.get(
 
 router.patch(
   "/:organizationId",
-  authenticateRequest,
-  requireVerifiedEmail,
-  initializeRequestContext,
-  requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_UPDATE),
   validateParams(organizationIdSchema),
   validateBody(updateOrganizationSchema),
@@ -261,10 +233,6 @@ router.patch(
 
 router.delete(
   "/:organizationId",
-  authenticateRequest,
-  requireVerifiedEmail,
-  initializeRequestContext,
-  requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_DELETE),
   requireRecentAuthentication,
   validateParams(organizationIdSchema),

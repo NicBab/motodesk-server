@@ -517,6 +517,7 @@ export async function acceptMembershipInvitation(
 
   const membership = await acceptMembershipInvitationRecord(
     invitation.id,
+    tokenHash,
     invitation.organizationId,
     user.id,
     invitation.role,

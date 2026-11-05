@@ -448,6 +448,7 @@ export async function refreshMembershipInvitationRecord(
 
 export async function acceptMembershipInvitationRecord(
   invitationId: string,
+  expectedTokenHash: string,
   organizationId: string,
   userId: string,
   role: MembershipRole,
@@ -471,6 +472,17 @@ export async function acceptMembershipInvitationRecord(
 
     if (!invitation) {
       throw invitationNotFound();
+    }
+
+    // The token looked up before this transaction may have been
+    // replaced by a concurrent refresh. Check the exact token again
+    // after obtaining the organization capacity lock.
+    if (invitation.tokenHash !== expectedTokenHash) {
+      throw new AppError(
+        410,
+        "Membership invitation token is no longer valid.",
+        { code: "MEMBERSHIP_INVITATION_TOKEN_INVALIDATED" },
+      );
     }
 
     if (invitation.acceptedAt) {

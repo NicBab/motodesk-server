@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
@@ -63,6 +64,7 @@ describe("Organization checkout coordination", () => {
         organizationId,
         customerId,
         operationId,
+        "starter",
       ),
       true,
     );
@@ -79,12 +81,14 @@ describe("Organization checkout coordination", () => {
         organizationId,
         customerId,
         first,
+        "starter",
       ),
 
       claimOrganizationCheckout(
         organizationId,
         customerId,
         second,
+        "starter",
       ),
     ]);
 
@@ -103,6 +107,7 @@ describe("Organization checkout coordination", () => {
       organizationId,
       `cus_other_${randomUUID()}`,
       randomUUID(),
+      "starter",
     );
 
     assert.equal(claimed, false);
@@ -122,6 +127,7 @@ describe("Organization checkout coordination", () => {
       organizationId,
       customerId,
       randomUUID(),
+      "starter",
     );
 
     assert.equal(claimed, false);

@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
@@ -379,10 +380,11 @@ describe("Completed billing checkout cleanup", () => {
     mock.method(
       getStripeClient().checkout.sessions,
       "retrieve",
-      async () => session(
-        "complete",
-        `sub_other_${randomUUID()}`,
-      ),
+      async () =>
+        session(
+          "complete",
+          `sub_other_${randomUUID()}`,
+        ),
     );
 
     await assert.rejects(
@@ -458,6 +460,7 @@ describe("Completed billing checkout cleanup", () => {
       organizationId,
       customerId,
       nextOperationId,
+      "starter",
     );
 
     assert.equal(claimed, true);

@@ -283,11 +283,12 @@ export async function createOrganizationBillingCheckout(
     checkoutOperationId: operationId,
   };
 
-  const claimed = await claimOrganizationCheckout(
-    organizationId,
-    customerId,
-    operationId,
-  );
+const claimed = await claimOrganizationCheckout(
+  organizationId,
+  customerId,
+  operationId,
+  input.planId,
+);
 
   if (!claimed) {
     throw checkoutConflict(
