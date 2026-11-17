@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 
 import {
@@ -29,6 +30,15 @@ import {
 } from "../../middleware/sensitive-response-cache.js";
 
 import {
+  ok,
+} from "../../platform/http/api-response.js";
+
+import {
+  requireSubscriptionOrganization,
+  resolveSubscriptionAccess,
+} from "./billing-subscription-access.middleware.js";
+
+import {
   createBillingCheckoutSchema,
   createBillingPortalSchema,
   createBillingUserCapacityPreviewSchema,
@@ -57,6 +67,29 @@ const router = Router({
 });
 
 router.use(preventSensitiveResponseCaching);
+
+//************************************************************** */
+
+// Available to authenticated organization members.
+// Does not expose financial or subscription details.
+
+router.get(
+  "/access",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  async (request, response) => {
+    const organizationId =
+      requireSubscriptionOrganization(request);
+
+    const { accessMode } =
+      await resolveSubscriptionAccess(organizationId);
+
+    ok(response, {
+      accessMode,
+    });
+  },
+);
 
 //************************************************************** */
 

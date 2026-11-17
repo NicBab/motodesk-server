@@ -71,11 +71,13 @@ describe("Invitation repository billing capacity", () => {
 
   function acceptInvitation(
     invitationId: string,
+    expectedTokenHash: string,
     userId: string,
     targetOrganizationId = organizationId,
   ) {
     return acceptMembershipInvitationRecord(
       invitationId,
+      expectedTokenHash,
       targetOrganizationId,
       userId,
       "TECHNICIAN",
@@ -237,6 +239,7 @@ describe("Invitation repository billing capacity", () => {
 
     const membership = await acceptInvitation(
       invitation.id,
+      invitation.tokenHash,
       user.id,
     );
 
@@ -330,7 +333,7 @@ describe("Invitation repository billing capacity", () => {
     const user = await createUser(invitation.email);
 
     await assert.rejects(
-      acceptInvitation(invitation.id, user.id),
+      acceptInvitation(invitation.id, invitation.tokenHash, user.id),
       { code: "MEMBERSHIP_INVITATION_EXPIRED" },
     );
 
@@ -354,7 +357,7 @@ describe("Invitation repository billing capacity", () => {
     await revokeMembershipInvitationRecord(invitation.id);
 
     await assert.rejects(
-      acceptInvitation(invitation.id, user.id),
+      acceptInvitation(invitation.id, invitation.tokenHash, user.id),
       { code: "MEMBERSHIP_INVITATION_REVOKED" },
     );
 
@@ -366,8 +369,8 @@ describe("Invitation repository billing capacity", () => {
     const user = await createUser(invitation.email);
 
     const results = await Promise.allSettled([
-      acceptInvitation(invitation.id, user.id),
-      acceptInvitation(invitation.id, user.id),
+      acceptInvitation(invitation.id, invitation.tokenHash, user.id),
+      acceptInvitation(invitation.id, invitation.tokenHash, user.id),
     ]);
 
     assert.equal(
@@ -452,6 +455,7 @@ describe("Invitation repository billing capacity", () => {
     await assert.rejects(
       acceptInvitation(
         invitation.id,
+        invitation.tokenHash,
         user.id,
         otherOrganization.id,
       ),
@@ -467,7 +471,7 @@ describe("Invitation repository billing capacity", () => {
     const wrongUser = await createUser();
 
     await assert.rejects(
-      acceptInvitation(invitation.id, wrongUser.id),
+      acceptInvitation(invitation.id, invitation.tokenHash, wrongUser.id),
       { code: "MEMBERSHIP_INVITATION_EMAIL_MISMATCH" },
     );
 

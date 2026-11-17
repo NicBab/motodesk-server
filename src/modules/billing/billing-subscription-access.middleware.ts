@@ -26,10 +26,130 @@ export type SubscriptionAccessMode =
   | "FULL"
   | "READ_ONLY";
 
+export interface SubscriptionAccessResult {
+  accessMode: SubscriptionAccessMode;
+  subscriptionStatus: BillingSubscriptionStatus;
+}
+
 const READ_ONLY_METHODS = new Set([
   "GET",
   "HEAD",
 ]);
+
+//************************************************************** */
+
+export async function resolveSubscriptionAccess(
+  organizationId: string,
+): Promise<SubscriptionAccessResult> {
+  const billingExempt =
+    await isOrganizationBillingExempt(
+      organizationId,
+    );
+
+  if (billingExempt) {
+    return {
+      accessMode: "FULL",
+      subscriptionStatus:
+        BillingSubscriptionStatus.NOT_SUBSCRIBED,
+    };
+  }
+
+  const billing =
+    await prisma.organizationBilling.findUnique({
+      where: {
+        organizationId,
+      },
+      select: {
+        status: true,
+        trialEndsAt: true,
+        endedAt: true,
+      },
+    });
+
+  const subscriptionStatus =
+    billing?.status ??
+    BillingSubscriptionStatus.NOT_SUBSCRIBED;
+
+  let accessMode: SubscriptionAccessMode =
+    "READ_ONLY";
+
+  if (billing && billing.endedAt === null) {
+    switch (billing.status) {
+      case BillingSubscriptionStatus.ACTIVE: {
+        accessMode = "FULL";
+        break;
+      }
+
+      case BillingSubscriptionStatus.TRIALING: {
+        if (
+          billing.trialEndsAt !== null &&
+          billing.trialEndsAt.getTime() > Date.now()
+        ) {
+          accessMode = "FULL";
+        }
+
+        break;
+      }
+
+      case BillingSubscriptionStatus.PAST_DUE:
+      case BillingSubscriptionStatus.INCOMPLETE:
+      case BillingSubscriptionStatus.INCOMPLETE_EXPIRED:
+      case BillingSubscriptionStatus.UNPAID:
+      case BillingSubscriptionStatus.PAUSED:
+      case BillingSubscriptionStatus.CANCELED:
+      case BillingSubscriptionStatus.NOT_SUBSCRIBED:
+      default: {
+        accessMode = "READ_ONLY";
+        break;
+      }
+    }
+  }
+
+  return {
+    accessMode,
+    subscriptionStatus,
+  };
+}
+
+//************************************************************** */
+
+export function requireSubscriptionOrganization(
+  request: AuthenticatedRequest,
+): string {
+  const organizationId =
+    request.params.organizationId;
+
+  if (
+    typeof organizationId !== "string" ||
+    organizationId.trim().length === 0
+  ) {
+    throw new AppError(
+      400,
+      "A valid organization ID is required.",
+      {
+        code: "ORGANIZATION_ID_REQUIRED",
+      },
+    );
+  }
+
+  const membership =
+    request.authenticatedMembership;
+
+  if (
+    !membership ||
+    membership.organizationId !== organizationId
+  ) {
+    throw new AppError(
+      403,
+      "Organization access is required.",
+      {
+        code: "ORGANIZATION_ACCESS_DENIED",
+      },
+    );
+  }
+
+  return organizationId;
+}
 
 //************************************************************** */
 
@@ -39,113 +159,24 @@ export async function requireSubscriptionAccess(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const organizationId = request.params.organizationId;
+    const organizationId =
+      requireSubscriptionOrganization(request);
 
-    if (
-      typeof organizationId !== "string" ||
-      organizationId.trim().length === 0
-    ) {
-      throw new AppError(
-        400,
-        "A valid organization ID is required.",
-        {
-          code: "ORGANIZATION_ID_REQUIRED",
-        },
-      );
-    }
-
-    // Authorization must be established before checking
-    // billing status or exemption.
-
-    const membership = request.authenticatedMembership;
-
-    if (
-      !membership ||
-      membership.organizationId !== organizationId
-    ) {
-      throw new AppError(
-        403,
-        "Organization access is required.",
-        {
-          code: "ORGANIZATION_ACCESS_DENIED",
-        },
-      );
-    }
-
-    // Preserve the existing platform-admin owner
-    // exemption policy.
-
-    const billingExempt =
-      await isOrganizationBillingExempt(organizationId);
-
-    if (billingExempt) {
-      next();
-      return;
-    }
-
-    const billing =
-      await prisma.organizationBilling.findUnique({
-        where: {
-          organizationId,
-        },
-        select: {
-          status: true,
-          trialEndsAt: true,
-          currentPeriodEnd: true,
-          endedAt: true,
-        },
-      });
-
-    const now = Date.now();
-
-    let accessMode: SubscriptionAccessMode =
-      "READ_ONLY";
-
-    if (billing && billing.endedAt === null) {
-      switch (billing.status) {
-        case BillingSubscriptionStatus.ACTIVE: {
-          accessMode = "FULL";
-          break;
-        }
-
-        case BillingSubscriptionStatus.TRIALING: {
-          if (
-            billing.trialEndsAt !== null &&
-            billing.trialEndsAt.getTime() > now
-          ) {
-            accessMode = "FULL";
-          }
-          break;
-        }
-
-        // Past-due grace requires an authoritative
-        // delinquency timestamp. Until implemented,
-        // use the conservative read-only fallback.
-
-        case BillingSubscriptionStatus.PAST_DUE:
-        case BillingSubscriptionStatus.INCOMPLETE:
-        case BillingSubscriptionStatus.INCOMPLETE_EXPIRED:
-        case BillingSubscriptionStatus.UNPAID:
-        case BillingSubscriptionStatus.PAUSED:
-        case BillingSubscriptionStatus.CANCELED:
-        case BillingSubscriptionStatus.NOT_SUBSCRIBED:
-        default: {
-          accessMode = "READ_ONLY";
-          break;
-        }
-      }
-    }
+    const {
+      accessMode,
+      subscriptionStatus,
+    } = await resolveSubscriptionAccess(
+      organizationId,
+    );
 
     if (accessMode === "FULL") {
       next();
       return;
     }
 
-    // Only safe read endpoints may pass this guard.
-    // Routes with GET side effects must be excluded
-    // or explicitly restricted during integration.
-
-    if (READ_ONLY_METHODS.has(request.method)) {
+    if (
+      READ_ONLY_METHODS.has(request.method)
+    ) {
       next();
       return;
     }
@@ -156,9 +187,7 @@ export async function requireSubscriptionAccess(
       {
         code: "SUBSCRIPTION_ACCESS_RESTRICTED",
         details: {
-          subscriptionStatus:
-            billing?.status ??
-            BillingSubscriptionStatus.NOT_SUBSCRIBED,
+          subscriptionStatus,
           accessMode: "READ_ONLY",
           billingRecoveryAvailable: true,
         },
