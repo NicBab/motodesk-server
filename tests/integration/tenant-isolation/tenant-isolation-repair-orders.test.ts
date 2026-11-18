@@ -6,6 +6,8 @@ import { prisma } from "../../../src/config/prisma.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
+
 //************************************************************** */
 
 function createSafeSuffix(): string {
@@ -53,6 +55,8 @@ describe("Repair Order tenant isolation integration", () => {
     assert.equal(typeof organizationBId, "string");
 
     assert.notEqual(organizationAId, organizationBId);
+
+    await createTrialSubscriptionFixture(organizationBId);
 
     //************************************************************** */
     // Organization B fixtures.

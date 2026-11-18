@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 
 import { describe, it } from "node:test";
@@ -5,6 +6,8 @@ import { describe, it } from "node:test";
 import { prisma } from "../../../src/config/prisma.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
 
 //************************************************************** */
 
@@ -49,6 +52,11 @@ describe("Part inventory tenant isolation integration", () => {
     assert.equal(organizationBResponse.status, 201);
 
     const organizationBId = organizationBResponse.body.data.id;
+
+    //************************************************************** */
+    // Establish subscription access for Organization B.
+
+    await createTrialSubscriptionFixture(organizationBId);
 
     //************************************************************** */
     // Create protected Part B.

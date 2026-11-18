@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 
 import { describe, it } from "node:test";
@@ -5,6 +6,8 @@ import { describe, it } from "node:test";
 import { prisma } from "../../../src/config/prisma.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
 
 //************************************************************** */
 
@@ -66,6 +69,14 @@ describe("Core tenant isolation integration", () => {
     assert.equal(typeof organizationBId, "string");
 
     assert.notEqual(organizationAId, organizationBId);
+
+    //************************************************************** */
+    // Establish valid subscription access for Organization B.
+    //
+    // Both organizations must have business mutation access so
+    // subscription enforcement does not mask tenant isolation.
+
+    await createTrialSubscriptionFixture(organizationBId);
 
     //************************************************************** */
     // Switch into Organization B and create foreign resources.
@@ -435,15 +446,15 @@ describe("Core tenant isolation integration", () => {
         inventoryStatus: "AVAILABLE",
       });
 
-assert.equal(
-  foreignCustomerVehicleResponse.status,
-  400,
-);
+    assert.equal(
+      foreignCustomerVehicleResponse.status,
+      400,
+    );
 
-assert.equal(
-  foreignCustomerVehicleResponse.body.code,
-  "VEHICLE_CUSTOMER_INVALID",
-);
+    assert.equal(
+      foreignCustomerVehicleResponse.body.code,
+      "VEHICLE_CUSTOMER_INVALID",
+    );
 
     //************************************************************** */
     // LIST ISOLATION

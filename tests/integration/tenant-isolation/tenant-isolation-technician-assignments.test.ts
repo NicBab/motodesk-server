@@ -6,6 +6,8 @@ import { prisma } from "../../../src/config/prisma.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
+
 //************************************************************** */
 
 function createSafeSuffix(): string {
@@ -176,6 +178,8 @@ describe(
 
         const organizationBId =
           organizationBResponse.body.data.id;
+
+        await createTrialSubscriptionFixture(organizationBId);
 
         //************************************************************** */
         // ELIGIBLE TECHNICIANS

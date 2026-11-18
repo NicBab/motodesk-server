@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import { prisma } from "../../../src/config/prisma.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
 
 //************************************************************** */
 
@@ -51,6 +52,8 @@ describe("Repair Order nested tenant isolation integration", () => {
     assert.equal(organizationBResponse.status, 201);
 
     const organizationBId = organizationBResponse.body.data.id;
+
+    await createTrialSubscriptionFixture(organizationBId);
 
     //************************************************************** */
     // Find the authenticated owner's membership in Organization B.

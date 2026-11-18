@@ -1,14 +1,21 @@
+
 import assert from "node:assert/strict";
 
 import { randomUUID } from "node:crypto";
 
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
 
 import { MembershipRole } from "../../../src/generated/prisma/client.js";
 
 import { prisma } from "../../../src/config/prisma.js";
 
-import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
+import { createAuthenticatedAgent } from "../helpers/billing-authenticated-agent.js";
+
+import { createTrialSubscriptionFixture } from "../helpers/subscription.fixture.js";
+
+//************************************************************** */
+
+const secondaryOrganizationIds: string[] = [];
 
 //************************************************************** */
 
@@ -22,8 +29,36 @@ async function switchOrganization(
       organizationId,
     });
 
-  assert.equal(response.status, 200);
+  assert.equal(
+    response.status,
+    200,
+    JSON.stringify(response.body),
+  );
+
   assert.equal(response.body.success, true);
+
+  const cookies = response.headers["set-cookie"];
+
+  const cookieLines = Array.isArray(cookies)
+    ? cookies
+    : typeof cookies === "string"
+      ? [cookies]
+      : [];
+
+  const accessCookie = cookieLines.find(
+    (cookie: string) =>
+      cookie.startsWith("motodesk_access_token="),
+  );
+
+  assert.ok(
+    accessCookie,
+    "Expected organization-scoped access cookie.",
+  );
+
+  agent.set(
+    "Cookie",
+    accessCookie.split(";")[0]!,
+  );
 }
 
 //************************************************************** */
@@ -54,7 +89,11 @@ async function createEmployee(
       laborRate: 125,
     });
 
-  assert.equal(response.status, 201);
+  assert.equal(
+    response.status,
+    201,
+    JSON.stringify(response.body),
+  );
 
   return response.body.data;
 }
@@ -84,7 +123,11 @@ async function createInvitation(
         : {}),
     });
 
-  assert.equal(response.status, 201);
+  assert.equal(
+    response.status,
+    201,
+    JSON.stringify(response.body),
+  );
 
   assert.equal(response.body.success, true);
 
@@ -129,10 +172,22 @@ describe(
         assert.equal(
           organizationBResponse.status,
           201,
+          JSON.stringify(organizationBResponse.body),
         );
 
         const organizationBId =
           organizationBResponse.body.data.id;
+
+        secondaryOrganizationIds.push(
+          organizationBId,
+        );
+
+        //************************************************************** */
+        // ESTABLISH SUBSCRIPTION ACCESS
+
+        await createTrialSubscriptionFixture(
+          organizationBId,
+        );
 
         //************************************************************** */
         // ORGANIZATION B EMPLOYEE + INVITATION
@@ -329,9 +384,6 @@ describe(
 
         //************************************************************** */
         // FOREIGN INVITATION — REFRESH
-        //
-        // Knowing B's invitation ID must not allow A to rotate its token
-        // or reactivate/change its invitation state.
 
         const foreignRefreshResponse =
           await agent.post(
@@ -368,8 +420,6 @@ describe(
 
         //************************************************************** */
         // FOREIGN EMPLOYEE LINKAGE
-        //
-        // A must not create an invitation linked to B's employee.
 
         const foreignEmployeeEmail =
           `tenant-invite-foreign-employee-${suffix}@motodesk.local`;
@@ -402,9 +452,6 @@ describe(
 
         //************************************************************** */
         // LOCAL EMPLOYEE LINKAGE STILL WORKS
-        //
-        // This proves the employee-link feature itself is operational
-        // and the rejected B employee was specifically tenant scoped.
 
         const localEmployeeInvitation =
           await createInvitation(
@@ -524,5 +571,32 @@ describe(
     );
   },
 );
+
+//************************************************************** */
+// CLEANUP — SECONDARY ORGANIZATIONS
+
+after(async () => {
+  if (secondaryOrganizationIds.length === 0) {
+    return;
+  }
+
+  await prisma.auditLog.deleteMany({
+    where: {
+      organizationId: {
+        in: secondaryOrganizationIds,
+      },
+    },
+  });
+
+  await prisma.organization.deleteMany({
+    where: {
+      id: {
+        in: secondaryOrganizationIds,
+      },
+    },
+  });
+
+  secondaryOrganizationIds.length = 0;
+});
 
 //************************************************************** */

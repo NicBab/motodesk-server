@@ -1,3 +1,4 @@
+
 import assert from "node:assert/strict";
 
 import {
@@ -33,7 +34,7 @@ import {
 
 import {
   createAuthenticatedAgent,
-} from "../integration/helpers/authenticated-agent.js";
+} from "../integration/helpers/billing-authenticated-agent.js";
 
 //************************************************************** */
 
@@ -53,273 +54,249 @@ describe(
           "MotoDesk-Privilege-Security-2026!";
 
         //************************************************************** */
-        // Use the established seeded OWNER fixture. This is the same
-        // organization/owner setup used by the existing membership
-        // integration suite.
+        // Create an isolated organization with an active trial.
+        //
+        // Do not consume seats in the shared development organization.
 
         const {
-          agent:
-            ownerAgent,
-
+          agent: ownerAgent,
           organizationId,
-        } =
-          await createAuthenticatedAgent();
+        } = await createAuthenticatedAgent();
 
         //************************************************************** */
-        // Membership creation requires an existing MotoDesk user.
-        //
-        // Create the technician user first, exactly as the existing
-        // membership-creation integration tests do.
 
         const passwordHash =
-          await hashPassword(
-            password,
-          );
+          await hashPassword(password);
 
         const technicianUser =
           await prisma.user.create({
             data: {
-              email:
-                technicianEmail,
-
+              email: technicianEmail,
               passwordHash,
-
-              firstName:
-                "Privilege",
-
-              lastName:
-                "Technician",
-
-              isActive:
-                true,
+              firstName: "Privilege",
+              lastName: "Technician",
+              emailVerifiedAt: new Date(),
+              isActive: true,
             },
           });
 
-        //************************************************************** */
-        // The OWNER now provisions the technician membership through the
-        // real HTTP endpoint.
+        try {
+          //************************************************************** */
+          // Provision the technician through the actual HTTP endpoint.
 
-        const membershipResponse =
-          await ownerAgent
-            .post(
-              `/api/v1/organizations/${organizationId}/memberships`,
-            )
-            .send({
-              email:
-                technicianEmail,
+          const membershipResponse =
+            await ownerAgent
+              .post(
+                `/api/v1/organizations/${organizationId}/memberships`,
+              )
+              .send({
+                email: technicianEmail,
+                role: MembershipRole.TECHNICIAN,
+              });
 
-              role:
-                MembershipRole.TECHNICIAN,
-            });
-
-        assert.equal(
-          membershipResponse.status,
-          201,
-        );
-
-        assert.equal(
-          membershipResponse.body
-            ?.success,
-          true,
-        );
-
-        const technicianMembershipId =
-          membershipResponse.body
-            ?.data
-            ?.id;
-
-        assert.equal(
-          typeof technicianMembershipId,
-          "string",
-        );
-
-        if (
-          typeof technicianMembershipId !==
-          "string"
-        ) {
-          throw new Error(
-            "Membership creation did not return the technician membership identifier.",
-          );
-        }
-
-        //************************************************************** */
-        // Authenticate as the newly-created lower-privileged user.
-
-        const technicianAgent =
-          request.agent(
-            app,
+          assert.equal(
+            membershipResponse.status,
+            201,
+            JSON.stringify(membershipResponse.body),
           );
 
-        const loginResponse =
-          await technicianAgent
-            .post(
-              "/api/v1/auth/login",
-            )
-            .send({
-              email:
-                technicianEmail,
+          assert.equal(
+            membershipResponse.body?.success,
+            true,
+          );
 
-              password,
+          const technicianMembershipId =
+            membershipResponse.body?.data?.id;
+
+          assert.equal(
+            typeof technicianMembershipId,
+            "string",
+          );
+
+          if (
+            typeof technicianMembershipId !== "string"
+          ) {
+            throw new Error(
+              "Membership creation did not return the technician membership identifier.",
+            );
+          }
+
+          //************************************************************** */
+          // Authenticate as the lower-privileged technician.
+
+          const technicianAgent =
+            request.agent(app);
+
+          const loginResponse =
+            await technicianAgent
+              .post("/api/v1/auth/login")
+              .send({
+                email: technicianEmail,
+                password,
+              });
+
+          assert.equal(
+            loginResponse.status,
+            200,
+            JSON.stringify(loginResponse.body),
+          );
+
+          //************************************************************** */
+
+          const switchResponse =
+            await technicianAgent
+              .post(
+                "/api/v1/auth/switch-organization",
+              )
+              .send({
+                organizationId,
+              });
+
+          assert.equal(
+            switchResponse.status,
+            200,
+            JSON.stringify(switchResponse.body),
+          );
+
+          //************************************************************** */
+          // Verify the technician does not already possess the
+          // privileged membership-management permission.
+
+          const permissionsBefore =
+            await prisma.membershipPermission.findMany({
+              where: {
+                organizationId,
+                membershipId: technicianMembershipId,
+              },
+
+              select: {
+                permission: true,
+              },
             });
 
-        assert.equal(
-          loginResponse.status,
-          200,
-        );
-
-        //************************************************************** */
-        // Switch the technician's authentication context into the same
-        // organization.
-
-        const switchResponse =
-          await technicianAgent
-            .post(
-              "/api/v1/auth/switch-organization",
-            )
-            .send({
-              organizationId,
-            });
-
-        assert.equal(
-          switchResponse.status,
-          200,
-        );
-
-        //************************************************************** */
-        // Verify the technician does not already possess the privileged
-        // membership-management permission we're about to attack.
-
-        const permissionsBefore =
-          await prisma.membershipPermission.findMany({
-            where: {
-              organizationId,
-
-              membershipId:
-                technicianMembershipId,
-            },
-
-            select: {
-              permission:
-                true,
-            },
-          });
-
-        assert.equal(
-          permissionsBefore.some(
-            (record) =>
-              record.permission ===
-              Permissions.MEMBERSHIPS_UPDATE,
-          ),
-          false,
-          "Technician unexpectedly already possesses memberships:update.",
-        );
-
-        //************************************************************** */
-        // ATTACK:
-        //
-        // A technician attempts to replace its own permission set with
-        // one containing an administrative membership-management
-        // capability.
-
-        const escalationResponse =
-          await technicianAgent
-            .put(
-              `/api/v1/organizations/${organizationId}/memberships/${technicianMembershipId}/permissions`,
-            )
-            .send({
-              permissions: [
+          assert.equal(
+            permissionsBefore.some(
+              (record) =>
+                record.permission ===
                 Permissions.MEMBERSHIPS_UPDATE,
-              ],
+            ),
+            false,
+            "Technician unexpectedly already possesses memberships:update.",
+          );
+
+          //************************************************************** */
+          // ATTACK:
+          // Attempt to grant administrative permissions to itself.
+
+          const escalationResponse =
+            await technicianAgent
+              .put(
+                `/api/v1/organizations/${organizationId}/memberships/${technicianMembershipId}/permissions`,
+              )
+              .send({
+                permissions: [
+                  Permissions.MEMBERSHIPS_UPDATE,
+                ],
+              });
+
+          assert.equal(
+            escalationResponse.status,
+            403,
+            "A technician must not be able to modify its own permission overrides.",
+          );
+
+          //************************************************************** */
+          // Verify the rejected privilege was not persisted.
+
+          const permissionsAfter =
+            await prisma.membershipPermission.findMany({
+              where: {
+                organizationId,
+                membershipId: technicianMembershipId,
+              },
+
+              select: {
+                permission: true,
+              },
             });
 
-        assert.equal(
-          escalationResponse.status,
-          403,
-          "A technician must not be able to modify its own permission overrides.",
-        );
+          assert.equal(
+            permissionsAfter.some(
+              (record) =>
+                record.permission ===
+                Permissions.MEMBERSHIPS_UPDATE,
+            ),
+            false,
+            "The rejected privilege escalation persisted memberships:update.",
+          );
 
-        //************************************************************** */
-        // The rejected request must not persist the requested privilege.
+          //************************************************************** */
+          // Defense in depth:
+          // Attempt to promote the technician to MANAGER.
 
-        const permissionsAfter =
-          await prisma.membershipPermission.findMany({
-            where: {
-              organizationId,
+          const protectedOperation =
+            await technicianAgent
+              .patch(
+                `/api/v1/organizations/${organizationId}/memberships/${technicianMembershipId}`,
+              )
+              .send({
+                role: MembershipRole.MANAGER,
+              });
 
-              membershipId:
-                technicianMembershipId,
-            },
+          assert.equal(
+            protectedOperation.status,
+            403,
+          );
 
-            select: {
-              permission:
-                true,
-            },
-          });
+          //************************************************************** */
+          // Verify the stored membership remains unchanged.
 
-        assert.equal(
-          permissionsAfter.some(
-            (record) =>
-              record.permission ===
-              Permissions.MEMBERSHIPS_UPDATE,
-          ),
-          false,
-          "The rejected privilege escalation persisted memberships:update.",
-        );
+          const storedMembership =
+            await prisma.membership.findUnique({
+              where: {
+                id: technicianMembershipId,
+              },
 
-        //************************************************************** */
-        // Defense in depth:
-        //
-        // The technician must still be unable to exercise the protected
-        // membership-update endpoint.
-
-        const protectedOperation =
-          await technicianAgent
-            .patch(
-              `/api/v1/organizations/${organizationId}/memberships/${technicianMembershipId}`,
-            )
-            .send({
-              role:
-                MembershipRole.MANAGER,
+              select: {
+                userId: true,
+                role: true,
+              },
             });
 
-        assert.equal(
-          protectedOperation.status,
-          403,
-        );
+          assert.ok(
+            storedMembership,
+          );
 
-        //************************************************************** */
-        // Sanity check: the account itself remains intact and the role
-        // was not modified by either attack.
+          assert.equal(
+            storedMembership.userId,
+            technicianUser.id,
+          );
 
-        const storedMembership =
-          await prisma.membership.findUnique({
-            where: {
-              id:
-                technicianMembershipId,
-            },
+          assert.equal(
+            storedMembership.role,
+            MembershipRole.TECHNICIAN,
+          );
+        } finally {
+          //************************************************************** */
+          // Remove all records belonging to this temporary technician.
+          //
+          // The isolated billing helper independently cleans up the
+          // temporary organization and owner.
 
-            select: {
-              userId:
-                true,
+          await prisma.$transaction(async (transaction) => {
+            await transaction.auditLog.deleteMany({
+              where: {
+                actorUserId: technicianUser.id,
+              },
+            });
 
-              role:
-                true,
-            },
+            await transaction.user.delete({
+              where: {
+                id: technicianUser.id,
+              },
+            });
           });
-
-        assert.ok(
-          storedMembership,
-        );
-
-        assert.equal(
-          storedMembership.userId,
-          technicianUser.id,
-        );
-
-        assert.equal(
-          storedMembership.role,
-          MembershipRole.TECHNICIAN,
-        );
+        }
       },
     );
   },
