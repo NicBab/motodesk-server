@@ -1,0 +1,45 @@
+
+//************************************************************** */
+
+enum ShopLocationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+//************************************************************** */
+
+model ShopLocation {
+  id             String @id @default(cuid())
+  organizationId String
+
+  name String
+  code String
+
+  email String?
+  phone String?
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String @default("US")
+
+  timezone String @default("America/Chicago")
+
+  isDefault Boolean @default(false)
+
+  status ShopLocationStatus @default(ACTIVE)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, name])
+  @@index([organizationId, status])
+  @@index([organizationId, isDefault])
+}
+
+//************************************************************** */

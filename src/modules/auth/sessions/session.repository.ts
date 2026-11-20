@@ -1,6 +1,7 @@
+
 //**************************************************************
-// Existing callers default to CLIENT. Admin callers will explicitly pass PLATFORM_ADMIN, 
-// and rotation checks the audience atomically alongside the token hash. 
+// Existing callers default to CLIENT. Admin callers will explicitly pass PLATFORM_ADMIN,
+// and rotation checks the audience atomically alongside the token hash.
 // Account-wide revocation still covers both audiences. */
 
 import {
@@ -19,6 +20,8 @@ export interface CreateSessionRecordData {
 
   audience?: SessionAudience;
 
+  activeOrganizationId?: string | null;
+
   tokenHash: string;
 
   userAgent: string | null;
@@ -31,13 +34,20 @@ export interface CreateSessionRecordData {
 //************************************************************** */
 
 export async function createSessionRecord(data: CreateSessionRecordData) {
+  const audience = data.audience ?? SessionAudience.CLIENT;
+
   return prisma.session.create({
     data: {
       id: data.id,
 
       userId: data.userId,
 
-      audience: data.audience ?? SessionAudience.CLIENT,
+      audience,
+
+      activeOrganizationId:
+        audience === SessionAudience.CLIENT
+          ? (data.activeOrganizationId ?? null)
+          : null,
 
       tokenHash: data.tokenHash,
 

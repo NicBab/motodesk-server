@@ -1,3 +1,4 @@
+
 //************************************************************** */
 
 enum OrganizationStatus {
@@ -45,6 +46,7 @@ model Organization {
   partReturnSequence            PartReturnSequence?
   repairOrderSequence           RepairOrderSequence?
   billing                       OrganizationBilling?
+  shopLocations                 ShopLocation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

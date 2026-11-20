@@ -1,3 +1,4 @@
+
 import { AppError } from "../../../../platform/errors/app-error.js";
 
 import {
@@ -82,10 +83,14 @@ export async function refreshSession(
   }
 
   //************************************************************** */
+  // Prefer the organization selected within this session.
+  // The repository validates active membership and preserves
+  // the existing fallback for legacy or unavailable selections.
 
   const user =
     await findUserForAuthentication(
       validatedSession.session.userId,
+      validatedSession.session.activeOrganizationId,
     );
 
   if (

@@ -1,3 +1,4 @@
+
 //************************************************************** */
 
 enum AuthTokenType {
@@ -104,6 +105,14 @@ model Session {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   audience SessionAudience @default(CLIENT)
+
+  /**
+   * The organization selected within this client session.
+   * This value represents workspace context, not authorization.
+   * Active membership must be validated before issuing
+   * organization-scoped access tokens.
+   */
+  activeOrganizationId String?
 
   tokenHash         String  @unique
   previousTokenHash String?

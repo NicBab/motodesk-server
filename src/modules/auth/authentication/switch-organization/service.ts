@@ -1,6 +1,10 @@
+
 import { AppError } from "../../../../platform/errors/app-error.js";
 
-import { findUserForOrganizationSwitch } from "./repository.js";
+import {
+  findUserForOrganizationSwitch,
+  updateSessionActiveOrganization,
+} from "./repository.js";
 
 import { generateAccessToken } from "../../tokens/jwt.service.js";
 
@@ -55,6 +59,18 @@ export async function switchOrganization(
   }
 
   const authenticatedMembership = toAuthenticatedMembership(membership);
+
+  const sessionUpdated = await updateSessionActiveOrganization(
+    sessionId,
+    user.id,
+    authenticatedMembership.organizationId,
+  );
+
+  if (!sessionUpdated) {
+    throw new AppError(401, "Session is invalid or expired.", {
+      code: "AUTHENTICATION_SESSION_INVALID",
+    });
+  }
 
   const accessToken = generateAccessToken({
     sub: user.id,

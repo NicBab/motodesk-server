@@ -1,3 +1,4 @@
+
 import { OrganizationStatus } from "../../generated/prisma/client.js";
 
 import { prisma } from "../../config/prisma.js";
@@ -56,6 +57,28 @@ export async function createOrganizationWithOwner(
               phone: input.phone,
             }
           : {}),
+      },
+    });
+
+    // Create the organization's default physical shop.
+    // This shares the transaction with organization and
+    // owner membership creation.
+
+    await transaction.shopLocation.create({
+      data: {
+        organizationId: organization.id,
+
+        name: "Main Shop",
+
+        code: "MAIN",
+
+        email: organization.email,
+
+        phone: organization.phone,
+
+        isDefault: true,
+
+        status: "ACTIVE",
       },
     });
 

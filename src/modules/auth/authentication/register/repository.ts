@@ -1,3 +1,4 @@
+
 import {
   MembershipStatus,
   MembershipRole,
@@ -140,6 +141,34 @@ export async function createRegistrationRecords(
             },
           });
 
+        // Create the primary shop inside the same transaction.
+        // A failed location creation rolls back registration.
+
+        await transaction.shopLocation.create({
+          data: {
+            organizationId:
+              organization.id,
+
+            name:
+              "Main Shop",
+
+            code:
+              "MAIN",
+
+            email:
+              organization.email,
+
+            phone:
+              organization.phone,
+
+            isDefault:
+              true,
+
+            status:
+              "ACTIVE",
+          },
+        });
+
         membership =
           await transaction.membership.create({
             data: {
@@ -169,6 +198,9 @@ export async function createRegistrationRecords(
 
             userId:
               user.id,
+
+            activeOrganizationId:
+              membership?.organizationId ?? null,
 
             tokenHash:
               data.session.tokenHash,

@@ -1,6 +1,10 @@
-//************************************************************** 
-//Creation, validation, and rotation now accept an audience, defaulting to CLIENT. 
-// Validation rejects an audience mismatch before touching the session or checking for token reuse. 
+
+//**************************************************************
+// Creation, validation, and rotation accept an audience,
+// defaulting to CLIENT.
+// Client sessions retain their selected organization context.
+// Validation rejects an audience mismatch before touching
+// the session or checking for token reuse.
 // Account-wide revocation remains unchanged.
 // */
 
@@ -70,6 +74,7 @@ export async function createSession(
   userId: string,
   context: RequestMetadata,
   audience: SessionAudience = SessionAudience.CLIENT,
+  activeOrganizationId: string | null = null,
 ): Promise<CreatedSession> {
   const sessionId = randomUUID();
 
@@ -79,6 +84,12 @@ export async function createSession(
     id: sessionId,
     userId,
     audience,
+
+    activeOrganizationId:
+      audience === SessionAudience.CLIENT
+        ? activeOrganizationId
+        : null,
+
     tokenHash: refreshToken.tokenHash,
     userAgent: context.userAgent,
     ipAddress: context.ipAddress,

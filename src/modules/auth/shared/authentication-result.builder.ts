@@ -1,6 +1,9 @@
-//************************************************************** 
-// The added audience argument defaults to CLIENT, preserving existing callers. 
-// Admin authentication will pass PLATFORM_ADMIN and a null organization membership.*/
+
+//**************************************************************
+// The audience argument defaults to CLIENT, preserving existing callers.
+// Admin authentication passes PLATFORM_ADMIN and a null organization membership.
+// Client sessions persist their initial active organization.
+// */
 
 import type {
   GeneratedRefreshToken,
@@ -84,10 +87,17 @@ export async function createAuthenticationResult(
   context: RequestMetadata,
   audience: SessionAudience = SessionAudience.CLIENT,
 ): Promise<AuthenticationResult> {
+  const activeOrganizationId =
+    audience === SessionAudience.CLIENT &&
+    membership?.status === MembershipStatus.ACTIVE
+      ? membership.organizationId
+      : null;
+
   const { session, refreshToken } = await createSession(
     user.id,
     context,
     audience,
+    activeOrganizationId,
   );
 
   return buildAuthenticationResult(
