@@ -144,3 +144,32 @@ export async function resolveBillingAdditionalUserPrice(
 }
 
 //************************************************************** */
+
+
+export async function resolveBillingAdditionalLocationPrice(
+  planId: BillingPlanId,
+): Promise<ValidatedBillingPrice> {
+  const plan = getBillingPlan(planId);
+
+  const additionalLocationPricing =
+    plan.additionalLocationPricing;
+
+  if (!additionalLocationPricing) {
+    throw new AppError(
+      400,
+      "Additional locations are not available on this plan.",
+      {
+        code: "BILLING_ADDITIONAL_LOCATIONS_UNSUPPORTED",
+      },
+    );
+  }
+
+  return resolveValidatedBillingPrice({
+    planId,
+    stripeLookupKey:
+      additionalLocationPricing.stripeLookupKey,
+    currency: plan.currency,
+    interval: plan.interval,
+    unitAmount: additionalLocationPricing.unitAmount,
+  });
+}

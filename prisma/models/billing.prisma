@@ -90,11 +90,13 @@ model OrganizationBilling {
   // Application-managed operation identifiers. Services must
   // verify record ownership and serialize both kinds of changes
   // using the existing organization-then-billing lock order.
-  activeUserCapacityChangeId String? @unique
-  activePlanChangeId         String? @unique
+ activeUserCapacityChangeId     String? @unique
+activePlanChangeId             String? @unique
+activeLocationCapacityChangeId String? @unique
 
-  userCapacityChanges BillingUserCapacityChange[]
-  planChanges         BillingPlanChange[]
+userCapacityChanges     BillingUserCapacityChange[]
+planChanges             BillingPlanChange[]
+locationCapacityChanges BillingLocationCapacityChange[]
 
   lastSyncedAt DateTime?
 

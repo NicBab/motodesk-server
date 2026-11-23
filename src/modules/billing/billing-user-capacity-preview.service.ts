@@ -144,12 +144,16 @@ export async function previewOrganizationBillingUserCapacity(
     );
   }
 
-  if (billing.activeUserCapacityChangeId) {
-    throw previewConflict(
-      "BILLING_CAPACITY_CHANGE_IN_PROGRESS",
-      "Another user-capacity change is in progress.",
-    );
-  }
+ if (
+  billing.activeUserCapacityChangeId ||
+  billing.activePlanChangeId ||
+  billing.activeLocationCapacityChangeId
+) {
+  throw previewConflict(
+    "BILLING_CAPACITY_CHANGE_IN_PROGRESS",
+    "Another subscription change is in progress.",
+  );
+}
 
   if (targetQuantity === billing.additionalUserQuantity) {
     throw previewConflict(

@@ -69,6 +69,17 @@ function assertNoActivePlanChange(
   }
 }
 
+function assertNoActiveLocationChange(
+  activeLocationCapacityChangeId: string | null,
+): void {
+  if (activeLocationCapacityChangeId) {
+    throw changeConflict(
+      "BILLING_SUBSCRIPTION_CHANGE_PENDING",
+      "Resolve the existing location-capacity change before changing user capacity.",
+    );
+  }
+}
+
 //************************************************************** */
 
 // Internal repository functions. The service must authorize
@@ -136,6 +147,7 @@ export async function createBillingUserCapacityPreview(
     }
 
     assertNoActivePlanChange(billing.activePlanChangeId);
+    assertNoActiveLocationChange(billing.activeLocationCapacityChangeId,);
 
     if (billing.activeUserCapacityChangeId) {
       throw changeConflict(
@@ -245,6 +257,7 @@ export async function claimBillingUserCapacityChange(
     }
 
     assertNoActivePlanChange(billing.activePlanChangeId);
+    assertNoActiveLocationChange(billing.activeLocationCapacityChangeId,);
 
     if (change.status === "PENDING_PAYMENT") {
       if (billing.activeUserCapacityChangeId !== change.id) {

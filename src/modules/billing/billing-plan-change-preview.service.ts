@@ -152,10 +152,11 @@ export async function previewOrganizationBillingPlanChange(
     );
   }
 
-  if (
-    billing.activePlanChangeId ||
-    billing.activeUserCapacityChangeId
-  ) {
+ if (
+  billing.activePlanChangeId ||
+  billing.activeUserCapacityChangeId ||
+  billing.activeLocationCapacityChangeId
+) {
     throw conflict(
       "BILLING_SUBSCRIPTION_CHANGE_PENDING",
       "Resolve the existing billing change before continuing.",

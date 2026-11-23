@@ -1,0 +1,65 @@
+
+//************************************************************** */
+// Additional Location Capacity Changes
+//************************************************************** */
+
+enum BillingLocationCapacityChangeStatus {
+  QUOTED
+  PROCESSING
+  PENDING_PAYMENT
+  APPLIED
+  REJECTED
+  EXPIRED
+  RECONCILIATION_REQUIRED
+}
+
+//************************************************************** */
+
+model BillingLocationCapacityChange {
+  id String @id @default(uuid())
+
+  organizationBillingId String
+  organizationBilling OrganizationBilling @relation(fields: [organizationBillingId], references: [id], onDelete: Cascade)
+
+  requestedByUserId String
+
+  status BillingLocationCapacityChangeStatus @default(QUOTED)
+
+  // Immutable Stripe identifiers captured during preview.
+  stripeCustomerId     String
+  stripeSubscriptionId String
+
+  expectedAdditionalLocationQuantity Int
+  targetAdditionalLocationQuantity   Int
+
+  expectedLastSyncedAt DateTime?
+
+  // Shared between preview and confirmed Stripe update.
+  prorationDate Int
+
+  currency String
+
+  // Amounts in minor currency units.
+  estimatedAmountDue BigInt
+  monthlyTotalAmount BigInt
+
+  // Validated, server-generated Stripe parameters.
+  stripeUpdateParameters Json
+
+  expiresAt   DateTime
+  submittedAt DateTime?
+
+  stripeInvoiceId String?
+  appliedAt       DateTime?
+
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationBillingId, createdAt])
+  @@index([organizationBillingId, status])
+  @@index([status, expiresAt])
+}
+
+//************************************************************** */

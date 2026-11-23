@@ -24,6 +24,11 @@ import {
   prepareBillingPlanChangeReconciliation,
 } from "./billing-plan-change-reconciliation.service.js";
 
+import {
+  applyBillingLocationCapacityReconciliation,
+  prepareBillingLocationCapacityReconciliation,
+} from "./billing-location-capacity-reconciliation.service.js";
+
 //************************************************************** */
 
 export interface BillingWebhookResult {
@@ -192,6 +197,7 @@ export async function processBillingWebhookEvent(
           prepared,
         )
       : null;
+      
 
     const completed = await completeBillingWebhookEvent(
       event.id,

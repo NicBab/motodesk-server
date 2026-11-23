@@ -183,7 +183,11 @@ async function assertActiveOrganization(
 }
 
 function assertNoActiveChange(billing: OrganizationBilling): void {
-  if (billing.activePlanChangeId || billing.activeUserCapacityChangeId) {
+  if (
+    billing.activePlanChangeId ||
+    billing.activeUserCapacityChangeId ||
+    billing.activeLocationCapacityChangeId
+  ) {
     throw conflict(
       "BILLING_SUBSCRIPTION_CHANGE_PENDING",
       "Resolve the existing billing change before continuing.",
@@ -319,12 +323,13 @@ export async function claimBillingPlanChange(
     }
 
     if (change.status === "PROCESSING" || change.status === "PENDING_PAYMENT") {
-      if (
-        billing.activePlanChangeId !== change.id ||
-        billing.activeUserCapacityChangeId !== null
-      ) {
-        throw reconciliationRequired();
-      }
+     if (
+  billing.activePlanChangeId !== change.id ||
+  billing.activeUserCapacityChangeId !== null ||
+  billing.activeLocationCapacityChangeId !== null
+) {
+  throw reconciliationRequired();
+}
 
       if (change.status === "PENDING_PAYMENT") {
         return {

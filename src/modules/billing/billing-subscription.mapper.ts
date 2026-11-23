@@ -1,3 +1,4 @@
+
 import type Stripe from "stripe";
 
 import {
@@ -43,6 +44,11 @@ export interface BillingSubscriptionSnapshot {
   additionalUserUnitAmount: number | null;
   stripeAdditionalUserPriceId: string | null;
   stripeAdditionalUserItemId: string | null;
+
+  additionalLocationQuantity: number;
+  additionalLocationUnitAmount: number | null;
+  stripeAdditionalLocationPriceId: string | null;
+  stripeAdditionalLocationItemId: string | null;
 
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
@@ -99,8 +105,6 @@ function assertExpectedPrice(
   interval: "month",
   expectedLivemode: boolean,
 ): void {
-  // Historical subscriptions can reference inactive prices.
-  // Validate their billing terms without requiring active=true.
   if (
     !price.id ||
     price.lookup_key !== lookupKey ||
@@ -117,6 +121,46 @@ function assertExpectedPrice(
   ) {
     throw invalidSubscription();
   }
+}
+
+//************************************************************** */
+
+function validateAdditionalItem(
+  item: Stripe.SubscriptionItem,
+  baseItem: Stripe.SubscriptionItem,
+  lookupKey: string,
+  unitAmount: number,
+  currency: string,
+  interval: "month",
+  expectedLivemode: boolean,
+): number {
+  const quantity = item.quantity;
+
+  if (
+    !item.id ||
+    item.id === baseItem.id ||
+    typeof quantity !== "number" ||
+    !Number.isSafeInteger(quantity) ||
+    quantity < 1 ||
+    quantity > 2_147_483_647 ||
+    item.current_period_start !==
+      baseItem.current_period_start ||
+    item.current_period_end !==
+      baseItem.current_period_end
+  ) {
+    throw invalidSubscription();
+  }
+
+  assertExpectedPrice(
+    item.price,
+    lookupKey,
+    unitAmount,
+    currency,
+    interval,
+    expectedLivemode,
+  );
+
+  return quantity;
 }
 
 //************************************************************** */
@@ -142,13 +186,11 @@ export function mapBillingSubscription(
     subscription.collection_method !== "charge_automatically" ||
     subscription.items.has_more ||
     items.length < 1 ||
-    items.length > 2
+    items.length > 3
   ) {
     throw invalidSubscription();
   }
 
-  // Find the base plan by its price rather than item order or
-  // subscription metadata, which can retain a previous plan.
   const baseItems = items.filter((item) =>
     BILLING_PLAN_IDS.some(
       (id) =>
@@ -163,7 +205,7 @@ export function mapBillingSubscription(
 
   const baseItem = baseItems[0]!;
 
-  if (baseItem.quantity !== 1) {
+  if (baseItem.quantity !== 1 || !baseItem.id) {
     throw invalidSubscription();
   }
 
@@ -213,54 +255,88 @@ export function mapBillingSubscription(
   let stripeAdditionalUserPriceId: string | null = null;
   let stripeAdditionalUserItemId: string | null = null;
 
+  let additionalLocationQuantity = 0;
+  let additionalLocationUnitAmount: number | null = null;
+  let stripeAdditionalLocationPriceId: string | null = null;
+  let stripeAdditionalLocationItemId: string | null = null;
+
   const additionalItems = items.filter(
     (item) => item !== baseItem,
   );
 
-  if (additionalItems.length > 0) {
-    const additionalItem = additionalItems[0]!;
-    const pricing = plan.additionalUserPricing;
-    const quantity = additionalItem.quantity;
+  const seenItemIds = new Set<string>([baseItem.id]);
+  let totalAmount = plan.unitAmount;
 
-    if (
-      !pricing ||
-      additionalItems.length !== 1 ||
-      !additionalItem.id ||
-      additionalItem.id === baseItem.id ||
-      typeof quantity !== "number" ||
-      !Number.isSafeInteger(quantity) ||
-      quantity < 1 ||
-      quantity > 2_147_483_647
-    ) {
+  for (const item of additionalItems) {
+    if (!item.id || seenItemIds.has(item.id)) {
       throw invalidSubscription();
     }
 
-    assertExpectedPrice(
-      additionalItem.price,
-      pricing.stripeLookupKey,
-      pricing.unitAmount,
-      plan.currency,
-      plan.interval,
-      expectedLivemode,
-    );
+    seenItemIds.add(item.id);
 
-    // Keep both recurring items on one billing period.
+    const lookupKey = item.price.lookup_key;
+
     if (
-      additionalItem.current_period_start !==
-        baseItem.current_period_start ||
-      additionalItem.current_period_end !==
-        baseItem.current_period_end ||
-      !Number.isSafeInteger(
-        plan.unitAmount + quantity * pricing.unitAmount,
-      )
+      plan.additionalUserPricing &&
+      lookupKey ===
+        plan.additionalUserPricing.stripeLookupKey
     ) {
+      if (additionalUserQuantity !== 0) {
+        throw invalidSubscription();
+      }
+
+      const pricing = plan.additionalUserPricing;
+
+      const quantity = validateAdditionalItem(
+        item,
+        baseItem,
+        pricing.stripeLookupKey,
+        pricing.unitAmount,
+        plan.currency,
+        plan.interval,
+        expectedLivemode,
+      );
+
+      additionalUserQuantity = quantity;
+      additionalUserUnitAmount = pricing.unitAmount;
+      stripeAdditionalUserPriceId = item.price.id;
+      stripeAdditionalUserItemId = item.id;
+
+      totalAmount += quantity * pricing.unitAmount;
+    } else if (
+      plan.additionalLocationPricing &&
+      lookupKey ===
+        plan.additionalLocationPricing.stripeLookupKey
+    ) {
+      if (additionalLocationQuantity !== 0) {
+        throw invalidSubscription();
+      }
+
+      const pricing = plan.additionalLocationPricing;
+
+      const quantity = validateAdditionalItem(
+        item,
+        baseItem,
+        pricing.stripeLookupKey,
+        pricing.unitAmount,
+        plan.currency,
+        plan.interval,
+        expectedLivemode,
+      );
+
+      additionalLocationQuantity = quantity;
+      additionalLocationUnitAmount = pricing.unitAmount;
+      stripeAdditionalLocationPriceId = item.price.id;
+      stripeAdditionalLocationItemId = item.id;
+
+      totalAmount += quantity * pricing.unitAmount;
+    } else {
       throw invalidSubscription();
     }
+  }
 
-    additionalUserQuantity = quantity;
-    additionalUserUnitAmount = pricing.unitAmount;
-    stripeAdditionalUserPriceId = additionalItem.price.id;
-    stripeAdditionalUserItemId = additionalItem.id;
+  if (!Number.isSafeInteger(totalAmount)) {
+    throw invalidSubscription();
   }
 
   return {
@@ -276,6 +352,11 @@ export function mapBillingSubscription(
     additionalUserUnitAmount,
     stripeAdditionalUserPriceId,
     stripeAdditionalUserItemId,
+
+    additionalLocationQuantity,
+    additionalLocationUnitAmount,
+    stripeAdditionalLocationPriceId,
+    stripeAdditionalLocationItemId,
 
     currentPeriodStart,
     currentPeriodEnd,
