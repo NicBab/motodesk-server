@@ -56,3 +56,36 @@ export type ConfirmBillingUserCapacityChangeInput = z.infer<
 >;
 
 //************************************************************** */
+
+// Total additional locations beyond Pro's two included shops.
+// This is the target quantity, not the number to add.
+
+export const createBillingLocationCapacityPreviewSchema =
+  z.strictObject({
+    additionalLocationQuantity: z
+      .number()
+      .int()
+      .min(0)
+      .max(2_147_483_647),
+  });
+
+export type CreateBillingLocationCapacityPreviewInput =
+  z.infer<
+    typeof createBillingLocationCapacityPreviewSchema
+  >;
+
+//************************************************************** */
+
+// Confirm a server-created Stripe location-capacity quote.
+
+export const confirmBillingLocationCapacityChangeSchema =
+  z.strictObject({
+    changeId: z.uuid(),
+  });
+
+export type ConfirmBillingLocationCapacityChangeInput =
+  z.infer<
+    typeof confirmBillingLocationCapacityChangeSchema
+  >;
+
+//************************************************************** */

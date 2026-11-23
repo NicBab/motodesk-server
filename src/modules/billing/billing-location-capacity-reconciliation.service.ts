@@ -16,9 +16,8 @@ import {
   mapBillingSubscription,
 } from "./billing-subscription.mapper.js";
 
-import {
-  applyBillingSynchronization,
-  type PreparedBillingSynchronization,
+import type {
+  PreparedBillingSynchronization,
 } from "./billing-sync.service.js";
 
 export interface PreparedLocationCapacityReconciliation {
@@ -234,16 +233,14 @@ export async function applyBillingLocationCapacityReconciliation(
   prepared: PreparedBillingSynchronization,
   reconciliation: PreparedLocationCapacityReconciliation | null,
 ): Promise<void> {
+  if (!reconciliation) {
+    return;
+  }
+
   await lockOrganizationUserCapacity(
     transaction,
     prepared.organizationId,
   );
-
-  await applyBillingSynchronization(transaction, prepared);
-
-  if (!reconciliation) {
-    return;
-  }
 
   if (
     reconciliation.organizationId !== prepared.organizationId ||

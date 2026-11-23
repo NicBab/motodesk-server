@@ -197,6 +197,13 @@ export async function processBillingWebhookEvent(
           prepared,
         )
       : null;
+
+    const locationReconciliation = prepared
+      ? await prepareBillingLocationCapacityReconciliation(
+          event,
+          prepared,
+        )
+      : null;
       
 
     const completed = await completeBillingWebhookEvent(
@@ -218,6 +225,12 @@ export async function processBillingWebhookEvent(
             transaction,
             prepared,
             planReconciliation,
+          );
+          
+          await applyBillingLocationCapacityReconciliation(
+            transaction,
+            prepared,
+            locationReconciliation,
           );
 
           // Both outcomes, subscription state, and the webhook

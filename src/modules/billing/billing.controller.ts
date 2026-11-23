@@ -46,12 +46,22 @@ import type {
   CreateBillingCheckoutInput,
   CreateBillingUserCapacityPreviewInput,
   ConfirmBillingUserCapacityChangeInput,
+  CreateBillingLocationCapacityPreviewInput,
+  ConfirmBillingLocationCapacityChangeInput,
 } from "./billing.schemas.js";
 
 import type {
   CreateBillingPlanChangePreviewInput,
   ConfirmBillingPlanChangeInput,
 } from "./billing-plan-change.schemas.js";
+
+import {
+  previewOrganizationBillingLocationCapacity,
+} from "./billing-location-capacity-preview.service.js";
+
+import {
+  confirmOrganizationBillingLocationCapacity,
+} from "./billing-location-capacity-confirm.service.js";
 
 //************************************************************** */
 
@@ -242,5 +252,52 @@ export async function confirmBillingPlanChangeHandler(
 
   ok(response, result);
 }
+
+//************************************************************** */
+
+export async function previewBillingLocationCapacityHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<CreateBillingLocationCapacityPreviewInput>(
+      request,
+    );
+
+  const result = await previewOrganizationBillingLocationCapacity(
+    organizationId,
+    userId,
+    input.additionalLocationQuantity,
+  );
+
+  ok(response, result);
+}
+
+//************************************************************** */
+
+export async function confirmBillingLocationCapacityHandler(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  const { organizationId, userId } =
+    requireBillingRequestContext(request);
+
+  const input =
+    requireValidatedBody<ConfirmBillingLocationCapacityChangeInput>(
+      request,
+    );
+
+  const result = await confirmOrganizationBillingLocationCapacity(
+    organizationId,
+    userId,
+    input,
+  );
+
+  ok(response, result);
+}
+
 
 //************************************************************** */

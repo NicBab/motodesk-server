@@ -43,6 +43,8 @@ import {
   createBillingPortalSchema,
   createBillingUserCapacityPreviewSchema,
   confirmBillingUserCapacityChangeSchema,
+  createBillingLocationCapacityPreviewSchema,
+  confirmBillingLocationCapacityChangeSchema,
 } from "./billing.schemas.js";
 
 import {
@@ -58,6 +60,8 @@ import {
   confirmBillingUserCapacityHandler,
   previewBillingPlanChangeHandler,
   confirmBillingPlanChangeHandler,
+  previewBillingLocationCapacityHandler,
+  confirmBillingLocationCapacityHandler,
 } from "./billing.controller.js";
 
 //************************************************************** */
@@ -172,6 +176,30 @@ router.post(
   requirePermissions(Permissions.BILLING_UPDATE),
   validateBody(confirmBillingPlanChangeSchema),
   confirmBillingPlanChangeHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/location-capacity/preview",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(createBillingLocationCapacityPreviewSchema),
+  previewBillingLocationCapacityHandler,
+);
+
+//************************************************************** */
+
+router.post(
+  "/location-capacity/confirm",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  requirePermissions(Permissions.BILLING_UPDATE),
+  validateBody(confirmBillingLocationCapacityChangeSchema),
+  confirmBillingLocationCapacityHandler,
 );
 
 //************************************************************** */
