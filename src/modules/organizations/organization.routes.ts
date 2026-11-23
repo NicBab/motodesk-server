@@ -63,6 +63,8 @@ import {
   requireVerifiedEmail,
 } from "../auth/index.js";
 
+import locationRouter from "../locations/location.routes.js";
+
 //************************************************************** */
 
 const router = Router();
@@ -168,6 +170,8 @@ router.use(
 );
 
 router.use("/:organizationId/employees", employeeRouter);
+
+router.use("/:organizationId/locations", locationRouter);
 
 router.use("/:organizationId/time-clock", timeClockRouter);
 

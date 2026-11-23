@@ -38,3 +38,43 @@ CREATE UNIQUE INDEX "ShopLocation_organizationId_name_key" ON "ShopLocation"("or
 
 -- AddForeignKey
 ALTER TABLE "ShopLocation" ADD CONSTRAINT "ShopLocation_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Enforce one default location per organization
+CREATE UNIQUE INDEX "ShopLocation_single_default_per_organization_key"
+ON "ShopLocation"("organizationId")
+WHERE "isDefault" = true;
+
+-- Default locations must remain active
+ALTER TABLE "ShopLocation"
+ADD CONSTRAINT "ShopLocation_default_must_be_active_check"
+CHECK ("isDefault" = false OR "status" = 'ACTIVE');
+
+-- Create a default shop for existing organizations
+INSERT INTO "ShopLocation" (
+    "id",
+    "organizationId",
+    "name",
+    "code",
+    "email",
+    "phone",
+    "country",
+    "timezone",
+    "isDefault",
+    "status",
+    "createdAt",
+    "updatedAt"
+)
+SELECT
+    'loc_' || "id",
+    "id",
+    'Main Shop',
+    'MAIN',
+    "email",
+    "phone",
+    'US',
+    'America/Chicago',
+    true,
+    'ACTIVE',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM "Organization";

@@ -1,4 +1,5 @@
-//************************************************************** */
+
+ //************************************************************** */
 
 enum BillingSubscriptionStatus {
   NOT_SUBSCRIBED
@@ -62,6 +63,13 @@ model OrganizationBilling {
   additionalUserUnitAmount    Int?
   stripeAdditionalUserPriceId String?
   stripeAdditionalUserItemId  String?
+
+  // Purchased locations beyond the plan's included locations.
+  // Pro includes two locations; additional locations cost $40/month.
+  additionalLocationQuantity      Int     @default(0)
+  additionalLocationUnitAmount    Int?
+  stripeAdditionalLocationPriceId String?
+  stripeAdditionalLocationItemId  String?
 
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?

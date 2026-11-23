@@ -1,6 +1,4 @@
 
-//************************************************************** */
-
 enum ShopLocationStatus {
   ACTIVE
   ARCHIVED
@@ -33,13 +31,36 @@ model ShopLocation {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  membershipLocations MembershipLocation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([organizationId, id])
   @@unique([organizationId, code])
   @@unique([organizationId, name])
   @@index([organizationId, status])
   @@index([organizationId, isDefault])
+}
+
+//************************************************************** */
+
+model MembershipLocation {
+  id String @id @default(cuid())
+
+  organizationId String
+  membershipId   String
+  shopLocationId String
+
+  membership Membership @relation(fields: [organizationId, membershipId], references: [organizationId, id], onDelete: Cascade)
+
+  shopLocation ShopLocation @relation(fields: [organizationId, shopLocationId], references: [organizationId, id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([membershipId, shopLocationId])
+  @@index([organizationId, shopLocationId])
+  @@index([organizationId, membershipId])
 }
 
 //************************************************************** */

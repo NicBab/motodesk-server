@@ -1,4 +1,5 @@
-//************************************************************** */
+
+ //************************************************************** */
 
 export const BILLING_PLAN_IDS = [
   "starter",
@@ -16,6 +17,11 @@ export interface AdditionalUserPricing {
   readonly unitAmount: number;
 }
 
+export interface AdditionalLocationPricing {
+  readonly stripeLookupKey: string;
+  readonly unitAmount: number;
+}
+
 export interface BillingPlanDefinition {
   readonly id: BillingPlanId;
   readonly name: string;
@@ -25,6 +31,8 @@ export interface BillingPlanDefinition {
   readonly unitAmount: number;
   readonly usersIncluded: number;
   readonly additionalUserPricing: AdditionalUserPricing | null;
+  readonly locationsIncluded: number;
+  readonly additionalLocationPricing: AdditionalLocationPricing | null;
   readonly trialDays: number;
   readonly recommended: boolean;
 }
@@ -41,6 +49,8 @@ export const BILLING_PLANS = {
     unitAmount: 8_900,
     usersIncluded: 2,
     additionalUserPricing: null,
+    locationsIncluded: 1,
+    additionalLocationPricing: null,
     trialDays: 14,
     recommended: false,
   },
@@ -54,6 +64,8 @@ export const BILLING_PLANS = {
     unitAmount: 18_900,
     usersIncluded: 5,
     additionalUserPricing: null,
+    locationsIncluded: 1,
+    additionalLocationPricing: null,
     trialDays: 14,
     recommended: true,
   },
@@ -70,6 +82,13 @@ export const BILLING_PLANS = {
     additionalUserPricing: {
       stripeLookupKey: "pro-additional-user-monthly",
       unitAmount: 1_000,
+    },
+
+    locationsIncluded: 2,
+
+    additionalLocationPricing: {
+      stripeLookupKey: "pro-additional-location-monthly",
+      unitAmount: 4_000,
     },
 
     trialDays: 14,
@@ -96,6 +115,57 @@ export function getBillingPlan(
   planId: BillingPlanId,
 ): BillingPlanDefinition {
   return BILLING_PLANS[planId];
+}
+
+//************************************************************** */
+
+export function getAdditionalLocationCount(
+  planId: BillingPlanId,
+  totalLocations: number,
+): number {
+  if (
+    !Number.isSafeInteger(totalLocations) ||
+    totalLocations < 0
+  ) {
+    throw new RangeError(
+      "Total locations must be a non-negative safe integer.",
+    );
+  }
+
+  const plan = getBillingPlan(planId);
+
+  const additionalLocations = Math.max(
+    0,
+    totalLocations - plan.locationsIncluded,
+  );
+
+  if (
+    additionalLocations > 0 &&
+    plan.additionalLocationPricing === null
+  ) {
+    throw new RangeError(
+      "Additional locations are not available on this plan.",
+    );
+  }
+
+  return additionalLocations;
+}
+
+//************************************************************** */
+
+export function getAdditionalLocationMonthlyAmount(
+  planId: BillingPlanId,
+  totalLocations: number,
+): number {
+  const plan = getBillingPlan(planId);
+
+  return (
+    getAdditionalLocationCount(
+      planId,
+      totalLocations,
+    ) *
+    (plan.additionalLocationPricing?.unitAmount ?? 0)
+  );
 }
 
 //************************************************************** */

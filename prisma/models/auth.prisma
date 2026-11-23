@@ -1,5 +1,5 @@
 
-//************************************************************** */
+ //************************************************************** */
 
 enum AuthTokenType {
   EMAIL_VERIFICATION
@@ -206,10 +206,14 @@ model Membership {
 
   employee Employee? @relation("EmployeeMembership")
 
+  // One employee can work at multiple shops without a second account.
+  membershipLocations MembershipLocation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, organizationId])
+  @@unique([organizationId, id])
   @@index([userId])
   @@index([organizationId])
 }
