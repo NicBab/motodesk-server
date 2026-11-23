@@ -175,6 +175,28 @@ export async function prepareBillingLocationCapacityReconciliation(
       snapshot.status === "TRIALING"
     )
   ) {
+    if (
+      !correlatedInvoiceId ||
+      readId(subscription.latest_invoice) !== correlatedInvoiceId
+    ) {
+      throw retryRequired();
+    }
+
+    const invoice = await stripe.invoices.retrieve(
+  correlatedInvoiceId,
+);
+
+if (
+  invoice.id !== correlatedInvoiceId ||
+  readId(invoice.customer) !== prepared.stripeCustomerId ||
+  readId(invoice.parent?.subscription_details?.subscription) !==
+  change.stripeSubscriptionId ||
+  invoice.livemode !== (env.STRIPE_MODE === "live") ||
+  invoice.status !== "paid"
+) {
+  throw retryRequired();
+}
+
     return { ...base, outcome: "APPLIED" };
   }
 
