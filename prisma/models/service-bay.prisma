@@ -14,8 +14,9 @@ enum ServiceBayAssignmentStatus {
 //************************************************************** */
 
 model ServiceBay {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
+  shopLocationId String?
 
   name        String
   description String?
@@ -27,11 +28,14 @@ model ServiceBay {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  shopLocation ShopLocation? @relation(fields: [organizationId, shopLocationId], references: [organizationId, id], onDelete: Restrict)
+
   assignments ServiceBayAssignment[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([organizationId, shopLocationId])
 }
 
 //************************************************************** */

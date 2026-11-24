@@ -1,5 +1,4 @@
-
- //************************************************************** */
+//************************************************************** */
 
 enum BillingSubscriptionStatus {
   NOT_SUBSCRIBED
@@ -90,13 +89,13 @@ model OrganizationBilling {
   // Application-managed operation identifiers. Services must
   // verify record ownership and serialize both kinds of changes
   // using the existing organization-then-billing lock order.
- activeUserCapacityChangeId     String? @unique
-activePlanChangeId             String? @unique
-activeLocationCapacityChangeId String? @unique
+  activeUserCapacityChangeId     String? @unique
+  activePlanChangeId             String? @unique
+  activeLocationCapacityChangeId String? @unique
 
-userCapacityChanges     BillingUserCapacityChange[]
-planChanges             BillingPlanChange[]
-locationCapacityChanges BillingLocationCapacityChange[]
+  userCapacityChanges     BillingUserCapacityChange[]
+  planChanges             BillingPlanChange[]
+  locationCapacityChanges BillingLocationCapacityChange[]
 
   lastSyncedAt DateTime?
 
@@ -184,8 +183,8 @@ model BillingPlanChange {
   status BillingPlanChangeStatus @default(QUOTED)
 
   // Immutable mapping and expected subscription state.
-  stripeCustomerId     String
-  stripeSubscriptionId String
+  stripeCustomerId      String
+  stripeSubscriptionId  String
   expectedStripePriceId String
 
   // Plan identifiers are validated against the server catalog.

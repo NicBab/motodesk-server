@@ -78,6 +78,7 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Accept",
+      "X-Shop-Location-Id",
     ],
   }),
 );

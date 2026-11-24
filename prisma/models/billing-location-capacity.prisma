@@ -1,4 +1,3 @@
-
 //************************************************************** */
 // Additional Location Capacity Changes
 //************************************************************** */
@@ -19,7 +18,7 @@ model BillingLocationCapacityChange {
   id String @id @default(uuid())
 
   organizationBillingId String
-  organizationBilling OrganizationBilling @relation(fields: [organizationBillingId], references: [id], onDelete: Cascade)
+  organizationBilling   OrganizationBilling @relation(fields: [organizationBillingId], references: [id], onDelete: Cascade)
 
   requestedByUserId String
 

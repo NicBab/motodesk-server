@@ -584,6 +584,35 @@ export async function acceptMembershipInvitationRecord(
       },
     });
 
+    // Assign the default shop in the same transaction as acceptance.
+    // Owners have implicit access to all active locations.
+    if (membership.role !== "OWNER") {
+      const defaultLocation = await transaction.shopLocation.findFirst({
+        where: {
+          organizationId,
+          isDefault: true,
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+
+      if (!defaultLocation) {
+        throw new AppError(
+          409,
+          "The organization has no active default shop location.",
+          { code: "DEFAULT_SHOP_LOCATION_REQUIRED" },
+        );
+      }
+
+      await transaction.membershipLocation.create({
+        data: {
+          organizationId,
+          membershipId: membership.id,
+          shopLocationId: defaultLocation.id,
+        },
+      });
+    }
+
     if (permissions.length > 0) {
       await transaction.membershipPermission.createMany({
         data: permissions.map((permission) => ({

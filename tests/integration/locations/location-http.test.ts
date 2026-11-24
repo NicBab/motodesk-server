@@ -76,11 +76,9 @@ describe("Shop location HTTP authorization", () => {
   beforeEach(async () => {
     owner = await createAuthenticatedAgent();
 
-    const location = await prisma.shopLocation.create({
-      data: {
+    const location = await prisma.shopLocation.findFirstOrThrow({
+      where: {
         organizationId: owner.organizationId,
-        name: "Main Shop",
-        code: "MAIN",
         isDefault: true,
         status: "ACTIVE",
       },
@@ -148,11 +146,9 @@ describe("Shop location HTTP authorization", () => {
     const other = await createAuthenticatedAgent();
 
     const outsideLocation =
-      await prisma.shopLocation.create({
-        data: {
+      await prisma.shopLocation.findFirstOrThrow({
+        where: {
           organizationId: other.organizationId,
-          name: "Outside Shop",
-          code: "OUTSIDE",
           isDefault: true,
           status: "ACTIVE",
         },
@@ -448,4 +444,34 @@ const session = await prisma.session.findFirstOrThrow({
   });
 
   //************************************************************** */
+  it("rejects unauthenticated accessible-location requests", async () => {
+    const response = await request(app).get(endpoint("/accessible"));
+    assert.equal(response.status, 401);
+  });
+
+  it("lists only active shops for the owner without a location header", async () => {
+    const second = await prisma.shopLocation.create({
+      data: { organizationId: owner.organizationId, name: "Second Shop", code: "SECOND", status: "ACTIVE", isDefault: false },
+    });
+    await prisma.shopLocation.create({
+      data: { organizationId: owner.organizationId, name: "Archived Shop", code: "OLD", status: "ARCHIVED", isDefault: false },
+    });
+    const response = await owner.agent.get(endpoint("/accessible"));
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.success, true);
+    assert.deepEqual(response.body.data.map((shop: { id: string }) => shop.id), [defaultLocationId, second.id]);
+  });
+
+  it("rejects accessible-location requests for another organization", async () => {
+    const other = await createAuthenticatedAgent();
+    const response = await owner.agent.get(`/api/v1/organizations/${other.organizationId}/locations/accessible`);
+    assert.equal(response.status, 403, JSON.stringify(response.body));
+  });
+
+  it("does not use the selected-location header to filter accessible shops", async () => {
+    const response = await owner.agent.get(endpoint("/accessible")).set("X-Shop-Location-Id", randomUUID());
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.deepEqual(response.body.data.map((shop: { id: string }) => shop.id), [defaultLocationId]);
+  });
+
 });

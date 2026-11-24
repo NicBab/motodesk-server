@@ -211,6 +211,22 @@ describe("Employee membership invitation linkage", () => {
     assert.equal(membership.role, MembershipRole.TECHNICIAN);
     assert.equal(membership.status, MembershipStatus.ACTIVE);
 
+    const defaultShop = await prisma.shopLocation.findFirstOrThrow({
+      where: {
+        organizationId,
+        isDefault: true,
+        status: "ACTIVE",
+      },
+    });
+
+    const locationAssignments = await prisma.membershipLocation.findMany({
+      where: { membershipId: membership.id },
+    });
+
+    assert.equal(locationAssignments.length, 1);
+    assert.equal(locationAssignments[0]!.organizationId, organizationId);
+    assert.equal(locationAssignments[0]!.shopLocationId, defaultShop.id);
+
     const linkedEmployee = await prisma.employee.findUniqueOrThrow({
       where: { id: employee.id },
 

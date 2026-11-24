@@ -145,6 +145,16 @@ describe("Invitation repository billing capacity", () => {
     organizationId = organization.id;
     organizationIds.push(organization.id);
 
+    await prisma.shopLocation.create({
+      data: {
+        organizationId,
+        name: "Main Shop",
+        code: "MAIN",
+        isDefault: true,
+        status: "ACTIVE",
+      },
+    });
+
     const owner = await createUser();
     ownerId = owner.id;
 

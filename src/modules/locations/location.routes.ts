@@ -1,5 +1,9 @@
 
 import { Router } from "express";
+import { AppError } from "../../platform/errors/app-error.js";
+import { getRequestContext } from "../../platform/request/request.context.js";
+import { list } from "../../platform/http/api-response.js";
+import { listAccessibleShopLocations } from "./location-access.service.js";
 
 import {
   authenticateRequest,
@@ -58,6 +62,45 @@ router.get(
   requireOrganizationAccess,
   requirePermissions(Permissions.ORGANIZATION_VIEW),
   listLocationsHandler,
+);
+
+//************************************************************** */
+// List locations accessible to the current membership
+//************************************************************** */
+
+router.get(
+  "/accessible",
+  authenticateRequest,
+  initializeRequestContext,
+  requireOrganizationAccess,
+  async (request, response, next) => {
+    try {
+      const organizationId = request.params.organizationId;
+      const membership = getRequestContext().membership;
+
+      if (typeof organizationId !== "string" || !organizationId.trim()) {
+        throw new AppError(400, "A valid organization ID is required.", {
+          code: "ORGANIZATION_ID_REQUIRED",
+        });
+      }
+
+      if (!membership || membership.organizationId !== organizationId) {
+        throw new AppError(403, "Organization membership is required.", {
+          code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+        });
+      }
+
+      const locations = await listAccessibleShopLocations(organizationId, {
+        organizationId: membership.organizationId,
+        membershipId: membership.id,
+        role: membership.role,
+      });
+
+      list(response, locations);
+    } catch (error) {
+      next(error);
+    }
+  },
 );
 
 //************************************************************** */

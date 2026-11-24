@@ -84,6 +84,17 @@ export async function createAuthenticatedAgent() {
     userId: user.id,
   });
 
+  // Mirror production organization provisioning.
+  await prisma.shopLocation.create({
+    data: {
+      organizationId,
+      name: "Main Shop",
+      code: "MAIN",
+      isDefault: true,
+      status: "ACTIVE",
+    },
+  });
+
   const membership = await prisma.membership.create({
     data: {
       organizationId,
