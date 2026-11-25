@@ -338,15 +338,17 @@ describe("Organization billing overview HTTP API", () => {
 
     assert.equal(data.subscription.status, "TRIALING");
 
-    assert.deepEqual(data.subscription.plan, {
-      id: "starter",
-      name: "Starter",
-      currency: "usd",
-      interval: "month",
-      unitAmount: 8_900,
-      usersIncluded: 2,
-      additionalUserPricing: null,
-    });
+   assert.deepEqual(data.subscription.plan, {
+  id: "starter",
+  name: "Starter",
+  currency: "usd",
+  interval: "month",
+  unitAmount: 8_900,
+  usersIncluded: 2,
+  locationsIncluded: 1,
+  additionalUserPricing: null,
+  additionalLocationPricing: null,
+});
 
     assert.equal(
       data.subscription.currentPeriodStart,

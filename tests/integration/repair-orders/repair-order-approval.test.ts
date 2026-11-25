@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -53,7 +54,7 @@ describe("Repair Order customer approval integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -73,7 +74,7 @@ describe("Repair Order customer approval integration", () => {
     const requestResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Estimate sent to customer for approval.",
       });
@@ -91,7 +92,7 @@ describe("Repair Order customer approval integration", () => {
     const approveResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         approvalMethod: "PHONE",
 
@@ -111,7 +112,7 @@ describe("Repair Order customer approval integration", () => {
 
     const finalResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(finalResponse.status, 200);
 
@@ -193,7 +194,7 @@ describe("Repair Order customer approval integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -211,7 +212,7 @@ describe("Repair Order customer approval integration", () => {
     const requestResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(requestResponse.status, 200);
@@ -227,7 +228,7 @@ describe("Repair Order customer approval integration", () => {
     const declineResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/decline`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Customer declined the estimate.",
       });
@@ -241,7 +242,7 @@ describe("Repair Order customer approval integration", () => {
 
     const finalResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(finalResponse.status, 200);
 
@@ -293,7 +294,7 @@ describe("Repair Order customer approval integration", () => {
     const vehicleId = vehicleResponse.body.data.id;
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -309,7 +310,7 @@ describe("Repair Order customer approval integration", () => {
     const approveResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         approvalMethod: "PHONE",
 
@@ -329,7 +330,7 @@ describe("Repair Order customer approval integration", () => {
     const declineResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/decline`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Invalid decline attempt.",
       });

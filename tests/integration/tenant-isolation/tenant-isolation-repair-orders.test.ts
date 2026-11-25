@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 
 import { describe, it } from "node:test";
@@ -97,7 +98,7 @@ describe("Repair Order tenant isolation integration", () => {
     //************************************************************** */
 
     const repairOrderBResponse = await agent
-      .post(`/api/v1/organizations/${organizationBId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationBId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationBId))
       .send({
         customerId: customerBId,
         vehicleId: vehicleBId,
@@ -152,7 +153,7 @@ describe("Repair Order tenant isolation integration", () => {
 
     const getForeignRepairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderBId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(getForeignRepairOrderResponse.status, 404);
 
@@ -169,7 +170,7 @@ describe("Repair Order tenant isolation integration", () => {
     const updateForeignRepairOrderResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderBId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         priority: "EMERGENCY",
         notes: "CROSS TENANT MUTATION",
@@ -190,7 +191,7 @@ describe("Repair Order tenant isolation integration", () => {
     const statusForeignRepairOrderResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderBId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         status: "AWAITING_CUSTOMER_APPROVAL",
         notes: "CROSS TENANT STATUS MUTATION",
@@ -212,7 +213,7 @@ describe("Repair Order tenant isolation integration", () => {
 
     const listResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(listResponse.status, 200);
 
@@ -229,7 +230,7 @@ describe("Repair Order tenant isolation integration", () => {
     // Valid Organization A vehicle + Organization B customer.
 
     const foreignCustomerResponse = await agent
-      .post(`/api/v1/organizations/${organizationAId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationAId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         customerId: customerBId,
         vehicleId: vehicleAId,
@@ -249,7 +250,7 @@ describe("Repair Order tenant isolation integration", () => {
     // Valid Organization A customer + Organization B vehicle.
 
     const foreignVehicleResponse = await agent
-      .post(`/api/v1/organizations/${organizationAId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationAId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         customerId: customerAId,
         vehicleId: vehicleBId,
@@ -271,7 +272,7 @@ describe("Repair Order tenant isolation integration", () => {
     // using the pair.
 
     const foreignPairResponse = await agent
-      .post(`/api/v1/organizations/${organizationAId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationAId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         customerId: customerBId,
         vehicleId: vehicleBId,

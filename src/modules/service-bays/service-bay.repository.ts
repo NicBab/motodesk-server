@@ -1,3 +1,4 @@
+
 import { prisma } from "../../config/prisma.js";
 
 //************************************************************** */
@@ -5,18 +6,18 @@ import { prisma } from "../../config/prisma.js";
 
 export async function createServiceBayRecord(
   organizationId: string,
+  shopLocationId: string,
   name: string,
   description?: string,
 ) {
   return prisma.serviceBay.create({
     data: {
       organizationId,
+      shopLocationId,
       name,
 
       ...(description !== undefined
-        ? {
-            description,
-          }
+        ? { description }
         : {}),
     },
   });
@@ -27,13 +28,14 @@ export async function createServiceBayRecord(
 
 export async function findServiceBayById(
   organizationId: string,
+  shopLocationId: string,
   serviceBayId: string,
 ) {
   return prisma.serviceBay.findFirst({
     where: {
       id: serviceBayId,
-
       organizationId,
+      shopLocationId,
     },
   });
 }
@@ -56,10 +58,14 @@ export async function findServiceBayByName(
 //************************************************************** */
 // List Service Bays
 
-export async function listServiceBayRecords(organizationId: string) {
+export async function listServiceBayRecords(
+  organizationId: string,
+  shopLocationId: string,
+) {
   return prisma.serviceBay.findMany({
     where: {
       organizationId,
+      shopLocationId,
     },
 
     orderBy: {
@@ -69,10 +75,32 @@ export async function listServiceBayRecords(organizationId: string) {
 }
 
 //************************************************************** */
+// Verify Repair Order Location
+
+export async function findRepairOrderForServiceBay(
+  organizationId: string,
+  shopLocationId: string,
+  repairOrderId: string,
+) {
+  return prisma.repairOrder.findFirst({
+    where: {
+      id: repairOrderId,
+      organizationId,
+      shopLocationId,
+    },
+
+    select: {
+      id: true,
+    },
+  });
+}
+
+//************************************************************** */
 // Find Active Assignment For Repair Order
 
 export async function findActiveServiceBayAssignmentForRepairOrder(
   organizationId: string,
+  shopLocationId: string,
   repairOrderId: string,
 ) {
   return prisma.serviceBayAssignment.findFirst({
@@ -80,6 +108,16 @@ export async function findActiveServiceBayAssignmentForRepairOrder(
       organizationId,
       repairOrderId,
       status: "ACTIVE",
+
+      repairOrder: {
+        organizationId,
+        shopLocationId,
+      },
+
+      serviceBay: {
+        organizationId,
+        shopLocationId,
+      },
     },
   });
 }
@@ -89,6 +127,7 @@ export async function findActiveServiceBayAssignmentForRepairOrder(
 
 export async function findActiveServiceBayAssignmentForBay(
   organizationId: string,
+  shopLocationId: string,
   serviceBayId: string,
 ) {
   return prisma.serviceBayAssignment.findFirst({
@@ -96,6 +135,11 @@ export async function findActiveServiceBayAssignmentForBay(
       organizationId,
       serviceBayId,
       status: "ACTIVE",
+
+      serviceBay: {
+        organizationId,
+        shopLocationId,
+      },
     },
   });
 }
@@ -105,24 +149,54 @@ export async function findActiveServiceBayAssignmentForBay(
 
 export async function assignRepairOrderToServiceBayRecord(
   organizationId: string,
+  shopLocationId: string,
   repairOrderId: string,
   serviceBayId: string,
   assignedByMembershipId: string | null,
   notes?: string,
 ) {
-  return prisma.serviceBayAssignment.create({
-    data: {
-      organizationId,
-      repairOrderId,
-      serviceBayId,
-      assignedByMembershipId,
+  return prisma.$transaction(async (transaction) => {
+    const repairOrder = await transaction.repairOrder.findFirst({
+      where: {
+        id: repairOrderId,
+        organizationId,
+        shopLocationId,
+      },
 
-      ...(notes !== undefined
-        ? {
-            notes,
-          }
-        : {}),
-    },
+      select: {
+        id: true,
+      },
+    });
+
+    const serviceBay = await transaction.serviceBay.findFirst({
+      where: {
+        id: serviceBayId,
+        organizationId,
+        shopLocationId,
+        status: "ACTIVE",
+      },
+
+      select: {
+        id: true,
+      },
+    });
+
+    if (!repairOrder || !serviceBay) {
+      return null;
+    }
+
+    return transaction.serviceBayAssignment.create({
+      data: {
+        organizationId,
+        repairOrderId,
+        serviceBayId,
+        assignedByMembershipId,
+
+        ...(notes !== undefined
+          ? { notes }
+          : {}),
+      },
+    });
   });
 }
 
@@ -131,35 +205,37 @@ export async function assignRepairOrderToServiceBayRecord(
 
 export async function releaseRepairOrderFromServiceBayRecord(
   organizationId: string,
+  shopLocationId: string,
   repairOrderId: string,
   activeAssignmentId: string,
   notes?: string,
 ) {
   return prisma.$transaction(async (transaction) => {
-    //************************************************************** */
-    // Release Active Assignment
-
     const releasedAssignment =
       await transaction.serviceBayAssignment.updateMany({
         where: {
           id: activeAssignmentId,
-
           organizationId,
-
           repairOrderId,
-
           status: "ACTIVE",
+
+          repairOrder: {
+            organizationId,
+            shopLocationId,
+          },
+
+          serviceBay: {
+            organizationId,
+            shopLocationId,
+          },
         },
 
         data: {
           status: "RELEASED",
-
           releasedAt: new Date(),
 
           ...(notes !== undefined
-            ? {
-                notes,
-              }
+            ? { notes }
             : {}),
         },
       });
@@ -168,12 +244,15 @@ export async function releaseRepairOrderFromServiceBayRecord(
       return null;
     }
 
-    //************************************************************** */
-    // Return Updated Assignment
-
-    return transaction.serviceBayAssignment.findUnique({
+    return transaction.serviceBayAssignment.findFirst({
       where: {
         id: activeAssignmentId,
+        organizationId,
+
+        serviceBay: {
+          organizationId,
+          shopLocationId,
+        },
       },
     });
   });
@@ -184,14 +263,15 @@ export async function releaseRepairOrderFromServiceBayRecord(
 
 export async function updateServiceBayStatusRecord(
   organizationId: string,
+  shopLocationId: string,
   serviceBayId: string,
   status: "ACTIVE" | "INACTIVE" | "MAINTENANCE",
 ) {
   const result = await prisma.serviceBay.updateMany({
     where: {
       id: serviceBayId,
-
       organizationId,
+      shopLocationId,
     },
 
     data: {
@@ -206,8 +286,10 @@ export async function updateServiceBayStatusRecord(
   return prisma.serviceBay.findFirst({
     where: {
       id: serviceBayId,
-
       organizationId,
+      shopLocationId,
     },
   });
 }
+
+//************************************************************** */

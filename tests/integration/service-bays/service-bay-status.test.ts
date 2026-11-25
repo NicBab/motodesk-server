@@ -1,5 +1,11 @@
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+
+import {
+  defaultShopLocationId,
+  scopeRepairOrderFixture,
+} from "../helpers/service-bay-location.fixture.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
@@ -7,7 +13,11 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
 describe("Service bay status integration", () => {
   it("moves an unoccupied service bay through maintenance and back to active", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const suffix = Date.now().toString();
 
@@ -16,6 +26,7 @@ describe("Service bay status integration", () => {
 
     const bayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Status Bay ${suffix}`,
       });
@@ -31,6 +42,7 @@ describe("Service bay status integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/${serviceBayId}/status`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         status: "MAINTENANCE",
         notes: "Lift inspection.",
@@ -38,7 +50,10 @@ describe("Service bay status integration", () => {
 
     assert.equal(maintenanceResponse.status, 200);
 
-    assert.equal(maintenanceResponse.body.data.status, "MAINTENANCE");
+    assert.equal(
+      maintenanceResponse.body.data.status,
+      "MAINTENANCE",
+    );
 
     //************************************************************** */
     // Return To Active
@@ -47,6 +62,7 @@ describe("Service bay status integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/${serviceBayId}/status`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         status: "ACTIVE",
       });
@@ -59,7 +75,11 @@ describe("Service bay status integration", () => {
   //************************************************************** */
 
   it("rejects placing an occupied service bay into maintenance", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const suffix = Date.now().toString();
 
@@ -68,6 +88,7 @@ describe("Service bay status integration", () => {
 
     const bayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Occupied Status Bay ${suffix}`,
       });
@@ -119,6 +140,11 @@ describe("Service bay status integration", () => {
 
     const repairOrderId = repairOrderResponse.body.data.id;
 
+    await scopeRepairOrderFixture(
+      organizationId,
+      repairOrderId,
+    );
+
     //************************************************************** */
     // Occupy Bay
 
@@ -126,6 +152,7 @@ describe("Service bay status integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${repairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
       });
@@ -139,12 +166,16 @@ describe("Service bay status integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/${serviceBayId}/status`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         status: "MAINTENANCE",
       });
 
     assert.equal(statusResponse.status, 400);
 
-    assert.equal(statusResponse.body.code, "SERVICE_BAY_STATUS_OCCUPIED");
+    assert.equal(
+      statusResponse.body.code,
+      "SERVICE_BAY_STATUS_OCCUPIED",
+    );
   });
 });

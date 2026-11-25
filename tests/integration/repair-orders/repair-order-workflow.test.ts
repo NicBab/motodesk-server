@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -47,7 +48,7 @@ describe("Repair Order workflow integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -67,7 +68,7 @@ describe("Repair Order workflow integration", () => {
       return agent
         .post(
           `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-        )
+        ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
         .send({
           status,
           notes: `Workflow transition to ${status}.`,
@@ -110,7 +111,7 @@ describe("Repair Order workflow integration", () => {
 
     const afterInvalidJump = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterInvalidJump.status, 200);
 
@@ -184,7 +185,7 @@ describe("Repair Order workflow integration", () => {
 
     const finalRepairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(finalRepairOrderResponse.status, 200);
 

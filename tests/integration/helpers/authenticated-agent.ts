@@ -182,11 +182,24 @@ export async function createAuthenticatedAgent() {
     );
   }
 
+  const defaultShopLocation =
+  await prisma.shopLocation.findFirstOrThrow({
+    where: {
+      organizationId,
+      isDefault: true,
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+    },
+  });
+
   return {
-    agent,
-    organizationId,
-    membershipId,
-  };
+  agent,
+  organizationId,
+  membershipId,
+  shopLocationId: defaultShopLocation.id,
+};
 }
 
 //************************************************************** */

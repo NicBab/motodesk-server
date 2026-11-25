@@ -91,8 +91,9 @@ enum RepairOrderLaborStatus {
 //************************************************************** */
 
 model RepairOrder {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
+  shopLocationId String?
   customerId     String
   vehicleId      String
 
@@ -137,6 +138,8 @@ model RepairOrder {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  shopLocation ShopLocation? @relation(fields: [organizationId, shopLocationId], references: [organizationId, id], onDelete: Restrict)
+
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
@@ -162,6 +165,7 @@ model RepairOrder {
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, roNumber])
+  @@index([organizationId, shopLocationId])
   @@index([organizationId])
   @@index([organizationId, customerId])
   @@index([organizationId, vehicleId])

@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import {
   describe,
@@ -81,7 +82,7 @@ describe(
           await agent
             .post(
               `/api/v1/organizations/${organizationId}/repair-orders`,
-            )
+            ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
             .send({
               customerId,
               vehicleId,
@@ -104,7 +105,7 @@ describe(
           await agent
             .post(
               `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines`,
-            )
+            ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
             .send({
               description:
                 "Inspect and adjust valve clearance",
@@ -160,7 +161,7 @@ describe(
         const getResponse =
           await agent.get(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}`,
-          );
+          ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
         assert.equal(
           getResponse.status,
@@ -179,7 +180,7 @@ describe(
           await agent
             .patch(
               `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}`,
-            )
+            ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
             .send({
               hours: 3,
               completed: true,
@@ -208,7 +209,7 @@ describe(
         const listResponse =
           await agent.get(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines`,
-          );
+          ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
         assert.equal(
           listResponse.status,
@@ -242,7 +243,7 @@ describe(
         const deleteResponse =
           await agent.delete(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}`,
-          );
+          ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
         assert.equal(
           deleteResponse.status,
@@ -265,7 +266,7 @@ describe(
         const missingResponse =
           await agent.get(
             `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}`,
-          );
+          ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
         assert.equal(
           missingResponse.status,

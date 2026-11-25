@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -53,7 +54,7 @@ describe("Repair Order cashier and pickup integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -72,7 +73,7 @@ describe("Repair Order cashier and pickup integration", () => {
       agent
         .post(
           `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-        )
+        ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
         .send({
           status,
 
@@ -93,7 +94,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const beginQcResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/begin`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(beginQcResponse.status, 200);
@@ -104,7 +105,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const passQcResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/pass`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(passQcResponse.status, 200);
@@ -117,7 +118,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const cashierResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/cashier`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         paymentReference: "TEST-PAID-001",
 
@@ -156,7 +157,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const pickupResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/pickup`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         pickupRecipient: "Cashier Workflow",
 
@@ -191,7 +192,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const closeResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/close`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Repair order finalized.",
       });
@@ -205,7 +206,7 @@ describe("Repair Order cashier and pickup integration", () => {
 
     const finalRepairOrder = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(finalRepairOrder.status, 200);
 
@@ -294,7 +295,7 @@ describe("Repair Order cashier and pickup integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -312,7 +313,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const cashierResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/cashier`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(cashierResponse.status, 400);
@@ -328,7 +329,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const pickupResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/pickup`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(pickupResponse.status, 400);
@@ -344,7 +345,7 @@ describe("Repair Order cashier and pickup integration", () => {
     const closeResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/close`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(closeResponse.status, 400);

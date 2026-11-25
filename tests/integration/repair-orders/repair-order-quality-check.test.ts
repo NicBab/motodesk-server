@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -38,7 +39,7 @@ describe("Repair Order quality check integration", () => {
     const vehicleId = vehicleResponse.body.data.id;
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -53,7 +54,7 @@ describe("Repair Order quality check integration", () => {
       agent
         .post(
           `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-        )
+        ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
         .send({
           status,
           automatic: false,
@@ -70,7 +71,7 @@ describe("Repair Order quality check integration", () => {
     const beginResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/begin`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Beginning final inspection.",
       });
@@ -82,7 +83,7 @@ describe("Repair Order quality check integration", () => {
     const passResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/pass`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "QC passed.",
       });
@@ -124,7 +125,7 @@ describe("Repair Order quality check integration", () => {
     const vehicleId = vehicleResponse.body.data.id;
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -139,7 +140,7 @@ describe("Repair Order quality check integration", () => {
       agent
         .post(
           `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-        )
+        ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
         .send({
           status,
           automatic: false,
@@ -156,7 +157,7 @@ describe("Repair Order quality check integration", () => {
     const beginResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/begin`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(beginResponse.status, 200);
@@ -164,7 +165,7 @@ describe("Repair Order quality check integration", () => {
     const failResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/quality-check/fail`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Brake lever still feels soft. Return to technician.",
       });

@@ -198,8 +198,10 @@ async function assertMembershipValid(
 
 //************************************************************** */
 
+
 export async function createRepairOrder(
   organizationId: string,
+  shopLocationId: string,
   membershipId: string | null,
   input: CreateRepairOrderInput,
 ) {
@@ -265,6 +267,7 @@ export async function createRepairOrder(
 
   return createRepairOrderRecord(
     organizationId,
+    shopLocationId,
     {
       ...input,
 
@@ -275,6 +278,7 @@ export async function createRepairOrder(
     membershipId,
   );
 }
+
 
 //************************************************************** */
 
@@ -295,11 +299,17 @@ export async function getRepairOrderById(
 
 //************************************************************** */
 
+
 export async function listRepairOrders(
   organizationId: string,
+  shopLocationId: string,
   query: ListRepairOrdersQueryInput,
 ) {
-  return findRepairOrdersByOrganization(organizationId, query);
+  return findRepairOrdersByOrganization(
+    organizationId,
+    shopLocationId,
+    query,
+  );
 }
 
 //************************************************************** */

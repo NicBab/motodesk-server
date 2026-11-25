@@ -1,5 +1,11 @@
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+
+import {
+  defaultShopLocationId,
+  scopeRepairOrderFixture,
+} from "../helpers/service-bay-location.fixture.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
@@ -14,9 +20,7 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/customers`)
     .send({
       type: "INDIVIDUAL",
-
       firstName: "Bay",
-
       lastName: `Release ${suffix}`,
     });
 
@@ -26,13 +30,9 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/vehicles`)
     .send({
       customerId: customerResponse.body.data.id,
-
       make: "Kawasaki",
-
       model: "KX450",
-
       vin: `BAY-RELEASE-${suffix}`,
-
       type: "MOTORCYCLE",
     });
 
@@ -42,13 +42,16 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/repair-orders`)
     .send({
       customerId: customerResponse.body.data.id,
-
       vehicleId: vehicleResponse.body.data.id,
-
       complaint: "Service bay release integration test.",
     });
 
   assert.equal(repairOrderResponse.status, 201);
+
+  await scopeRepairOrderFixture(
+    organizationId,
+    repairOrderResponse.body.data.id,
+  );
 
   return repairOrderResponse.body.data.id;
 }
@@ -57,7 +60,11 @@ async function createRepairOrderFixture(
 
 describe("Service bay release integration", () => {
   it("releases an active service bay assignment and allows the bay to be reused", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const suffix = Date.now().toString();
 
@@ -66,6 +73,7 @@ describe("Service bay release integration", () => {
 
     const bayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Release Bay ${suffix}`,
       });
@@ -90,9 +98,9 @@ describe("Service bay release integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${firstRepairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
-
         notes: "First repair order assigned.",
       });
 
@@ -119,6 +127,7 @@ describe("Service bay release integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${firstRepairOrderId}/release`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         notes: "Unit moved out of service bay.",
       });
@@ -166,15 +175,18 @@ describe("Service bay release integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${secondRepairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
-
         notes: "Released bay reused by second repair order.",
       });
 
     assert.equal(secondAssignmentResponse.status, 200);
 
-    assert.equal(secondAssignmentResponse.body.data.serviceBayId, serviceBayId);
+    assert.equal(
+      secondAssignmentResponse.body.data.serviceBayId,
+      serviceBayId,
+    );
 
     assert.equal(
       secondAssignmentResponse.body.data.repairOrderId,
@@ -187,7 +199,11 @@ describe("Service bay release integration", () => {
   //************************************************************** */
 
   it("rejects release when the repair order has no active bay assignment", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const repairOrderId = await createRepairOrderFixture(
       agent,
@@ -199,6 +215,7 @@ describe("Service bay release integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${repairOrderId}/release`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         notes: "Invalid release attempt.",
       });

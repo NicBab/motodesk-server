@@ -50,6 +50,8 @@ import type {
   CompleteRepairOrderPartsReviewInput,
 } from "./repair-order.schemas.js";
 
+import { requireAuthorizedShopLocation } from "../locations/location-access.middleware.js";
+
 //************************************************************** */
 
 function requireOrganizationId(request: AuthenticatedRequest): string {
@@ -77,11 +79,15 @@ function getMembershipId(): string | null {
 
 //************************************************************** */
 
+
 export async function createRepairOrderHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
+
+  const shopLocationId =
+    requireAuthorizedShopLocation(request).id;
 
   const membershipId = getMembershipId();
 
@@ -89,6 +95,7 @@ export async function createRepairOrderHandler(
 
   const repairOrder = await createRepairOrder(
     organizationId,
+    shopLocationId,
     membershipId,
     input,
   );
@@ -98,18 +105,27 @@ export async function createRepairOrderHandler(
 
 //************************************************************** */
 
+
 export async function listRepairOrdersHandler(
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
+  const shopLocationId =
+    requireAuthorizedShopLocation(request).id;
+
   const query = requireValidatedQuery<ListRepairOrdersQueryInput>(request);
 
-  const repairOrders = await listRepairOrders(organizationId, query);
+  const repairOrders = await listRepairOrders(
+    organizationId,
+    shopLocationId,
+    query,
+  );
 
   ok(response, repairOrders);
 }
+
 
 //************************************************************** */
 

@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 
 import { describe, it } from "node:test";
@@ -125,7 +126,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     // Repair Order B
 
     const repairOrderBResponse = await agent
-      .post(`/api/v1/organizations/${organizationBId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationBId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationBId))
       .send({
         customerId: customerBId,
         vehicleId: vehicleBId,
@@ -142,7 +143,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const laborLineBResponse = await agent
       .post(
         `/api/v1/organizations/${organizationBId}/repair-orders/${repairOrderBId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationBId))
       .send({
         technicianMembershipId: membershipBId,
         description: "Organization B protected labor line",
@@ -179,7 +180,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const partLineBResponse = await agent
       .post(
         `/api/v1/organizations/${organizationBId}/repair-orders/${repairOrderBId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationBId))
       .send({
         partId: partBId,
         partNumber: partNumberB,
@@ -233,7 +234,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     //************************************************************** */
 
     const repairOrderAResponse = await agent
-      .post(`/api/v1/organizations/${organizationAId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationAId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         customerId: customerAId,
         vehicleId: vehicleAId,
@@ -250,7 +251,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const laborLineAResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         technicianMembershipId: membershipAId,
         description: "Organization A protected labor line",
@@ -287,7 +288,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const partLineAResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         partId: partAId,
         partNumber: partNumberA,
@@ -311,7 +312,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignLaborListResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderBId}/labor-lines`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignLaborListResponse.status, 404);
 
@@ -322,7 +323,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignPartListResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderBId}/part-lines`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignPartListResponse.status, 404);
 
@@ -337,7 +338,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignLaborReadResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines/${laborLineBId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignLaborReadResponse.status, 404);
 
@@ -352,7 +353,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignLaborUpdateResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines/${laborLineBId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         description: "CROSS TENANT LABOR MUTATION",
         hours: 99,
@@ -370,7 +371,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignLaborDeleteResponse = await agent.delete(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines/${laborLineBId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignLaborDeleteResponse.status, 404);
 
@@ -384,7 +385,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignPartLineReadResponse = await agent.get(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines/${partLineBId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignPartLineReadResponse.status, 404);
 
@@ -399,7 +400,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignPartLineUpdateResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines/${partLineBId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         description: "CROSS TENANT PART MUTATION",
         quantity: 9,
@@ -421,7 +422,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignPartAllocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines/${partLineBId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         quantity: 1,
       });
@@ -438,7 +439,7 @@ describe("Repair Order nested tenant isolation integration", () => {
 
     const foreignPartLineDeleteResponse = await agent.delete(
       `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines/${partLineBId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId));
 
     assert.equal(foreignPartLineDeleteResponse.status, 404);
 
@@ -456,7 +457,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignTechnicianCreateResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         technicianMembershipId: membershipBId,
         description: "Foreign technician injection attempt",
@@ -477,7 +478,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignTechnicianUpdateResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/labor-lines/${laborLineAId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         technicianMembershipId: membershipBId,
       });
@@ -498,7 +499,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignAdvisorResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         serviceAdvisorMembershipId: membershipBId,
       });
@@ -516,7 +517,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignPrimaryTechnicianResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         primaryTechnicianMembershipId: membershipBId,
       });
@@ -537,7 +538,7 @@ describe("Repair Order nested tenant isolation integration", () => {
     const foreignInventoryPartResponse = await agent
       .post(
         `/api/v1/organizations/${organizationAId}/repair-orders/${repairOrderAId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationAId))
       .send({
         partId: partBId,
         partNumber: partNumberB,

@@ -1,3 +1,4 @@
+
 import { env } from "../../config/env.js";
 
 import { prisma } from "../../config/prisma.js";
@@ -56,6 +57,7 @@ export async function getOrganizationBillingOverview(
     billingState,
     billingExempt,
     assignedUsers,
+    activeLocations,
   ] = await Promise.all([
     readBillingOverviewState(
       organizationId,
@@ -68,6 +70,13 @@ export async function getOrganizationBillingOverview(
       where: {
         organizationId,
         status: MembershipStatus.ACTIVE,
+      },
+    }),
+
+    prisma.shopLocation.count({
+      where: {
+        organizationId,
+        status: "ACTIVE",
       },
     }),
   ]);
@@ -87,6 +96,10 @@ export async function getOrganizationBillingOverview(
     storedPlanId !== null
       ? getBillingPlan(storedPlanId)
       : null;
+
+  //************************************************************** */
+  // Additional User Capacity
+  //************************************************************** */
 
   const additionalUserQuantity =
     billing?.additionalUserQuantity ?? 0;
@@ -126,20 +139,79 @@ export async function getOrganizationBillingOverview(
     throw invalidBillingConfiguration();
   }
 
+  //************************************************************** */
+  // Additional Location Capacity
+  //************************************************************** */
+
+  const additionalLocationQuantity =
+    billing?.additionalLocationQuantity ?? 0;
+
+  const additionalLocationUnitAmount =
+    billing?.additionalLocationUnitAmount ?? null;
+
+  const additionalLocationPriceId =
+    billing?.stripeAdditionalLocationPriceId ?? null;
+
+  const additionalLocationItemId =
+    billing?.stripeAdditionalLocationItemId ?? null;
+
+  if (
+    !Number.isSafeInteger(additionalLocationQuantity) ||
+    additionalLocationQuantity < 0 ||
+    additionalLocationQuantity > 2_147_483_647
+  ) {
+    throw invalidBillingConfiguration();
+  }
+
+  if (additionalLocationQuantity > 0) {
+    if (
+      !plan?.additionalLocationPricing ||
+      additionalLocationUnitAmount !==
+        plan.additionalLocationPricing.unitAmount ||
+      !additionalLocationPriceId ||
+      !additionalLocationItemId
+    ) {
+      throw invalidBillingConfiguration();
+    }
+  } else if (
+    additionalLocationUnitAmount !== null ||
+    additionalLocationPriceId !== null ||
+    additionalLocationItemId !== null
+  ) {
+    throw invalidBillingConfiguration();
+  }
+
+  //************************************************************** */
+  // Recurring Subscription Totals
+  //************************************************************** */
+
   const additionalUserMonthlyAmount =
-    additionalUserQuantity * (additionalUserUnitAmount ?? 0);
+    additionalUserQuantity *
+    (additionalUserUnitAmount ?? 0);
+
+  const additionalLocationMonthlyAmount =
+    additionalLocationQuantity *
+    (additionalLocationUnitAmount ?? 0);
 
   const monthlyTotalAmount = plan
-    ? plan.unitAmount + additionalUserMonthlyAmount
+    ? plan.unitAmount +
+      additionalUserMonthlyAmount +
+      additionalLocationMonthlyAmount
     : null;
 
   const purchasedUserCapacity = plan
     ? plan.usersIncluded + additionalUserQuantity
     : 0;
 
+  const purchasedLocationCapacity = plan
+    ? plan.locationsIncluded + additionalLocationQuantity
+    : 0;
+
   if (
     !Number.isSafeInteger(additionalUserMonthlyAmount) ||
+    !Number.isSafeInteger(additionalLocationMonthlyAmount) ||
     !Number.isSafeInteger(purchasedUserCapacity) ||
+    !Number.isSafeInteger(purchasedLocationCapacity) ||
     (
       monthlyTotalAmount !== null &&
       !Number.isSafeInteger(monthlyTotalAmount)
@@ -147,6 +219,8 @@ export async function getOrganizationBillingOverview(
   ) {
     throw invalidBillingConfiguration();
   }
+
+  //************************************************************** */
 
   return {
     organizationId,
@@ -169,11 +243,22 @@ export async function getOrganizationBillingOverview(
         unitAmount: availablePlan.unitAmount,
         usersIncluded: availablePlan.usersIncluded,
 
+        locationsIncluded:
+          availablePlan.locationsIncluded,
+
         additionalUserPricing:
           availablePlan.additionalUserPricing
             ? {
                 unitAmount:
                   availablePlan.additionalUserPricing.unitAmount,
+              }
+            : null,
+
+        additionalLocationPricing:
+          availablePlan.additionalLocationPricing
+            ? {
+                unitAmount:
+                  availablePlan.additionalLocationPricing.unitAmount,
               }
             : null,
 
@@ -196,18 +281,34 @@ export async function getOrganizationBillingOverview(
             unitAmount: plan.unitAmount,
             usersIncluded: plan.usersIncluded,
 
-            additionalUserPricing: plan.additionalUserPricing
-              ? {
-                  unitAmount:
-                    plan.additionalUserPricing.unitAmount,
-                }
-              : null,
+            locationsIncluded:
+              plan.locationsIncluded,
+
+            additionalUserPricing:
+              plan.additionalUserPricing
+                ? {
+                    unitAmount:
+                      plan.additionalUserPricing.unitAmount,
+                  }
+                : null,
+
+            additionalLocationPricing:
+              plan.additionalLocationPricing
+                ? {
+                    unitAmount:
+                      plan.additionalLocationPricing.unitAmount,
+                  }
+                : null,
           }
         : null,
 
       additionalUserQuantity,
       additionalUserUnitAmount,
       additionalUserMonthlyAmount,
+
+      additionalLocationQuantity,
+      additionalLocationUnitAmount,
+      additionalLocationMonthlyAmount,
 
       // Recurring list price, not an invoice balance.
       monthlyTotalAmount,
@@ -243,12 +344,31 @@ export async function getOrganizationBillingOverview(
       // Purchased capacity. Pending reductions can temporarily
       // impose a lower limit, enforced by the capacity guard.
       // Capacity alone does not establish subscription access.
-      userLimit: billingExempt ? null : purchasedUserCapacity,
+      userLimit: billingExempt
+        ? null
+        : purchasedUserCapacity,
+
+      activeLocations,
+
+      locationLimit: billingExempt
+        ? null
+        : purchasedLocationCapacity,
+
+      availableLocations: billingExempt
+        ? null
+        : Math.max(
+            0,
+            purchasedLocationCapacity - activeLocations,
+          ),
     },
 
     // Only the safe public operation projection is returned.
     // Never spread billingState.billing into the response.
     pendingChange,
+
+    locationCapacityChangePending: Boolean(
+      billing?.activeLocationCapacityChangeId,
+    ),
 
     checkoutPending: Boolean(
       billing?.checkoutOperationId,

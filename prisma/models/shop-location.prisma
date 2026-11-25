@@ -32,6 +32,8 @@ model ShopLocation {
 
   membershipLocations MembershipLocation[]
   serviceBays         ServiceBay[]
+  repairOrders        RepairOrder[]
+  serviceAppointments ServiceAppointment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

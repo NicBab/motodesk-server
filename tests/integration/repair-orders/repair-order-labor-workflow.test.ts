@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -53,7 +54,7 @@ describe("Repair Order labor workflow integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -71,7 +72,7 @@ describe("Repair Order labor workflow integration", () => {
     const approvedResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "APPROVED",
 
@@ -86,7 +87,7 @@ describe("Repair Order labor workflow integration", () => {
     const readyResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "READY_TO_WORK",
 
@@ -101,7 +102,7 @@ describe("Repair Order labor workflow integration", () => {
     const laborResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         description: "Diagnose starting issue",
 
@@ -122,7 +123,7 @@ describe("Repair Order labor workflow integration", () => {
     const startResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}/start`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Technician began diagnosis.",
       });
@@ -138,7 +139,7 @@ describe("Repair Order labor workflow integration", () => {
 
     const repairOrderAfterStart = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(repairOrderAfterStart.status, 200);
 
@@ -167,7 +168,7 @@ describe("Repair Order labor workflow integration", () => {
     const duplicateStartResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${laborLineId}/start`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(duplicateStartResponse.status, 400);
@@ -227,7 +228,7 @@ describe("Repair Order labor workflow integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -245,7 +246,7 @@ describe("Repair Order labor workflow integration", () => {
     const approvedResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "APPROVED",
 
@@ -260,7 +261,7 @@ describe("Repair Order labor workflow integration", () => {
     const readyResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "READY_TO_WORK",
 
@@ -275,7 +276,7 @@ describe("Repair Order labor workflow integration", () => {
     const firstLaborResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         description: "Diagnose starting issue",
 
@@ -294,7 +295,7 @@ describe("Repair Order labor workflow integration", () => {
     const secondLaborResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         description: "Perform repair after diagnosis",
 
@@ -314,7 +315,7 @@ describe("Repair Order labor workflow integration", () => {
     const firstStartResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${firstLaborLineId}/start`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(firstStartResponse.status, 200);
@@ -326,14 +327,14 @@ describe("Repair Order labor workflow integration", () => {
     const secondStartResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${secondLaborLineId}/start`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(secondStartResponse.status, 200);
 
     const afterStartingBoth = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterStartingBoth.body.data.status, "IN_PROGRESS");
 
@@ -343,7 +344,7 @@ describe("Repair Order labor workflow integration", () => {
     const firstCompleteResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${firstLaborLineId}/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Diagnosis completed.",
       });
@@ -359,7 +360,7 @@ describe("Repair Order labor workflow integration", () => {
 
     const afterFirstCompletion = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterFirstCompletion.body.data.status, "IN_PROGRESS");
 
@@ -369,7 +370,7 @@ describe("Repair Order labor workflow integration", () => {
     const finalCompleteResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${secondLaborLineId}/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Final repair work completed.",
       });
@@ -385,7 +386,7 @@ describe("Repair Order labor workflow integration", () => {
 
     const afterFinalCompletion = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterFinalCompletion.status, 200);
 
@@ -414,7 +415,7 @@ describe("Repair Order labor workflow integration", () => {
     const duplicateCompleteResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/labor-lines/${secondLaborLineId}/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(duplicateCompleteResponse.status, 400);

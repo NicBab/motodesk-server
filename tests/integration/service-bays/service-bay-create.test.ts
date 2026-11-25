@@ -1,5 +1,8 @@
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
@@ -7,7 +10,11 @@ import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
 describe("Service bay creation integration", () => {
   it("creates and lists service bays and rejects duplicate names", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const suffix = Date.now().toString();
 
@@ -18,6 +25,7 @@ describe("Service bay creation integration", () => {
 
     const createResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name,
         description: "Primary repair bay.",
@@ -25,22 +33,33 @@ describe("Service bay creation integration", () => {
 
     assert.equal(createResponse.status, 200);
 
-    assert.equal(createResponse.body.data.organizationId, organizationId);
+    assert.equal(
+      createResponse.body.data.organizationId,
+      organizationId,
+    );
 
     assert.equal(createResponse.body.data.name, name);
 
     assert.equal(createResponse.body.data.status, "ACTIVE");
 
+    assert.equal(
+      createResponse.body.data.shopLocationId,
+      shopLocationId,
+    );
+
     //************************************************************** */
     // List
 
-    const listResponse = await agent.get(
-      `/api/v1/organizations/${organizationId}/service-bays`,
-    );
+    const listResponse = await agent
+      .get(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId);
 
     assert.equal(listResponse.status, 200);
 
-    assert.equal(Array.isArray(listResponse.body.data), true);
+    assert.equal(
+      Array.isArray(listResponse.body.data),
+      true,
+    );
 
     const createdBay = listResponse.body.data.find(
       (serviceBay: { id: string }) =>
@@ -54,6 +73,7 @@ describe("Service bay creation integration", () => {
 
     const duplicateResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name,
       });

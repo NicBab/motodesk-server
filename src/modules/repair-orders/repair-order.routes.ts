@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 
 import { authenticateRequest } from "../auth/index.js";
@@ -5,6 +6,10 @@ import { authenticateRequest } from "../auth/index.js";
 import { requireOrganizationAccess } from "../organizations/index.js";
 
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
+
+import { requireLocationAccess } from "../locations/location-access.middleware.js";
+
+import { requireRepairOrderLocationAccess } from "./repair-order-location-access.middleware.js";
 
 import {
   validateBody,
@@ -27,7 +32,7 @@ import {
   approveRepairOrderSchema,
   declineRepairOrderApprovalSchema,
   requestRepairOrderApprovalSchema,
-  completeRepairOrderPartsReviewSchema
+  completeRepairOrderPartsReviewSchema,
 } from "./repair-order.schemas.js";
 
 import {
@@ -45,7 +50,7 @@ import {
   approveRepairOrderHandler,
   declineRepairOrderApprovalHandler,
   requestRepairOrderApprovalHandler,
-  completeRepairOrderPartsReviewHandler
+  completeRepairOrderPartsReviewHandler,
 } from "./repair-order.controller.js";
 
 import repairOrderLaborRouter from "./repair-order-labor.routes.js";
@@ -65,6 +70,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateBody(createRepairOrderSchema),
   createRepairOrderHandler,
 );
@@ -76,6 +82,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateQuery(listRepairOrdersQuerySchema),
   listRepairOrdersHandler,
 );
@@ -87,7 +94,9 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   getRepairOrderHandler,
 );
 
@@ -98,7 +107,9 @@ router.patch(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(updateRepairOrderSchema),
   updateRepairOrderHandler,
 );
@@ -110,7 +121,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(beginRepairOrderQualityCheckSchema),
   beginRepairOrderQualityCheckHandler,
 );
@@ -122,7 +135,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(passRepairOrderQualityCheckSchema),
   passRepairOrderQualityCheckHandler,
 );
@@ -134,7 +149,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(failRepairOrderQualityCheckSchema),
   failRepairOrderQualityCheckHandler,
 );
@@ -146,7 +163,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(cashierRepairOrderSchema),
   cashierRepairOrderHandler,
 );
@@ -158,7 +177,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(pickupRepairOrderSchema),
   pickupRepairOrderHandler,
 );
@@ -170,7 +191,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(closeRepairOrderSchema),
   closeRepairOrderHandler,
 );
@@ -182,7 +205,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(requestRepairOrderApprovalSchema),
   requestRepairOrderApprovalHandler,
 );
@@ -194,7 +219,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(approveRepairOrderSchema),
   approveRepairOrderHandler,
 );
@@ -206,7 +233,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(declineRepairOrderApprovalSchema),
   declineRepairOrderApprovalHandler,
 );
@@ -218,7 +247,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(completeRepairOrderPartsReviewSchema),
   completeRepairOrderPartsReviewHandler,
 );
@@ -230,7 +261,9 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(repairOrderIdSchema),
+  requireRepairOrderLocationAccess,
   validateBody(updateRepairOrderStatusSchema),
   updateRepairOrderStatusHandler,
 );
@@ -242,6 +275,8 @@ router.use(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
+  requireRepairOrderLocationAccess,
   repairOrderLaborRouter,
 );
 
@@ -252,6 +287,8 @@ router.use(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
+  requireRepairOrderLocationAccess,
   repairOrderPartRouter,
 );
 

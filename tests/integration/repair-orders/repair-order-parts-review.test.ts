@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -53,7 +54,7 @@ export async function createPartsReviewFixture(options: {
   // Repair Order
 
   const repairOrderResponse = await agent
-    .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+    .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       customerId,
       vehicleId,
@@ -71,7 +72,7 @@ export async function createPartsReviewFixture(options: {
   const requestApprovalResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       notes: "Estimate ready for customer approval.",
     });
@@ -90,7 +91,7 @@ export async function createPartsReviewFixture(options: {
   const approvalResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       approvalMethod: "PHONE",
 
@@ -134,7 +135,7 @@ export async function createPartsReviewFixture(options: {
   const partLineResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       partId,
       partNumber,
@@ -189,7 +190,7 @@ describe("Repair Order parts review integration", () => {
     const completeResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/parts-review/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Attempting to complete parts review.",
       });
@@ -206,7 +207,7 @@ describe("Repair Order parts review integration", () => {
 
     const repairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(repairOrderResponse.status, 200);
 
@@ -231,7 +232,7 @@ describe("Repair Order parts review integration", () => {
     const toBeOrderedResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/to-be-ordered`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Part is not available in shop inventory.",
       });
@@ -246,7 +247,7 @@ describe("Repair Order parts review integration", () => {
     const completeResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/parts-review/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Parts review complete. Required part must be ordered.",
       });
@@ -260,7 +261,7 @@ describe("Repair Order parts review integration", () => {
 
     const repairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(repairOrderResponse.status, 200);
 
@@ -296,7 +297,7 @@ describe("Repair Order parts review integration", () => {
     const allocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -311,7 +312,7 @@ describe("Repair Order parts review integration", () => {
     const pullResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/pull`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
 
@@ -330,7 +331,7 @@ describe("Repair Order parts review integration", () => {
     const stageResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/stage`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "Part staged for technician.",
       });
@@ -345,7 +346,7 @@ describe("Repair Order parts review integration", () => {
     const completeResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/parts-review/complete`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         notes: "All required parts allocated from shop inventory.",
       });
@@ -359,7 +360,7 @@ describe("Repair Order parts review integration", () => {
 
     const repairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(repairOrderResponse.status, 200);
 
@@ -395,7 +396,7 @@ describe("Repair Order parts review integration", () => {
     const allocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -410,7 +411,7 @@ describe("Repair Order parts review integration", () => {
     const pullResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/pull`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 2,
       });
@@ -427,7 +428,7 @@ describe("Repair Order parts review integration", () => {
 
     const partLineResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(partLineResponse.status, 200);
 
@@ -452,7 +453,7 @@ describe("Repair Order parts review integration", () => {
     const allocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -467,7 +468,7 @@ describe("Repair Order parts review integration", () => {
     const stageResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/stage`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(stageResponse.status, 400);
@@ -479,7 +480,7 @@ describe("Repair Order parts review integration", () => {
 
     const partLineResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(partLineResponse.status, 200);
 

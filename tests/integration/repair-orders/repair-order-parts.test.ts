@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -38,7 +39,7 @@ describe("Repair Order Parts integration", () => {
     const vehicleId = vehicleResponse.body.data.id;
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -68,7 +69,7 @@ describe("Repair Order Parts integration", () => {
     const createResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         partId,
         partNumber,
@@ -89,7 +90,7 @@ describe("Repair Order Parts integration", () => {
     const allocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 2,
       });
@@ -101,7 +102,7 @@ describe("Repair Order Parts integration", () => {
     const partialDeallocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/deallocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -113,7 +114,7 @@ describe("Repair Order Parts integration", () => {
     const finalDeallocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/deallocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -127,7 +128,7 @@ describe("Repair Order Parts integration", () => {
     const updateResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         actualCost: 36,
         vendorName: "MotoDesk Test Vendor",
@@ -137,13 +138,13 @@ describe("Repair Order Parts integration", () => {
 
     const listResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(listResponse.status, 200);
 
     const deleteResponse = await agent.delete(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(deleteResponse.status, 200);
   });
@@ -191,7 +192,7 @@ describe("Repair Order Parts integration", () => {
     // Repair order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -227,7 +228,7 @@ describe("Repair Order Parts integration", () => {
     const partLineResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         partId,
         partNumber,
@@ -249,7 +250,7 @@ describe("Repair Order Parts integration", () => {
     const allocationResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 2,
       });
@@ -264,7 +265,7 @@ describe("Repair Order Parts integration", () => {
     const issueResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
         notes: "Issued to technician.",
@@ -299,7 +300,7 @@ describe("Repair Order Parts integration", () => {
     const excessiveIssueResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 2,
       });
@@ -317,7 +318,7 @@ describe("Repair Order Parts integration", () => {
     const finalIssueResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/issue`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -334,7 +335,7 @@ describe("Repair Order Parts integration", () => {
     const installResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/install`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -351,7 +352,7 @@ describe("Repair Order Parts integration", () => {
     const excessiveInstallResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/install`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 2,
       });
@@ -369,7 +370,7 @@ describe("Repair Order Parts integration", () => {
     const finalInstallResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}/install`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -418,7 +419,7 @@ describe("Repair Order Parts integration", () => {
 
     const deleteResponse = await agent.delete(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${partLineId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(deleteResponse.status, 400);
 

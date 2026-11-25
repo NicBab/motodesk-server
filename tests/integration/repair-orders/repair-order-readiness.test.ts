@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -53,7 +54,7 @@ describe("Repair Order readiness integration", () => {
     // Repair Order
 
     const repairOrderResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -71,7 +72,7 @@ describe("Repair Order readiness integration", () => {
     const approvedResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "APPROVED",
 
@@ -90,7 +91,7 @@ describe("Repair Order readiness integration", () => {
     const partsReviewResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "PARTS_REVIEW",
 
@@ -109,7 +110,7 @@ describe("Repair Order readiness integration", () => {
     const waitingResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "WAITING_ON_PARTS",
 
@@ -170,7 +171,7 @@ describe("Repair Order readiness integration", () => {
     const firstPartLineResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         partId: firstPartId,
 
@@ -201,7 +202,7 @@ describe("Repair Order readiness integration", () => {
     const secondPartLineResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         partId: secondPartId,
 
@@ -232,7 +233,7 @@ describe("Repair Order readiness integration", () => {
     const firstToBeOrdered = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/to-be-ordered`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(firstToBeOrdered.status, 200);
@@ -240,7 +241,7 @@ describe("Repair Order readiness integration", () => {
     const secondToBeOrdered = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/to-be-ordered`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({});
 
     assert.equal(secondToBeOrdered.status, 200);
@@ -338,7 +339,7 @@ describe("Repair Order readiness integration", () => {
 
     const afterFirstReceipt = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterFirstReceipt.status, 200);
 
@@ -370,7 +371,7 @@ describe("Repair Order readiness integration", () => {
 
     const afterFinalReceipt = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterFinalReceipt.status, 200);
 
@@ -382,7 +383,7 @@ describe("Repair Order readiness integration", () => {
     const firstAllocateResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -400,7 +401,7 @@ describe("Repair Order readiness integration", () => {
     const secondAllocateResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/allocate`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -417,7 +418,7 @@ describe("Repair Order readiness integration", () => {
 
     const afterAllocation = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterAllocation.status, 200);
 
@@ -429,7 +430,7 @@ describe("Repair Order readiness integration", () => {
     const firstPullResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${firstPartLineId}/pull`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -446,7 +447,7 @@ describe("Repair Order readiness integration", () => {
 
     const afterFirstPull = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(afterFirstPull.status, 200);
 
@@ -458,7 +459,7 @@ describe("Repair Order readiness integration", () => {
     const secondPullResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines/${secondPartLineId}/pull`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         quantity: 1,
       });
@@ -475,7 +476,7 @@ describe("Repair Order readiness integration", () => {
 
     const readyRepairOrderResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(readyRepairOrderResponse.status, 200);
 

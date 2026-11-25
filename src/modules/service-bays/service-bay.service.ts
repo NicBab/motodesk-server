@@ -1,3 +1,4 @@
+
 import { AppError } from "../../platform/errors/app-error.js";
 
 import {
@@ -5,6 +6,7 @@ import {
   createServiceBayRecord,
   findActiveServiceBayAssignmentForBay,
   findActiveServiceBayAssignmentForRepairOrder,
+  findRepairOrderForServiceBay,
   findServiceBayById,
   findServiceBayByName,
   listServiceBayRecords,
@@ -19,16 +21,41 @@ import type {
   UpdateServiceBayStatusInput,
 } from "./service-bay.schemas.js";
 
-import { getRepairOrderById } from "../repair-orders/repair-order.service.js";
+//************************************************************** */
+// Require Repair Order Location
+
+async function requireRepairOrderLocation(
+  organizationId: string,
+  shopLocationId: string,
+  repairOrderId: string,
+) {
+  const repairOrder = await findRepairOrderForServiceBay(
+    organizationId,
+    shopLocationId,
+    repairOrderId,
+  );
+
+  if (!repairOrder) {
+    throw new AppError(404, "Repair order not found.", {
+      code: "REPAIR_ORDER_NOT_FOUND",
+    });
+  }
+
+  return repairOrder;
+}
 
 //************************************************************** */
 // Create Service Bay
 
 export async function createServiceBay(
   organizationId: string,
+  shopLocationId: string,
   input: CreateServiceBayInput,
 ) {
-  const existingBay = await findServiceBayByName(organizationId, input.name);
+  const existingBay = await findServiceBayByName(
+    organizationId,
+    input.name,
+  );
 
   if (existingBay) {
     throw new AppError(400, "A service bay with this name already exists.", {
@@ -36,14 +63,25 @@ export async function createServiceBay(
     });
   }
 
-  return createServiceBayRecord(organizationId, input.name, input.description);
+  return createServiceBayRecord(
+    organizationId,
+    shopLocationId,
+    input.name,
+    input.description,
+  );
 }
 
 //************************************************************** */
 // List Service Bays
 
-export async function listServiceBays(organizationId: string) {
-  return listServiceBayRecords(organizationId);
+export async function listServiceBays(
+  organizationId: string,
+  shopLocationId: string,
+) {
+  return listServiceBayRecords(
+    organizationId,
+    shopLocationId,
+  );
 }
 
 //************************************************************** */
@@ -51,6 +89,7 @@ export async function listServiceBays(organizationId: string) {
 
 export async function assignRepairOrderToServiceBay(
   organizationId: string,
+  shopLocationId: string,
   repairOrderId: string,
   assignedByMembershipId: string | null,
   input: AssignRepairOrderToServiceBayInput,
@@ -58,13 +97,18 @@ export async function assignRepairOrderToServiceBay(
   //************************************************************** */
   // Verify Repair Order
 
-  await getRepairOrderById(organizationId, repairOrderId);
+  await requireRepairOrderLocation(
+    organizationId,
+    shopLocationId,
+    repairOrderId,
+  );
 
   //************************************************************** */
   // Verify Service Bay
 
   const serviceBay = await findServiceBayById(
     organizationId,
+    shopLocationId,
     input.serviceBayId,
   );
 
@@ -90,6 +134,7 @@ export async function assignRepairOrderToServiceBay(
   const existingRepairOrderAssignment =
     await findActiveServiceBayAssignmentForRepairOrder(
       organizationId,
+      shopLocationId,
       repairOrderId,
     );
 
@@ -106,10 +151,12 @@ export async function assignRepairOrderToServiceBay(
   //************************************************************** */
   // Prevent Multiple ROs From Occupying Same Bay
 
-  const existingBayAssignment = await findActiveServiceBayAssignmentForBay(
-    organizationId,
-    input.serviceBayId,
-  );
+  const existingBayAssignment =
+    await findActiveServiceBayAssignmentForBay(
+      organizationId,
+      shopLocationId,
+      input.serviceBayId,
+    );
 
   if (existingBayAssignment) {
     throw new AppError(
@@ -124,13 +171,27 @@ export async function assignRepairOrderToServiceBay(
   //************************************************************** */
   // Create Assignment
 
-  return assignRepairOrderToServiceBayRecord(
-    organizationId,
-    repairOrderId,
-    input.serviceBayId,
-    assignedByMembershipId,
-    input.notes,
-  );
+  const assignment =
+    await assignRepairOrderToServiceBayRecord(
+      organizationId,
+      shopLocationId,
+      repairOrderId,
+      input.serviceBayId,
+      assignedByMembershipId,
+      input.notes,
+    );
+
+  if (!assignment) {
+    throw new AppError(
+      409,
+      "The repair order or service bay is no longer available for assignment.",
+      {
+        code: "SERVICE_BAY_ASSIGNMENT_FAILED",
+      },
+    );
+  }
+
+  return assignment;
 }
 
 //************************************************************** */
@@ -138,21 +199,28 @@ export async function assignRepairOrderToServiceBay(
 
 export async function releaseRepairOrderFromServiceBay(
   organizationId: string,
+  shopLocationId: string,
   repairOrderId: string,
   input: ReleaseRepairOrderFromServiceBayInput,
 ) {
   //************************************************************** */
   // Verify Repair Order
 
-  await getRepairOrderById(organizationId, repairOrderId);
+  await requireRepairOrderLocation(
+    organizationId,
+    shopLocationId,
+    repairOrderId,
+  );
 
   //************************************************************** */
   // Require Active Bay Assignment
 
-  const activeAssignment = await findActiveServiceBayAssignmentForRepairOrder(
-    organizationId,
-    repairOrderId,
-  );
+  const activeAssignment =
+    await findActiveServiceBayAssignmentForRepairOrder(
+      organizationId,
+      shopLocationId,
+      repairOrderId,
+    );
 
   if (!activeAssignment) {
     throw new AppError(
@@ -167,17 +235,23 @@ export async function releaseRepairOrderFromServiceBay(
   //************************************************************** */
   // Release Assignment
 
-  const releasedAssignment = await releaseRepairOrderFromServiceBayRecord(
-    organizationId,
-    repairOrderId,
-    activeAssignment.id,
-    input.notes,
-  );
+  const releasedAssignment =
+    await releaseRepairOrderFromServiceBayRecord(
+      organizationId,
+      shopLocationId,
+      repairOrderId,
+      activeAssignment.id,
+      input.notes,
+    );
 
   if (!releasedAssignment) {
-    throw new AppError(400, "Service bay assignment could not be released.", {
-      code: "SERVICE_BAY_RELEASE_FAILED",
-    });
+    throw new AppError(
+      400,
+      "Service bay assignment could not be released.",
+      {
+        code: "SERVICE_BAY_RELEASE_FAILED",
+      },
+    );
   }
 
   return releasedAssignment;
@@ -188,10 +262,15 @@ export async function releaseRepairOrderFromServiceBay(
 
 export async function updateServiceBayStatus(
   organizationId: string,
+  shopLocationId: string,
   serviceBayId: string,
   input: UpdateServiceBayStatusInput,
 ) {
-  const serviceBay = await findServiceBayById(organizationId, serviceBayId);
+  const serviceBay = await findServiceBayById(
+    organizationId,
+    shopLocationId,
+    serviceBayId,
+  );
 
   if (!serviceBay) {
     throw new AppError(404, "Service bay not found.", {
@@ -200,19 +279,26 @@ export async function updateServiceBayStatus(
   }
 
   if (serviceBay.status === input.status) {
-    throw new AppError(400, "Service bay is already in this status.", {
-      code: "SERVICE_BAY_STATUS_UNCHANGED",
-    });
+    throw new AppError(
+      400,
+      "Service bay is already in this status.",
+      {
+        code: "SERVICE_BAY_STATUS_UNCHANGED",
+      },
+    );
   }
 
-  const activeAssignment = await findActiveServiceBayAssignmentForBay(
-    organizationId,
-    serviceBayId,
-  );
+  const activeAssignment =
+    await findActiveServiceBayAssignmentForBay(
+      organizationId,
+      shopLocationId,
+      serviceBayId,
+    );
 
   if (
     activeAssignment &&
-    (input.status === "MAINTENANCE" || input.status === "INACTIVE")
+    (input.status === "MAINTENANCE" ||
+      input.status === "INACTIVE")
   ) {
     throw new AppError(
       400,
@@ -223,17 +309,25 @@ export async function updateServiceBayStatus(
     );
   }
 
-  const updatedServiceBay = await updateServiceBayStatusRecord(
-    organizationId,
-    serviceBayId,
-    input.status,
-  );
+  const updatedServiceBay =
+    await updateServiceBayStatusRecord(
+      organizationId,
+      shopLocationId,
+      serviceBayId,
+      input.status,
+    );
 
   if (!updatedServiceBay) {
-    throw new AppError(400, "Service bay status could not be updated.", {
-      code: "SERVICE_BAY_STATUS_UPDATE_FAILED",
-    });
+    throw new AppError(
+      400,
+      "Service bay status could not be updated.",
+      {
+        code: "SERVICE_BAY_STATUS_UPDATE_FAILED",
+      },
+    );
   }
 
   return updatedServiceBay;
 }
+
+//************************************************************** */

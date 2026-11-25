@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -49,7 +50,7 @@ describe("Repair Order integration", () => {
     // Create repair order
 
     const createResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -81,7 +82,7 @@ describe("Repair Order integration", () => {
 
     const getResponse = await agent.get(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-    );
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId));
 
     assert.equal(getResponse.status, 200);
 
@@ -97,7 +98,7 @@ describe("Repair Order integration", () => {
     const updateResponse = await agent
       .patch(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         priority: "RUSH",
         notes: "Customer requested expedited service.",
@@ -118,7 +119,7 @@ describe("Repair Order integration", () => {
     const statusResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "AWAITING_CUSTOMER_APPROVAL",
         notes: "Estimate ready for customer review.",
@@ -146,7 +147,7 @@ describe("Repair Order integration", () => {
     const duplicateStatusResponse = await agent
       .post(
         `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/status`,
-      )
+      ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         status: "AWAITING_CUSTOMER_APPROVAL",
       });
@@ -162,7 +163,7 @@ describe("Repair Order integration", () => {
     // List + search
 
     const listResponse = await agent
-      .get(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .get(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .query({
         search: "hard starting",
         priority: "RUSH",
@@ -212,7 +213,7 @@ describe("Repair Order integration", () => {
     const vehicleId = vehicleResponse.body.data.id;
 
     const firstResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,
@@ -221,7 +222,7 @@ describe("Repair Order integration", () => {
     assert.equal(firstResponse.status, 201);
 
     const secondResponse = await agent
-      .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+      .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
       .send({
         customerId,
         vehicleId,

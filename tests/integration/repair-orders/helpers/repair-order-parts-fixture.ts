@@ -1,3 +1,4 @@
+import { defaultShopLocationId } from "../../helpers/service-bay-location.fixture.js";
 import assert from "node:assert/strict";
 
 import { createAuthenticatedAgent } from "../../helpers/authenticated-agent.js";
@@ -52,7 +53,7 @@ export async function createPartsReviewFixture(options: {
   // Repair Order
 
   const repairOrderResponse = await agent
-    .post(`/api/v1/organizations/${organizationId}/repair-orders`)
+    .post(`/api/v1/organizations/${organizationId}/repair-orders`).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       customerId,
       vehicleId,
@@ -70,7 +71,7 @@ export async function createPartsReviewFixture(options: {
   const requestApprovalResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/request`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       notes: "Estimate ready for customer approval.",
     });
@@ -89,7 +90,7 @@ export async function createPartsReviewFixture(options: {
   const approvalResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/approval/approve`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       approvalMethod: "PHONE",
 
@@ -133,7 +134,7 @@ export async function createPartsReviewFixture(options: {
   const partLineResponse = await agent
     .post(
       `/api/v1/organizations/${organizationId}/repair-orders/${repairOrderId}/part-lines`,
-    )
+    ).set("X-Shop-Location-Id", await defaultShopLocationId(organizationId))
     .send({
       partId,
       partNumber,

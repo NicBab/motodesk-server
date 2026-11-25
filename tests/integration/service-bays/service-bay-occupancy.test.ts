@@ -1,5 +1,11 @@
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+
+import {
+  defaultShopLocationId,
+  scopeRepairOrderFixture,
+} from "../helpers/service-bay-location.fixture.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
@@ -14,9 +20,7 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/customers`)
     .send({
       type: "INDIVIDUAL",
-
       firstName: "Bay",
-
       lastName: `Occupancy ${suffix}`,
     });
 
@@ -26,13 +30,9 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/vehicles`)
     .send({
       customerId: customerResponse.body.data.id,
-
       make: "Honda",
-
       model: "CRF450R",
-
       vin: `BAY-OCCUPANCY-${suffix}`,
-
       type: "MOTORCYCLE",
     });
 
@@ -42,13 +42,16 @@ async function createRepairOrderFixture(
     .post(`/api/v1/organizations/${organizationId}/repair-orders`)
     .send({
       customerId: customerResponse.body.data.id,
-
       vehicleId: vehicleResponse.body.data.id,
-
       complaint: "Service bay occupancy integration test.",
     });
 
   assert.equal(repairOrderResponse.status, 201);
+
+  await scopeRepairOrderFixture(
+    organizationId,
+    repairOrderResponse.body.data.id,
+  );
 
   return repairOrderResponse.body.data.id;
 }
@@ -57,7 +60,11 @@ async function createRepairOrderFixture(
 
 describe("Service bay occupancy integration", () => {
   it("rejects assigning another repair order to an occupied service bay", async () => {
-    const { agent, organizationId } = await createAuthenticatedAgent();
+    const { agent, organizationId } =
+      await createAuthenticatedAgent();
+
+    const shopLocationId =
+      await defaultShopLocationId(organizationId);
 
     const suffix = Date.now().toString();
 
@@ -66,6 +73,7 @@ describe("Service bay occupancy integration", () => {
 
     const bayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Occupancy Bay ${suffix}`,
       });
@@ -96,9 +104,9 @@ describe("Service bay occupancy integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${firstRepairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
-
         notes: "First repair order occupies bay.",
       });
 
@@ -111,9 +119,9 @@ describe("Service bay occupancy integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${secondRepairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
-
         notes: "Attempt duplicate bay occupancy.",
       });
 

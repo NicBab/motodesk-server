@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 
 import { z } from "zod";
@@ -5,6 +6,8 @@ import { z } from "zod";
 import { authenticateRequest } from "../auth/index.js";
 
 import { requireOrganizationAccess } from "../organizations/index.js";
+
+import { requireLocationAccess } from "../locations/location-access.middleware.js";
 
 import { initializeRequestContext } from "../../platform/request/request.middleware.js";
 
@@ -54,6 +57,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateBody(createServiceBaySchema),
   createServiceBayHandler,
 );
@@ -66,6 +70,7 @@ router.get(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   listServiceBaysHandler,
 );
 
@@ -77,6 +82,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(serviceBayAssignmentParamsSchema),
   validateBody(assignRepairOrderToServiceBaySchema),
   assignRepairOrderToServiceBayHandler,
@@ -90,6 +96,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(serviceBayAssignmentParamsSchema),
   validateBody(releaseRepairOrderFromServiceBaySchema),
   releaseRepairOrderFromServiceBayHandler,
@@ -103,6 +110,7 @@ router.post(
   authenticateRequest,
   initializeRequestContext,
   requireOrganizationAccess,
+  requireLocationAccess,
   validateParams(serviceBayStatusParamsSchema),
   validateBody(updateServiceBayStatusSchema),
   updateServiceBayStatusHandler,

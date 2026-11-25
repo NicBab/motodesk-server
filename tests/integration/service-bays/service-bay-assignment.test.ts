@@ -1,12 +1,22 @@
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+
+import {
+  defaultShopLocationId,
+  scopeRepairOrderFixture,
+} from "../helpers/service-bay-location.fixture.js";
 
 import { createAuthenticatedAgent } from "../helpers/authenticated-agent.js";
 
 //************************************************************** */
 
 async function createRepairOrderFixture() {
-  const { agent, organizationId } = await createAuthenticatedAgent();
+  const { agent, organizationId } =
+    await createAuthenticatedAgent();
+
+  const shopLocationId =
+    await defaultShopLocationId(organizationId);
 
   const suffix = `${Date.now()}-${Math.random()}`;
 
@@ -51,9 +61,15 @@ async function createRepairOrderFixture() {
 
   assert.equal(repairOrderResponse.status, 201);
 
+  await scopeRepairOrderFixture(
+    organizationId,
+    repairOrderResponse.body.data.id,
+  );
+
   return {
     agent,
     organizationId,
+    shopLocationId,
     repairOrderId: repairOrderResponse.body.data.id,
   };
 }
@@ -62,14 +78,19 @@ async function createRepairOrderFixture() {
 
 describe("Service bay assignment integration", () => {
   it("assigns a repair order to an active service bay", async () => {
-    const { agent, organizationId, repairOrderId } =
-      await createRepairOrderFixture();
+    const {
+      agent,
+      organizationId,
+      shopLocationId,
+      repairOrderId,
+    } = await createRepairOrderFixture();
 
     //************************************************************** */
     // Create Bay
 
     const bayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Assignment Bay ${Date.now()}`,
         description: "Bay used for assignment integration testing.",
@@ -86,6 +107,7 @@ describe("Service bay assignment integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${repairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId,
         notes: "Moved into service bay.",
@@ -93,22 +115,41 @@ describe("Service bay assignment integration", () => {
 
     assert.equal(assignmentResponse.status, 200);
 
-    assert.equal(assignmentResponse.body.data.organizationId, organizationId);
+    assert.equal(
+      assignmentResponse.body.data.organizationId,
+      organizationId,
+    );
 
-    assert.equal(assignmentResponse.body.data.repairOrderId, repairOrderId);
+    assert.equal(
+      assignmentResponse.body.data.repairOrderId,
+      repairOrderId,
+    );
 
-    assert.equal(assignmentResponse.body.data.serviceBayId, serviceBayId);
+    assert.equal(
+      assignmentResponse.body.data.serviceBayId,
+      serviceBayId,
+    );
 
-    assert.equal(assignmentResponse.body.data.status, "ACTIVE");
+    assert.equal(
+      assignmentResponse.body.data.status,
+      "ACTIVE",
+    );
 
-    assert.equal(assignmentResponse.body.data.releasedAt, null);
+    assert.equal(
+      assignmentResponse.body.data.releasedAt,
+      null,
+    );
   });
 
   //************************************************************** */
 
   it("rejects assigning the same repair order to another bay while it has an active assignment", async () => {
-    const { agent, organizationId, repairOrderId } =
-      await createRepairOrderFixture();
+    const {
+      agent,
+      organizationId,
+      shopLocationId,
+      repairOrderId,
+    } = await createRepairOrderFixture();
 
     const suffix = Date.now();
 
@@ -117,6 +158,7 @@ describe("Service bay assignment integration", () => {
 
     const firstBayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `First Bay ${suffix}`,
       });
@@ -125,6 +167,7 @@ describe("Service bay assignment integration", () => {
 
     const secondBayResponse = await agent
       .post(`/api/v1/organizations/${organizationId}/service-bays`)
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         name: `Second Bay ${suffix}`,
       });
@@ -138,6 +181,7 @@ describe("Service bay assignment integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${repairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId: firstBayResponse.body.data.id,
       });
@@ -151,6 +195,7 @@ describe("Service bay assignment integration", () => {
       .post(
         `/api/v1/organizations/${organizationId}/service-bays/repair-orders/${repairOrderId}/assign`,
       )
+      .set("X-Shop-Location-Id", shopLocationId)
       .send({
         serviceBayId: secondBayResponse.body.data.id,
       });

@@ -1,3 +1,4 @@
+
 import type { Response } from "express";
 
 import { AppError } from "../../platform/errors/app-error.js";
@@ -12,6 +13,10 @@ import {
 } from "../../platform/validation/validated-request.js";
 
 import { ok } from "../../platform/http/api-response.js";
+
+import {
+  requireAuthorizedShopLocation,
+} from "../locations/location-access.middleware.js";
 
 import {
   assignRepairOrderToServiceBay,
@@ -42,16 +47,22 @@ interface ServiceBayStatusParams {
 
 //************************************************************** */
 
-function requireOrganizationId(request: AuthenticatedRequest): string {
+function requireOrganizationId(
+  request: AuthenticatedRequest,
+): string {
   const organizationId = request.params.organizationId;
 
   if (
     typeof organizationId !== "string" ||
     organizationId.trim().length === 0
   ) {
-    throw new AppError(400, "A valid organization ID is required.", {
-      code: "ORGANIZATION_ID_REQUIRED",
-    });
+    throw new AppError(
+      400,
+      "A valid organization ID is required.",
+      {
+        code: "ORGANIZATION_ID_REQUIRED",
+      },
+    );
   }
 
   return organizationId;
@@ -66,9 +77,16 @@ export async function createServiceBayHandler(
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
-  const input = requireValidatedBody<CreateServiceBayInput>(request);
+  const shopLocation = requireAuthorizedShopLocation(request);
 
-  const serviceBay = await createServiceBay(organizationId, input);
+  const input =
+    requireValidatedBody<CreateServiceBayInput>(request);
+
+  const serviceBay = await createServiceBay(
+    organizationId,
+    shopLocation.id,
+    input,
+  );
 
   ok(response, serviceBay);
 }
@@ -82,7 +100,12 @@ export async function listServiceBaysHandler(
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
-  const serviceBays = await listServiceBays(organizationId);
+  const shopLocation = requireAuthorizedShopLocation(request);
+
+  const serviceBays = await listServiceBays(
+    organizationId,
+    shopLocation.id,
+  );
 
   ok(response, serviceBays);
 }
@@ -96,16 +119,20 @@ export async function assignRepairOrderToServiceBayHandler(
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
+  const shopLocation = requireAuthorizedShopLocation(request);
+
   const { repairOrderId } =
     requireValidatedParams<ServiceBayAssignmentParams>(request);
 
   const input =
     requireValidatedBody<AssignRepairOrderToServiceBayInput>(request);
 
-  const assignedByMembershipId = getRequestContext().membership?.id ?? null;
+  const assignedByMembershipId =
+    getRequestContext().membership?.id ?? null;
 
   const assignment = await assignRepairOrderToServiceBay(
     organizationId,
+    shopLocation.id,
     repairOrderId,
     assignedByMembershipId,
     input,
@@ -123,6 +150,8 @@ export async function releaseRepairOrderFromServiceBayHandler(
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
+  const shopLocation = requireAuthorizedShopLocation(request);
+
   const { repairOrderId } =
     requireValidatedParams<ServiceBayAssignmentParams>(request);
 
@@ -131,6 +160,7 @@ export async function releaseRepairOrderFromServiceBayHandler(
 
   const assignment = await releaseRepairOrderFromServiceBay(
     organizationId,
+    shopLocation.id,
     repairOrderId,
     input,
   );
@@ -147,16 +177,22 @@ export async function updateServiceBayStatusHandler(
 ): Promise<void> {
   const organizationId = requireOrganizationId(request);
 
+  const shopLocation = requireAuthorizedShopLocation(request);
+
   const { serviceBayId } =
     requireValidatedParams<ServiceBayStatusParams>(request);
 
-  const input = requireValidatedBody<UpdateServiceBayStatusInput>(request);
+  const input =
+    requireValidatedBody<UpdateServiceBayStatusInput>(request);
 
   const serviceBay = await updateServiceBayStatus(
     organizationId,
+    shopLocation.id,
     serviceBayId,
     input,
   );
 
   ok(response, serviceBay);
 }
+
+//************************************************************** */

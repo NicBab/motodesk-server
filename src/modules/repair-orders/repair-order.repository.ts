@@ -23,6 +23,7 @@ type CreateRepairOrderRecordInput = CreateRepairOrderInput & {
 
 export async function createRepairOrderRecord(
   organizationId: string,
+  shopLocationId: string,
   input: CreateRepairOrderRecordInput,
   changedByMembershipId: string | null,
 ) {
@@ -47,14 +48,15 @@ export async function createRepairOrderRecord(
     const roNumber = sequence.nextNumber - 1;
 
     return transaction.repairOrder.create({
-      data: {
-        organizationId,
-        customerId: input.customerId,
-        vehicleId: input.vehicleId,
+  data: {
+    organizationId,
+    shopLocationId,
+    customerId: input.customerId,
+    vehicleId: input.vehicleId,
 
-        roNumber,
+    roNumber,
 
-        status: input.status,
+    status: input.status,
 
         priority: input.priority,
 
@@ -202,13 +204,16 @@ export async function findRepairOrderById(
 
 //************************************************************** */
 
+
 export async function findRepairOrdersByOrganization(
   organizationId: string,
+  shopLocationId: string,
   query: ListRepairOrdersQueryInput,
 ) {
   return prisma.repairOrder.findMany({
     where: {
       organizationId,
+      shopLocationId,
 
       ...(query.customerId !== undefined
         ? {
@@ -343,6 +348,7 @@ export async function findRepairOrdersByOrganization(
     ],
   });
 }
+
 
 //************************************************************** */
 
